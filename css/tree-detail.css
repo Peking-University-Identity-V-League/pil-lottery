@@ -1,4 +1,32 @@
-/* 放大的人格树：点击人格图标查看详情（在 style.css 之后加载） */
+/* 人格树相关的补充样式（在 style.css 之后加载）：
+   人格卡片的“复制人格树”按钮；放大的人格树里点击图标查看详情 */
+
+.panel-head { align-items: center; }
+
+.panel-copy {
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  letter-spacing: .06em;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+
+.panel-copy:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.panel-copy:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------ 放大的人格树 */
 
 .tree-detail-side {
   display: flex;

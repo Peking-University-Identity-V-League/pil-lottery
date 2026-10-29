@@ -316,6 +316,7 @@ function createSlot(index) {
     <div class="panel">
       <div class="panel-head">
         <span class="panel-title">人格</span>
+        <button type="button" class="panel-copy">复制人格树</button>
       </div>
       ${hunter ? `
       <div class="trait">
@@ -353,6 +354,7 @@ function createSlot(index) {
   };
 
   slot.webBtn.addEventListener('click', () => openTree(slot));
+  $('.panel-copy', root).addEventListener('click', () => copyTreeImage(slot));
   $('.slot-actions', root).addEventListener('click', (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (!act || busy || !match) return;
@@ -822,6 +824,195 @@ async function copyResult({ brief = false } = {}) {
   }
 }
 
+/* ------------------------------------------------------------------ 复制人格树图片 */
+
+function loadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+/** 用 Canvas 画出一张人格树图片（配色取自页面 CSS 变量），返回 PNG Blob。 */
+async function renderTreeImage(slot, entry) {
+  const tree = data.trees[slot.side];
+  const levels = entry.build.levels;
+  const css = getComputedStyle(slot.root);
+  const v = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+  const color = {
+    accent: v('--accent', '#61d5dd'),
+    nodeFill: v('--node-fill', '#1c3337'),
+    brass: v('--brass', '#b39158'),
+    night: v('--night', '#181c21'),
+    parchment: v('--parchment', '#ddd0b1'),
+    muted: v('--muted', '#9b958a'),
+  };
+  const font = v('--font', 'serif');
+
+  const W = 760;
+  const HEAD = 76;
+  const H = HEAD + 760;
+  const SCALE = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W * SCALE;
+  canvas.height = H * SCALE;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(SCALE, SCALE);
+
+  // 背景
+  ctx.fillStyle = color.night;
+  ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(W / 2, HEAD + 380, 0, W / 2, HEAD + 380, 380);
+  glow.addColorStop(0, 'rgba(255, 255, 255, .045)');
+  glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, HEAD, W, 760);
+
+  // 标题：角色名 + 终极人格
+  const { ultimates } = splitBuild(tree, entry.build);
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = color.parchment;
+  ctx.font = `700 28px ${font}`;
+  ctx.fillText(entry.char.name, 32, 42);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = color.brass;
+  ctx.font = `16px ${font}`;
+  ctx.fillText(`终极人格：${ultimates.length ? ultimates.map((t) => t.node.name).join('、') : '无'}`, W - 32, 42);
+  ctx.fillStyle = 'rgba(179, 145, 88, .35)';
+  ctx.fillRect(32, HEAD - 1, W - 64, 1);
+
+  const icons = new Map(await Promise.all(
+    tree.talents.map(async (n) => [n.id, n.icon?.local_path ? await loadImage(asset(n.icon.local_path)) : null]),
+  ));
+
+  ctx.save();
+  ctx.translate(W / 2, HEAD + 380);
+
+  // 连线
+  ctx.lineCap = 'round';
+  for (const e of tree.edges) {
+    const a = tree.byId.get(e.from);
+    const b = tree.byId.get(e.to);
+    const lit = Boolean(levels[b.id]);
+    ctx.strokeStyle = lit ? color.accent : 'rgba(255, 255, 255, .11)';
+    ctx.lineWidth = lit ? 6 : 4;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  // 中心
+  ctx.fillStyle = color.brass;
+  ctx.beginPath();
+  ctx.arc(0, 0, 13, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 节点
+  for (const n of tree.talents) {
+    const level = levels[n.id] || 0;
+    const r = n.is_ultimate ? 31 : 25;
+    ctx.save();
+    ctx.translate(n.x, n.y);
+
+    if (n.is_ultimate && level) {
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = color.brass;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.fillStyle = level ? color.nodeFill : '#1b2026';
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    if (level) {
+      ctx.strokeStyle = n.is_ultimate ? color.brass : color.accent;
+      ctx.lineWidth = n.is_ultimate ? 5 : 3.5;
+    } else {
+      ctx.strokeStyle = n.is_ultimate ? 'rgba(179, 145, 88, .4)' : 'rgba(255, 255, 255, .16)';
+      ctx.lineWidth = 2;
+      if (n.is_ultimate) ctx.setLineDash([5, 5]);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const icon = icons.get(n.id);
+    if (icon) {
+      ctx.globalAlpha = level ? 1 : 0.2;
+      ctx.drawImage(icon, -r * 0.8, -r * 0.8, r * 1.6, r * 1.6);
+      ctx.globalAlpha = 1;
+    }
+
+    if (level && n.max_level > 1) {
+      const bx = r * 0.78;
+      const by = -r * 0.78;
+      ctx.fillStyle = color.brass;
+      ctx.beginPath();
+      ctx.arc(bx, by, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1b1611';
+      ctx.font = `700 17px ${font}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(level), bx, by + 1);
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // 角标
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = color.muted;
+  ctx.font = `13px ${font}`;
+  ctx.fillText('PIL 第五人格随机抽取工具', W - 20, H - 18);
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('图片生成失败'))), 'image/png');
+  });
+}
+
+function downloadBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = el('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+async function copyTreeImage(slot) {
+  const entry = match?.slots[slot.index];
+  if (!entry || busy) return;
+  const name = entry.char.name;
+  // 先发起生成：ClipboardItem 接受 Promise，Safari 需要在点击当下调用 clipboard.write
+  const blobPromise = renderTreeImage(slot, entry);
+  blobPromise.catch(() => {});
+  try {
+    if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') throw new Error('不支持复制图片');
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
+    toast(`已复制${name}的人格树图片`);
+  } catch {
+    try {
+      downloadBlob(await blobPromise, `${name}-人格树.png`);
+      toast('浏览器不允许复制图片，已下载为 PNG');
+    } catch (err) {
+      console.error(err);
+      toast('人格树图片生成失败，请重试');
+    }
+  }
+}
+
 /* ------------------------------------------------------------------ 人格树详情 */
 
 function openTree(slot) {
@@ -994,7 +1185,7 @@ function syncButtons() {
   $('#btn-copy-brief').disabled = !match || busy;
   $('#btn-pool').disabled = busy;
   $('#opt-trait').disabled = busy;
-  document.querySelectorAll('.slot-actions .btn, .web-btn').forEach((b) => { b.disabled = !match || busy; });
+  document.querySelectorAll('.slot-actions .btn, .web-btn, .panel-copy').forEach((b) => { b.disabled = !match || busy; });
   document.querySelectorAll('[data-act="trait"]').forEach((b) => { b.hidden = !settings.drawTrait; });
   document.body.classList.toggle('is-busy', busy);
 }
