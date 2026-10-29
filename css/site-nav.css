@@ -1,0 +1,71 @@
+/* 顶部站点导航：回到 PIL 官网，以及在两个工具之间切换 */
+
+.site-nav {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 14px var(--pad) 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(179, 145, 88, .18);
+  font-size: 14px;
+}
+
+.site-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .15s;
+}
+
+.site-nav a:hover { color: var(--parchment); }
+
+.site-nav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: .12em;
+}
+
+.site-nav .site-nav-brand { color: var(--text); }
+
+.site-nav-brand img {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+
+.site-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px 22px;
+  flex-wrap: wrap;
+}
+
+.site-nav-links a {
+  position: relative;
+  padding: 4px 0;
+  white-space: nowrap;
+}
+
+.site-nav-links a[aria-current="page"] { color: var(--parchment); }
+
+.site-nav-links a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--brass);
+}
+
+.site-nav-short { display: none; }
+
+@media (max-width: 560px) {
+  .site-nav { font-size: 13px; }
+  .site-nav-full { display: none; }
+  .site-nav-short { display: inline; }
+  .site-nav-links { gap: 4px 14px; }
+}

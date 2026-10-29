@@ -1,0 +1,238 @@
+name: Deploy Lottery
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lottery-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.22.1'
+      - name: Install pinned image tooling
+        run: npm install --prefix "$RUNNER_TEMP/lottery-tools" --ignore-scripts --no-audit --no-fund sharp@0.35.5
+      - name: Build static assets
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+          import { dirname, join, relative, resolve } from 'node:path';
+          import { fileURLToPath } from 'node:url';
+          import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
+          import { createRequire } from 'node:module';
+          import { execFileSync } from 'node:child_process';
+          const sharp = createRequire(join(process.env.RUNNER_TEMP, 'lottery-tools/package.json'))('sharp');
+
+          const root = process.cwd();
+          const output = join(process.env.RUNNER_TEMP, 'lottery-dist');
+          const work = join(process.env.RUNNER_TEMP, 'lottery-meta');
+          const sha256 = (buffer) => createHash('sha256').update(buffer).digest('hex');
+
+          async function walk(directory) {
+            const files = [];
+            for (const entry of await readdir(join(root, directory), { withFileTypes: true })) {
+              const path = join(directory, entry.name);
+              if (entry.isDirectory()) files.push(...await walk(path));
+              else if (entry.isFile()) files.push(path);
+              else throw new Error(`Unsupported source file: ${path}`);
+            }
+            return files.sort();
+          }
+
+          const images = [...await walk('icons'), ...await walk('portraits')];
+          const replacements = new Map();
+          const contents = new Map();
+          const favicon = await readFile(join(root, 'favicon.svg'));
+          contents.set('favicon.svg', favicon);
+          let originalImageBytes = 0;
+          let optimizedImageBytes = 0;
+          let imageCursor = 0;
+
+          // 保留源 PNG；立绘采用 WebP 90，带文字的小图标采用无损 WebP。
+          async function convertImages() {
+            while (imageCursor < images.length) {
+              const sourcePath = images[imageCursor++];
+              const source = await readFile(join(root, sourcePath));
+              const original = await sharp(source).metadata();
+              const options = sourcePath.startsWith('icons/')
+                ? { lossless: true, effort: 6 }
+                : { quality: 90, alphaQuality: 100, effort: 6 };
+              const converted = await sharp(source).webp(options).toBuffer();
+              const result = await sharp(converted).metadata();
+              if (result.width !== original.width || result.height !== original.height
+                  || Boolean(result.hasAlpha) !== Boolean(original.hasAlpha)) {
+                throw new Error(`Image dimensions or transparency changed: ${sourcePath}`);
+              }
+              const useWebp = converted.length < source.length;
+              const targetPath = useWebp ? sourcePath.replace(/\.[^.]+$/, '.webp') : sourcePath;
+              const data = useWebp ? converted : source;
+              replacements.set(sourcePath, targetPath);
+              contents.set(targetPath, data);
+              originalImageBytes += source.length;
+              optimizedImageBytes += data.length;
+            }
+          }
+          await Promise.all(Array.from({ length: 4 }, convertImages));
+
+          function replaceImagePaths(value) {
+            if (typeof value === 'string') return replacements.get(value) || value;
+            if (Array.isArray(value)) return value.map(replaceImagePaths);
+            if (value && typeof value === 'object') {
+              return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, replaceImagePaths(child)]));
+            }
+            return value;
+          }
+
+          const dataFiles = ['characters.json', 'talent-trees.json', 'auxiliary-traits.json', 'tree-config-source.json'];
+          for (const path of dataFiles) {
+            const json = replaceImagePaths(JSON.parse(await readFile(join(root, path), 'utf8')));
+            contents.set(path, Buffer.from(JSON.stringify(json) + '\n'));
+          }
+          for (const path of [...await walk('js'), ...await walk('css')]) {
+            contents.set(path, await readFile(join(root, path)));
+          }
+
+          // 任一资源变化都会生成新的目录 URL，旧 URL 保持不变，可安全使用 immutable。
+          const fingerprint = createHash('sha256');
+          for (const [path, buffer] of [...contents].sort(([a], [b]) => a.localeCompare(b, 'en'))) {
+            fingerprint.update(path).update('\0').update(sha256(buffer)).update('\n');
+          }
+          const assetVersion = fingerprint.digest('hex').slice(0, 20);
+          const prefix = `assets/${assetVersion}/`;
+          const files = new Map([...contents].map(([path, buffer]) => [prefix + path, buffer]));
+          let html = await readFile(join(root, 'index.html'), 'utf8');
+          html = html.replace(/\b(href|src)="([^"]+)"/g, (full, attribute, path) =>
+            contents.has(path) ? `${attribute}="${prefix}${path}"` : full)
+            .replace('</head>', `  <link rel="modulepreload" href="${prefix}js/rules.js">\n  <link rel="modulepreload" href="${prefix}js/sound.js">\n</head>`);
+          if (!html.includes(`src="${prefix}js/app.js"`) || !html.includes(`href="${prefix}css/style.css"`)
+              || !html.includes(`href="${prefix}favicon.svg"`)) {
+            throw new Error('HTML asset entry points could not be versioned.');
+          }
+          files.set('index.html', Buffer.from(html));
+          files.set('favicon.svg', favicon);
+          const commit = process.env.SOURCE_COMMIT;
+          if (!/^[a-f0-9]{40}$/.test(commit || '')) throw new Error('Invalid source commit.');
+          const release = 'lottery-' + commit;
+          const metadata = {
+            component: 'lottery', source_commit: commit, release, asset_version: assetVersion,
+            released_at: execFileSync('git', ['show', '-s', '--format=%cI', commit], { encoding: 'utf8' }).trim(), image_count: images.length,
+            original_image_bytes: originalImageBytes, optimized_image_bytes: optimizedImageBytes,
+          };
+          files.set('__release.json', Buffer.from(JSON.stringify(metadata, null, 2) + '\n'));
+
+          let textBytes = 0;
+          let gzipBytes = 0;
+          let brotliBytes = 0;
+          for (const [path, data] of [...files]) {
+            if (!/\.(html|css|js|json|svg)$/.test(path)) continue;
+            const gzip = gzipSync(data, { level: 9 });
+            const brotli = brotliCompressSync(data, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } });
+            if (gzip.length < data.length) files.set(path + '.gz', gzip);
+            if (brotli.length < data.length) files.set(path + '.br', brotli);
+            textBytes += data.length;
+            gzipBytes += Math.min(gzip.length, data.length);
+            brotliBytes += Math.min(brotli.length, data.length);
+          }
+
+          // 只清理本脚本生成的 dist，避免误删其他文件。
+          try {
+            const previous = JSON.parse(await readFile(join(output, '__release.json'), 'utf8'));
+            if (previous.component !== 'lottery') throw new Error('Refusing to replace an unknown dist directory.');
+            await rm(output, { recursive: true });
+          } catch (error) {
+            if (error.code !== 'ENOENT') throw error;
+          }
+          await mkdir(output, { recursive: false });
+          for (const [path, data] of files) {
+            const target = join(output, path);
+            if (!relative(output, target) || relative(output, target).startsWith('..')) throw new Error('Invalid output path.');
+            await mkdir(dirname(target), { recursive: true });
+            await writeFile(target, data);
+          }
+          const manifest = Object.fromEntries([...files].sort().map(([path, data]) => [path, sha256(data)]));
+          const report = {
+            ...metadata, file_count: files.size,
+            image_savings_percent: Number((100 * (1 - optimizedImageBytes / originalImageBytes)).toFixed(1)),
+            text_bytes: textBytes, gzip_bytes: gzipBytes, brotli_bytes: brotliBytes,
+          };
+          await mkdir(work, { recursive: true });
+          await writeFile(join(work, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+          await writeFile(join(work, 'build-report.json'), JSON.stringify(report, null, 2) + '\n');
+          console.log(JSON.stringify(report, null, 2));
+          NODE
+      - name: Package static assets
+        run: tar -czf "$RUNNER_TEMP/lottery-release.tar.gz" -C "$RUNNER_TEMP/lottery-dist" .
+      - name: Publish and verify production
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, appendFile } from 'node:fs/promises';
+          import { join } from 'node:path';
+          import { createHash } from 'node:crypto';
+          const commit = process.env.SOURCE_COMMIT;
+          const endpoint = new URL(process.env.DEPLOY_URL || 'https://invalid.invalid');
+          const token = process.env.DEPLOY_TOKEN || '';
+          if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.search || !/^[A-Za-z0-9_-]{40,128}$/.test(token)) {
+            throw new Error('Deployment secrets are missing or invalid.');
+          }
+          const metadata = JSON.parse(await readFile(join(process.env.RUNNER_TEMP, 'lottery-dist/__release.json'), 'utf8'));
+          const manifest = JSON.parse(await readFile(join(process.env.RUNNER_TEMP, 'lottery-meta/manifest.json'), 'utf8'));
+          const archive = await readFile(join(process.env.RUNNER_TEMP, 'lottery-release.tar.gz'));
+          if (archive.length > 24 * 1024 * 1024 || metadata.source_commit !== commit) throw new Error('Invalid release archive.');
+          let receipt;
+          try {
+            const response = await fetch(endpoint, { method: 'POST', body: archive, headers: {
+              Authorization: 'Bearer ' + token, 'Content-Type': 'application/gzip', 'Content-Length': String(archive.length),
+            }, signal: AbortSignal.timeout(180000), redirect: 'error' });
+            if (!response.ok) throw new Error('Upload rejected: HTTP ' + response.status);
+            receipt = await response.json();
+          } catch { throw new Error('Production upload failed. Credential-bearing diagnostics are suppressed.'); }
+          if (!receipt.ok || receipt.source_commit !== commit || receipt.release !== metadata.release) throw new Error('Unexpected deployment receipt.');
+          const base = 'https://pkuidv.com/lottery/';
+          async function download(path) {
+            let last;
+            for (let attempt = 0; attempt < 3; attempt++) {
+              try {
+                const response = await fetch(base + encodeURI(path), { headers: { 'Accept-Encoding': 'br, gzip' }, signal: AbortSignal.timeout(20000) });
+                if (!response.ok) throw new Error('Public response: HTTP ' + response.status);
+                const data = Buffer.from(await response.arrayBuffer());
+                if (createHash('sha256').update(data).digest('hex') !== manifest[path]) throw new Error('Public asset hash mismatch.');
+                const expectedCache = path.startsWith('assets/') ? 'public, max-age=31536000, immutable' : 'no-cache';
+                if (response.headers.get('cache-control') !== expectedCache) throw new Error('Unexpected cache policy.');
+                return data;
+              } catch (error) { last = error; }
+            }
+            throw last;
+          }
+          const live = JSON.parse((await download('__release.json')).toString());
+          if (live.source_commit !== commit) throw new Error('Production has not activated this commit.');
+          const prefix = 'assets/' + metadata.asset_version + '/';
+          const html = (await download('index.html')).toString();
+          if (!html.includes(prefix + 'css/site-nav.css') || !html.includes('PIL 站点导航')) throw new Error('Navigation assets were not published.');
+          await Promise.all(['js/app.js', 'css/style.css', 'css/site-nav.css', 'favicon.svg', 'characters.json', 'talent-trees.json', 'auxiliary-traits.json'].map(path => download(prefix + path)));
+          const summary = 'Published and verified ' + commit + ' at ' + base;
+          console.log(summary);
+          if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
+          NODE
