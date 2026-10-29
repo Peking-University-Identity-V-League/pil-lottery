@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第五人格随机抽取工具｜北京大学第五人格赛事</title>
+  <meta name="description" content="第五人格 4v1 对局随机抽取：4 名求生者与 1 名监管者，附带随机人格与辅助特质。">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" sizes="any">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-title">
+      <h1>第五人格随机抽取工具</h1>
+      <p>抽取 4 名求生者和 1 名监管者、各自的人格、监管者辅助特质</p>
+    </div>
+    <div class="masthead-tools">
+      <button type="button" class="btn btn-quiet" id="btn-pool">角色池</button>
+      <button type="button" class="btn btn-quiet" id="btn-sound" aria-pressed="true">音效：开</button>
+    </div>
+  </header>
+
+  <section class="controls" aria-label="抽取设置">
+    <fieldset class="rule rule-survivor">
+      <legend>求生者</legend>
+      <div class="rule-row">
+        <span class="rule-label" id="lbl-s-ult">终极人格</span>
+        <div class="segmented" role="radiogroup" aria-labelledby="lbl-s-ult" data-setting="survivor">
+          <button type="button" role="radio" data-value="random">随机</button>
+          <button type="button" role="radio" data-value="0">0 个</button>
+          <button type="button" role="radio" data-value="1">1 个</button>
+          <button type="button" role="radio" data-value="2">2 个</button>
+        </div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="opt-despair">
+        <span class="switch-track" aria-hidden="true"></span>
+        <span>必点绝处逢生</span>
+      </label>
+    </fieldset>
+
+    <fieldset class="rule rule-hunter">
+      <legend>监管者</legend>
+      <div class="rule-row">
+        <span class="rule-label" id="lbl-h-ult">终极人格</span>
+        <div class="segmented" role="radiogroup" aria-labelledby="lbl-h-ult" data-setting="hunter">
+          <button type="button" role="radio" data-value="random">随机</button>
+          <button type="button" role="radio" data-value="0">0 个</button>
+          <button type="button" role="radio" data-value="1">1 个</button>
+          <button type="button" role="radio" data-value="2">2 个</button>
+        </div>
+      </div>
+      <p class="rule-note">默认用满 130 点人格点数</p>
+    </fieldset>
+
+    <div class="actions">
+      <button type="button" class="btn btn-wax" id="btn-draw" disabled>抽取结果</button>
+      <button type="button" class="btn btn-quiet" id="btn-copy" disabled>复制结果</button>
+    </div>
+  </section>
+
+  <main class="table" id="table">
+    <p class="notice" id="notice">正在整理庄园的信件…</p>
+  </main>
+
+  <div class="flash" id="flash" aria-hidden="true"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog class="sheet" id="dlg-pool" aria-labelledby="pool-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="pool-title">角色池</h2>
+        <p>点一下把角色移出或放回抽取范围，设置会保存在这个浏览器里。</p>
+      </header>
+      <div class="pool-tabs" role="tablist">
+        <button type="button" role="tab" data-tab="survivor" aria-selected="true">求生者</button>
+        <button type="button" role="tab" data-tab="hunter" aria-selected="false">监管者</button>
+        <button type="button" role="tab" data-tab="trait" aria-selected="false">辅助特质</button>
+      </div>
+      <div class="pool-grid" id="pool-grid"></div>
+      <footer class="sheet-foot">
+        <span class="pool-count" id="pool-count"></span>
+        <button type="button" class="btn btn-quiet" id="pool-all">全部放回</button>
+        <button type="button" class="btn btn-quiet" id="pool-none">全部移出</button>
+        <button class="btn btn-wax" value="close">完成</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="sheet sheet-wide" id="dlg-tree" aria-labelledby="tree-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="tree-title"></h2>
+        <p id="tree-sub"></p>
+      </header>
+      <div class="tree-detail">
+        <div class="tree-detail-web" id="tree-web"></div>
+        <ol class="tree-detail-list" id="tree-list"></ol>
+      </div>
+      <footer class="sheet-foot">
+        <button class="btn btn-wax" value="close">关闭</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script>
+    // 本地文件访问受限时，提供在线入口。
+    if (location.protocol === 'file:') {
+      document.getElementById('notice').innerHTML =
+        '直接打开本地文件时，浏览器会限制角色数据读取。<br>' +
+        '请使用<a href="https://pkuidv.com/lottery/">在线版本</a>。';
+    }
+  </script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

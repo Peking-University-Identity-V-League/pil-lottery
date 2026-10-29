@@ -1,0 +1,2142 @@
+{
+  "source": {
+    "title": "人格",
+    "url": "https://wiki.biligame.com/dwrg/%E4%BA%BA%E6%A0%BC",
+    "fetched_at": "2026-10-29T09:24:04.771779+00:00",
+    "revision_id": 208983,
+    "html_sha256": "354bf53cf54538c70d071ba23de3b68b1460492da1bc0f1f8961b3a52c611d7d"
+  },
+  "layout_source_url": "https://web.homeworkkun.top/%E5%A4%A9%E8%B5%8B%E6%A0%91/config.json",
+  "layout_source_sha256": "389a812500b6803638e67947b6dcbb41309f6ce555724d60dbfe9373a51132f6",
+  "scope": "人格页当前求生者、监管者两棵树；不含已移除人格。",
+  "node_note": "center 是无名称的布局根节点，不计入人格数量，也没有图标。",
+  "counts": {
+    "survivor": 40,
+    "hunter": 40,
+    "total": 80
+  },
+  "trees": {
+    "survivor": {
+      "faction": "求生者",
+      "source_url": "https://wiki.biligame.com/dwrg/%E6%B1%82%E7%94%9F%E8%80%85%E4%BA%BA%E6%A0%BC",
+      "root_id": "center",
+      "talent_count": 40,
+      "nodes": [
+        {
+          "id": "center",
+          "name": "",
+          "x": 0,
+          "y": 0,
+          "is_center": true,
+          "prerequisite_id": null,
+          "icon": null
+        },
+        {
+          "id": "up_1",
+          "name": "关系场",
+          "x": 0,
+          "y": -85,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "center",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%85%B3%E7%B3%BB%E5%9C%BA",
+          "icon": {
+            "file_title": "文件:人格图标-关系场.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/2/24/dv1pstoj7a8ftqf9l3jazt1cpe4sxwo.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%85%B3%E7%B3%BB%E5%9C%BA.png",
+            "local_path": "icons/survivors/关系场.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2252,
+            "sha1": "76ac84ee88d465ac5e5900afdb4ace9e3808a6a8",
+            "sha256": "b893574e2c6c4e06d113915229c16971b995b883200114a0abb876dee777e6b4"
+          }
+        },
+        {
+          "id": "up_2",
+          "name": "祸福相依",
+          "x": 0,
+          "y": -170,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "up_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E7%A5%B8%E7%A6%8F%E7%9B%B8%E4%BE%9D",
+          "icon": {
+            "file_title": "文件:人格图标-祸福相依.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/b/ba/nar8dcgrsawq1v9o0fokivoaomys6gk.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%A5%B8%E7%A6%8F%E7%9B%B8%E4%BE%9D.png",
+            "local_path": "icons/survivors/祸福相依.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1332,
+            "sha1": "c774f7377d4063a2e447fb31a4708553b2f189b4",
+            "sha256": "8a4e2ba4f33c2cfaeabfd7b4c41d8c95aa18483957450b8197cfb89c5773cb8a"
+          }
+        },
+        {
+          "id": "up_3",
+          "name": "韦伯定律",
+          "x": 0,
+          "y": -255,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "up_2",
+          "source_url": "https://wiki.biligame.com/dwrg/%E9%9F%A6%E4%BC%AF%E5%AE%9A%E5%BE%8B",
+          "icon": {
+            "file_title": "文件:人格图标-韦伯定律.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/2/28/4opnhwv5mnc78m81u6ulz3t2b50yhxj.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E9%9F%A6%E4%BC%AF%E5%AE%9A%E5%BE%8B.png",
+            "local_path": "icons/survivors/韦伯定律.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2604,
+            "sha1": "281eb69313e6b1c0a84ad27c69f84b727b48f347",
+            "sha256": "86cd896103c3b1442fd1fdbf24f7b05ed622eb6f9285394948ec595183188f00"
+          }
+        },
+        {
+          "id": "up_4",
+          "name": "飞轮效应",
+          "x": 0,
+          "y": -340,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": true,
+          "prerequisite_id": "up_3",
+          "source_url": "https://wiki.biligame.com/dwrg/%E9%A3%9E%E8%BD%AE%E6%95%88%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-飞轮效应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/0/07/r5uy2z33ro1xgmw8qpp847h4bfvf8ld.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E9%A3%9E%E8%BD%AE%E6%95%88%E5%BA%94.png",
+            "local_path": "icons/survivors/飞轮效应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2472,
+            "sha1": "e88925cdce13a5b0f103b32dea98e916aa70a441",
+            "sha256": "0bf3a594b02ba355b2fab729fb368716f0076704650f578fab987dfc2538c35e"
+          }
+        },
+        {
+          "id": "up_inter_L",
+          "name": "幸存者本能",
+          "x": -60,
+          "y": -145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "up_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%B9%B8%E5%AD%98%E8%80%85%E6%9C%AC%E8%83%BD",
+          "icon": {
+            "file_title": "文件:人格图标-幸存者本能.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/6/60/pgwz9lgd9okg9hwlk7kyszsa3ov1ipf.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%B9%B8%E5%AD%98%E8%80%85%E6%9C%AC%E8%83%BD.png",
+            "local_path": "icons/survivors/幸存者本能.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2149,
+            "sha1": "da0b16d309c1783cd21fa0a12d4e562bf4cea3f3",
+            "sha256": "9d763d3e79341c62a8a96bbf71973534b171935e92ce697bb43e43b21c0c5354"
+          }
+        },
+        {
+          "id": "up_inter_R",
+          "name": "相濡以沫",
+          "x": 60,
+          "y": -145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "up_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E7%9B%B8%E6%BF%A1%E4%BB%A5%E6%B2%AB",
+          "icon": {
+            "file_title": "文件:人格图标-相濡以沫.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/c/c9/rmy1slhai2al2sy8ksj5u4kuwwm3qzl.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%9B%B8%E6%BF%A1%E4%BB%A5%E6%B2%AB.png",
+            "local_path": "icons/survivors/相濡以沫.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2790,
+            "sha1": "ec994dcad775aed3e608e415e4e63977a33c8161",
+            "sha256": "50629151cbb4706d3551150e4521f67bf1c43e7bca0fc9f3c63a96a57e5b1089"
+          }
+        },
+        {
+          "id": "up_leaf_L1",
+          "name": "防御机制",
+          "x": -75,
+          "y": -230,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "up_inter_L",
+          "source_url": "https://wiki.biligame.com/dwrg/%E9%98%B2%E5%BE%A1%E6%9C%BA%E5%88%B6",
+          "icon": {
+            "file_title": "文件:人格图标-防御机制.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/5/5e/7jhjavu711fk9djq55jmdqi0h0kw1dp.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E9%98%B2%E5%BE%A1%E6%9C%BA%E5%88%B6.png",
+            "local_path": "icons/survivors/防御机制.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2012,
+            "sha1": "408f5148cf53945052b3c1c5c79038956e5172fd",
+            "sha256": "8e937a47ad7e450456ef71486558cdd36662f4fb62bb4f3e5ecf06e6558848c3"
+          }
+        },
+        {
+          "id": "up_leaf_L2",
+          "name": "愈合",
+          "x": -130,
+          "y": -190,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "up_inter_L",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%84%88%E5%90%88",
+          "icon": {
+            "file_title": "文件:人格图标-愈合.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/7/77/s8yi0a8lbv2e4z6dqtd5ue48educk3j.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%84%88%E5%90%88.png",
+            "local_path": "icons/survivors/愈合.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2558,
+            "sha1": "f1d55bf33546984ee02e942c432e9a02166502bf",
+            "sha256": "1d5e1dd253cd5076cf448c12e9efbc7c64926343f3bc06029e6d95b31d230e9c"
+          }
+        },
+        {
+          "id": "up_leaf_R1",
+          "name": "共生效应",
+          "x": 75,
+          "y": -230,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "up_inter_R",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%85%B1%E7%94%9F%E6%95%88%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-共生效应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/7/74/0m43fe23ldq8wcysaps2zfr95azenr9.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%85%B1%E7%94%9F%E6%95%88%E5%BA%94.png",
+            "local_path": "icons/survivors/共生效应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1919,
+            "sha1": "0542380440db06191e7a87d12bf1dd7b40c86ac5",
+            "sha256": "31cd91ce1f65243a4ed44155f29c9fc65f0b35ce42116c7d8f4b4348dcdd807e"
+          }
+        },
+        {
+          "id": "up_leaf_R2",
+          "name": "依恋效应",
+          "x": 130,
+          "y": -190,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "up_inter_R",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%BE%9D%E6%81%8B%E6%95%88%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-依恋效应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/2/2a/0sjfxsryqw4hmowjjp3mcd4njul5ebz.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E4%BE%9D%E6%81%8B%E6%95%88%E5%BA%94.png",
+            "local_path": "icons/survivors/依恋效应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 3376,
+            "sha1": "06c96f10378cd643f005a0d2effce4de627b34cf",
+            "sha256": "0eb9797e13bbe6c426c24e5e59b22c7fcaace134beaaacc54ef164d5526097d3"
+          }
+        },
+        {
+          "id": "right_1",
+          "name": "好奇心",
+          "x": 85,
+          "y": 0,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "center",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%BA%BA%E6%A0%BC%20%E5%A5%BD%E5%A5%87%E5%BF%83",
+          "icon": {
+            "file_title": "文件:人格图标-好奇心.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/7/7d/d9yabn07l8xw9b39jxh4irdd3e0xpab.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%A5%BD%E5%A5%87%E5%BF%83.png",
+            "local_path": "icons/survivors/好奇心.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2521,
+            "sha1": "71a84d6d19e1dae65e2e3e20f4d91656c34c6643",
+            "sha256": "e3531a5a0c9615ebafadb2852ece0a547d04e6c5938d39afd20b414cda1c6a8c"
+          }
+        },
+        {
+          "id": "right_2",
+          "name": "不屈不挠",
+          "x": 170,
+          "y": 0,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "right_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%B8%8D%E5%B1%88%E4%B8%8D%E6%8C%A0",
+          "icon": {
+            "file_title": "文件:人格图标-不屈不挠.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/1/1a/euabjre12e35zh5swiu6nq4uvt09hju.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E4%B8%8D%E5%B1%88%E4%B8%8D%E6%8C%A0.png",
+            "local_path": "icons/survivors/不屈不挠.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2671,
+            "sha1": "7f0dc37addceee18dad205519b8c33d38b55c51a",
+            "sha256": "5f7260612f74c2c937722225482c788be4edd2c2443bbe0c68e7e0c85d04546a"
+          }
+        },
+        {
+          "id": "right_3",
+          "name": "逃逸",
+          "x": 255,
+          "y": 0,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "right_2",
+          "source_url": "https://wiki.biligame.com/dwrg/%E9%80%83%E9%80%B8",
+          "icon": {
+            "file_title": "文件:人格图标-逃逸.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/3/37/igwh7ij28q3yk6tlngcs751de8mpw19.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E9%80%83%E9%80%B8.png",
+            "local_path": "icons/survivors/逃逸.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2153,
+            "sha1": "9e1d3d850076abb78e83ddcfec78106cd43c846d",
+            "sha256": "f20a307e69e279a9401c050cce27abd9fa7a8c6ce045deaa9d291d554ab2db11"
+          }
+        },
+        {
+          "id": "right_4",
+          "name": "回光返照",
+          "x": 340,
+          "y": 0,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": true,
+          "prerequisite_id": "right_3",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%9B%9E%E5%85%89%E8%BF%94%E7%85%A7",
+          "icon": {
+            "file_title": "文件:人格图标-回光返照.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/6/68/gx58i6eswtgskl5cakxhqw02swm03lf.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%9B%9E%E5%85%89%E8%BF%94%E7%85%A7.png",
+            "local_path": "icons/survivors/回光返照.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2230,
+            "sha1": "90daf080d3e54bb849125e97621c10f76f8aa833",
+            "sha256": "306d3a005e7177a2096812d094fe642b0c3a3c6e4178fe294414ed450fb40d95"
+          }
+        },
+        {
+          "id": "right_inter_T",
+          "name": "分心",
+          "x": 150,
+          "y": -80,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "right_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%88%86%E5%BF%83",
+          "icon": {
+            "file_title": "文件:人格图标-分心.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/5/58/9x51kk4kqoulersg9xj4dgc6fdc8ohu.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%88%86%E5%BF%83.png",
+            "local_path": "icons/survivors/分心.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2135,
+            "sha1": "54ed9cf7008ca864b7eb6df06a093c9692977e02",
+            "sha256": "08c50fa53da965ef76319f4373f96233954f5d1da81100fc4475fccd72f314cb"
+          }
+        },
+        {
+          "id": "right_inter_B",
+          "name": "心灵感应",
+          "x": 150,
+          "y": 80,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "right_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%BF%83%E7%81%B5%E6%84%9F%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-心灵感应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/c/c9/dwh4kzntz3yue7f9vl6hmtxvco0qkex.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%BF%83%E7%81%B5%E6%84%9F%E5%BA%94.png",
+            "local_path": "icons/survivors/心灵感应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2245,
+            "sha1": "770374bebda211d31bef975856f1a7a1d885c9d9",
+            "sha256": "2fa4e003503f370030ec9e23f4be286666126e31ad8e6243651bb8448b2ca16a"
+          }
+        },
+        {
+          "id": "right_leaf_T1",
+          "name": "触摸效应",
+          "x": 230,
+          "y": -75,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "right_inter_T",
+          "source_url": "https://wiki.biligame.com/dwrg/%E8%A7%A6%E6%91%B8%E6%95%88%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-触摸效应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/7/70/rmz22ggguvl6e6c2aepnoqmg5mtebec.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E8%A7%A6%E6%91%B8%E6%95%88%E5%BA%94.png",
+            "local_path": "icons/survivors/触摸效应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1826,
+            "sha1": "ec9b01fd33237710d33d3401311138104858d634",
+            "sha256": "8e14ea58fa09089eec60df19412a074075fd278a81399dfbb69cb84a3edd14f2"
+          }
+        },
+        {
+          "id": "right_leaf_T2",
+          "name": "假寐",
+          "x": 190,
+          "y": -145,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "right_inter_T",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%81%87%E5%AF%90",
+          "icon": {
+            "file_title": "文件:人格图标-假寐.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/4/44/1fhksp7e63hwevsuylfgw0fn214k77h.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%81%87%E5%AF%90.png",
+            "local_path": "icons/survivors/假寐.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1965,
+            "sha1": "0c3e73605cec7bf070d6d99b9fc989121354697d",
+            "sha256": "bbd8b76a9ed7b53953e712aeb81cff1e4677563151c5bfdda01cfd99aa3831bf"
+          }
+        },
+        {
+          "id": "right_leaf_B1",
+          "name": "结伴效应",
+          "x": 230,
+          "y": 75,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "right_inter_B",
+          "source_url": "https://wiki.biligame.com/dwrg/%E7%BB%93%E4%BC%B4%E6%95%88%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-结伴效应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/2/20/jc5doviawspochewch8rr9akvg3wwix.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%BB%93%E4%BC%B4%E6%95%88%E5%BA%94.png",
+            "local_path": "icons/survivors/结伴效应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2425,
+            "sha1": "a58b7b1c5b1d67c07d85c1f1dedb8e0e89cc7fa9",
+            "sha256": "2961f1fc6972e05b44e5f36ca535a30e353a0000e98122a37f13ed176d977c94"
+          }
+        },
+        {
+          "id": "right_leaf_B2",
+          "name": "观众效应",
+          "x": 190,
+          "y": 145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "right_inter_B",
+          "source_url": "https://wiki.biligame.com/dwrg/%E8%A7%82%E4%BC%97%E6%95%88%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-观众效应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/1/15/8hrlz9y5ggtx1ier7pvo8mtqagcgl21.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E8%A7%82%E4%BC%97%E6%95%88%E5%BA%94.png",
+            "local_path": "icons/survivors/观众效应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2827,
+            "sha1": "48b62bcdb5cf2506e4709004d9b64906d3e7ba99",
+            "sha256": "43b047a713f6f1adb51633f69c7253993f56db17303ed25f6c4f0f2e0cfdc58c"
+          }
+        },
+        {
+          "id": "down_1",
+          "name": "鸟笼效应",
+          "x": 0,
+          "y": 85,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "center",
+          "source_url": "https://wiki.biligame.com/dwrg/%E9%B8%9F%E7%AC%BC%E6%95%88%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-鸟笼效应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/2/24/i9bzd7ppjda0sizs3nqn20fypj7qszj.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E9%B8%9F%E7%AC%BC%E6%95%88%E5%BA%94.png",
+            "local_path": "icons/survivors/鸟笼效应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1660,
+            "sha1": "9c50715a025bf97a6c8798c27e20579daf1cb83f",
+            "sha256": "7bec56dcbccff5a86fb395534025a87b981b8f9dc485ed95030c185e6b5db24e"
+          }
+        },
+        {
+          "id": "down_2",
+          "name": "救世主情结",
+          "x": 0,
+          "y": 170,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "down_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%95%91%E4%B8%96%E4%B8%BB%E6%83%85%E7%BB%93",
+          "icon": {
+            "file_title": "文件:人格图标-救世主情结.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/7/70/8im2x0e1imdiwl8a6jyki2rn3864u0p.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%95%91%E4%B8%96%E4%B8%BB%E6%83%85%E7%BB%93.png",
+            "local_path": "icons/survivors/救世主情结.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1926,
+            "sha1": "48e9b2904e8f967575fded91a091a3a3f4ea46f9",
+            "sha256": "39e16fd1c7409f359cc5a506c5a8f8d3604fb873f2aa7d6b74cbf328bf61de8d"
+          }
+        },
+        {
+          "id": "down_3",
+          "name": "从众心理",
+          "x": 0,
+          "y": 255,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "down_2",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%BB%8E%E4%BC%97%E5%BF%83%E7%90%86",
+          "icon": {
+            "file_title": "文件:人格图标-从众心理.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/b/ba/ekoulk3p7v7y5si2b6gv6r3787r8tte.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E4%BB%8E%E4%BC%97%E5%BF%83%E7%90%86.png",
+            "local_path": "icons/survivors/从众心理.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1988,
+            "sha1": "7cc5901d12a8db6f22a6c90b1fa60560e2affff2",
+            "sha256": "97858006b9d0a191aa075d0cbe11d601883565ff193b35084aa99c8c821b26f8"
+          }
+        },
+        {
+          "id": "down_4",
+          "name": "化险为夷",
+          "x": 0,
+          "y": 340,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": true,
+          "prerequisite_id": "down_3",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%8C%96%E9%99%A9%E4%B8%BA%E5%A4%B7",
+          "icon": {
+            "file_title": "文件:人格图标-化险为夷.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/4/4e/e2lx1u4qj5kdraxrg7xq5u1scdnmr05.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%8C%96%E9%99%A9%E4%B8%BA%E5%A4%B7.png",
+            "local_path": "icons/survivors/化险为夷.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2231,
+            "sha1": "7878d1bcf228ea18b7e74c7e2d94381494c4bd35",
+            "sha256": "2e74b95ff97ce197fef8410d0eb0d3e00faf3eaea5ab9bae4703ab327f5c40d1"
+          }
+        },
+        {
+          "id": "down_inter_L",
+          "name": "宣泄效应",
+          "x": -60,
+          "y": 145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "down_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%AE%A3%E6%B3%84%E6%95%88%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-宣泄效应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/7/7c/0ee12g31568k9jnpuae6iqqrllypxvx.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%AE%A3%E6%B3%84%E6%95%88%E5%BA%94.png",
+            "local_path": "icons/survivors/宣泄效应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1773,
+            "sha1": "036c009ac062a16b987226be1bb55c3f76285dcd",
+            "sha256": "bf7b2047f8c07eabcbde9ed2e9f49ab90cbf83cfd5fa572bb4db25372d29afe7"
+          }
+        },
+        {
+          "id": "down_inter_R",
+          "name": "悄无声息",
+          "x": 60,
+          "y": 145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "down_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%82%84%E6%97%A0%E5%A3%B0%E6%81%AF",
+          "icon": {
+            "file_title": "文件:人格图标-悄无声息.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/1/13/o8d12vi02km7ozis0f2io312tsynodg.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%82%84%E6%97%A0%E5%A3%B0%E6%81%AF.png",
+            "local_path": "icons/survivors/悄无声息.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1996,
+            "sha1": "cf72c431415e310fb157f39136a9641e67707d24",
+            "sha256": "61826f613d214e41d2cc512d94fe1b4af6ebc518a07a4c5f3f5876900b5a24ec"
+          }
+        },
+        {
+          "id": "down_leaf_L1",
+          "name": "应急储备",
+          "x": -75,
+          "y": 230,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "down_inter_L",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%BA%94%E6%80%A5%E5%82%A8%E5%A4%87",
+          "icon": {
+            "file_title": "文件:人格图标-应急储备.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/f/f6/o8ixpxb56avrj5e2tzdyps58h8rfa7i.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%BA%94%E6%80%A5%E5%82%A8%E5%A4%87.png",
+            "local_path": "icons/survivors/应急储备.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1987,
+            "sha1": "cf7cc135ab44d508f62b699ffd493154887b0c6e",
+            "sha256": "a4df5d3dfa2c5e16fdba88a7618ffe7421bfd5fab664b28a9c1b910180192e9c"
+          }
+        },
+        {
+          "id": "down_leaf_L2",
+          "name": "共情",
+          "x": -130,
+          "y": 190,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "down_inter_L",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%85%B1%E6%83%85",
+          "icon": {
+            "file_title": "文件:人格图标-共情.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/2/24/4qxlekrswz8d3q71c7u27oozq8jpfap.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%85%B1%E6%83%85.png",
+            "local_path": "icons/survivors/共情.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2292,
+            "sha1": "28a5e5a6bc4447f1433c3ab803968b1884008cb1",
+            "sha256": "37508875226eb0c70208ec9bb32e6de0fa96f172e5428430c31450e578bca08c"
+          }
+        },
+        {
+          "id": "down_leaf_R1",
+          "name": "避难所",
+          "x": 75,
+          "y": 230,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "down_inter_R",
+          "source_url": "https://wiki.biligame.com/dwrg/%E9%81%BF%E9%9A%BE%E6%89%80",
+          "icon": {
+            "file_title": "文件:人格图标-避难所.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/e/e4/t778llk2l362rgl78vvm4yf9vwlw0dt.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E9%81%BF%E9%9A%BE%E6%89%80.png",
+            "local_path": "icons/survivors/避难所.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2608,
+            "sha1": "f9f9f43cb6e099ce2fc3febc16c1994af5cfaef1",
+            "sha256": "812f167cdb591d4ff8405ff99d494fc64fa1e707227fcdb82a9c3886b8c662af"
+          }
+        },
+        {
+          "id": "down_leaf_R2",
+          "name": "医者",
+          "x": 130,
+          "y": 190,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "down_inter_R",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%8C%BB%E8%80%85",
+          "icon": {
+            "file_title": "文件:人格图标-医者.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/0/05/jpcfy1y5m5m83zvex6xmx6hiqzpuuqs.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%8C%BB%E8%80%85.png",
+            "local_path": "icons/survivors/医者.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1952,
+            "sha1": "a8aed328ce9c0bc99c185d282a475461d17c3c24",
+            "sha256": "5acfca1cb7561b8b693a187b1bc15602801cabf2e03069f25dcc4bbf00dbfcaf"
+          }
+        },
+        {
+          "id": "left_1",
+          "name": "火中取栗",
+          "x": -85,
+          "y": 0,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "center",
+          "source_url": "https://wiki.biligame.com/dwrg/%E7%81%AB%E4%B8%AD%E5%8F%96%E6%A0%97",
+          "icon": {
+            "file_title": "文件:人格图标-火中取栗.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/b/be/qehxdreh3fqv4umqmpzpdlu9meemt5v.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%81%AB%E4%B8%AD%E5%8F%96%E6%A0%97.png",
+            "local_path": "icons/survivors/火中取栗.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2131,
+            "sha1": "e20773e954649a1aed54fedf493d9aeb1ec9a323",
+            "sha256": "4a00996d54ccb57780cd11754e258099b22f3add07153cb0e0146c09fa38e2b3"
+          }
+        },
+        {
+          "id": "left_2",
+          "name": "马蝇效应",
+          "x": -170,
+          "y": 0,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "left_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E9%A9%AC%E8%9D%87%E6%95%88%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-马蝇效应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/2/22/cph15mne5npfmpjlk2jnuvavkcumkz9.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E9%A9%AC%E8%9D%87%E6%95%88%E5%BA%94.png",
+            "local_path": "icons/survivors/马蝇效应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1885,
+            "sha1": "6cc995ab9ed5d9057c255db69b70fb5070ada1b5",
+            "sha256": "a610adb8271a55dc9977bdfcd48b6c02128673da032433bd9a1492ed712aa2ff"
+          }
+        },
+        {
+          "id": "left_3",
+          "name": "肌肉记忆",
+          "x": -255,
+          "y": 0,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "left_2",
+          "source_url": "https://wiki.biligame.com/dwrg/%E8%82%8C%E8%82%89%E8%AE%B0%E5%BF%86",
+          "icon": {
+            "file_title": "文件:人格图标-肌肉记忆.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/f/fb/d1gczjs1y6vrfu91ucp3j39dhwrz7sv.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E8%82%8C%E8%82%89%E8%AE%B0%E5%BF%86.png",
+            "local_path": "icons/survivors/肌肉记忆.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2356,
+            "sha1": "6fa2f923ecf4163f4e680ed5899379e83dbfdd3f",
+            "sha256": "52b1dd73516aaa1d8faeab7b8b2bf4725479051c901040c722236509d1ea6324"
+          }
+        },
+        {
+          "id": "left_4",
+          "name": "膝跳反射",
+          "x": -340,
+          "y": 0,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": true,
+          "prerequisite_id": "left_3",
+          "source_url": "https://wiki.biligame.com/dwrg/%E8%86%9D%E8%B7%B3%E5%8F%8D%E5%B0%84",
+          "icon": {
+            "file_title": "文件:人格图标-膝跳反射.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/f/f4/t46ea9jy8unps4j5ewba5mfeefg4qfi.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E8%86%9D%E8%B7%B3%E5%8F%8D%E5%B0%84.png",
+            "local_path": "icons/survivors/膝跳反射.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 3408,
+            "sha1": "f941e62c5a6f8e47acc129ea94fdc58d74fe6ace",
+            "sha256": "e6994cb5d51541112780040686b906b6ab11c7b1bf0e8b19757a29094813ad5d"
+          }
+        },
+        {
+          "id": "left_inter_T",
+          "name": "绝处逢生",
+          "x": -150,
+          "y": -80,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "left_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E7%BB%9D%E5%A4%84%E9%80%A2%E7%94%9F",
+          "icon": {
+            "file_title": "文件:人格图标-绝处逢生.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/6/60/31wfzv6n1o3kimapa7znelpbr77x1j2.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%BB%9D%E5%A4%84%E9%80%A2%E7%94%9F.png",
+            "local_path": "icons/survivors/绝处逢生.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1995,
+            "sha1": "1a2274afc7237c79f2ff925c7c294f6afba5d8fe",
+            "sha256": "70790e31fd74fc6aeeb00163569b791b6c8132f9979890337c05d181589a7a8f"
+          }
+        },
+        {
+          "id": "left_inter_B",
+          "name": "劳有所得",
+          "x": -150,
+          "y": 80,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "left_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%8A%B3%E6%9C%89%E6%89%80%E5%BE%97",
+          "icon": {
+            "file_title": "文件:人格图标-劳有所得.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/4/47/py190238ic3zzek7g6n80r763y78g9w.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%8A%B3%E6%9C%89%E6%89%80%E5%BE%97.png",
+            "local_path": "icons/survivors/劳有所得.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1444,
+            "sha1": "de1d38259ba367f3e28f737846383451a848e364",
+            "sha256": "669c2b0b9461b5bfce0a3055afe7dc9355b282517e9dec448d417ce3162c489a"
+          }
+        },
+        {
+          "id": "left_leaf_T1",
+          "name": "酝酿效应",
+          "x": -230,
+          "y": -75,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "left_inter_T",
+          "source_url": "https://wiki.biligame.com/dwrg/%E9%85%9D%E9%85%BF%E6%95%88%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-酝酿效应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/b/b2/dv4t2bxv0czqpk4p2vy3oaleio39q9k.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E9%85%9D%E9%85%BF%E6%95%88%E5%BA%94.png",
+            "local_path": "icons/survivors/酝酿效应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2277,
+            "sha1": "76b1bee44aa299830925a5ca6190d24dcc66d038",
+            "sha256": "fbffc97d035485006c608ebe2bc67a3fc02d52267186a4cdd503b93dac2aa54b"
+          }
+        },
+        {
+          "id": "left_leaf_T2",
+          "name": "感觉适应",
+          "x": -190,
+          "y": -145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "left_inter_T",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%84%9F%E8%A7%89%E9%80%82%E5%BA%94",
+          "icon": {
+            "file_title": "文件:人格图标-感觉适应.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/6/63/2qh5ksenki8yfppw7vh7lox0alip6f7.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%84%9F%E8%A7%89%E9%80%82%E5%BA%94.png",
+            "local_path": "icons/survivors/感觉适应.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2136,
+            "sha1": "176af44298296a8cb55c8aff8d3d0cd430d652c3",
+            "sha256": "073a66a537d6585e8c59f943fecd84f9c12fd1aae8d3df361e42774c66777e47"
+          }
+        },
+        {
+          "id": "left_leaf_B1",
+          "name": "求生意志",
+          "x": -230,
+          "y": 75,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "left_inter_B",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%B1%82%E7%94%9F%E6%84%8F%E5%BF%97",
+          "icon": {
+            "file_title": "文件:人格图标-求生意志.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/8/88/snv592i47bdhovtzf7zt9hvhwkne1bb.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%B1%82%E7%94%9F%E6%84%8F%E5%BF%97.png",
+            "local_path": "icons/survivors/求生意志.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2042,
+            "sha1": "f560d77a5482332c2069d8175b18c0f77d238527",
+            "sha256": "ffb43e54840b0f7cdff711343d9d6a96276c332960f47e4b2e9431a52f9fec59"
+          }
+        },
+        {
+          "id": "left_leaf_B2",
+          "name": "巨力",
+          "x": -190,
+          "y": 145,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "left_inter_B",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%B7%A8%E5%8A%9B",
+          "icon": {
+            "file_title": "文件:人格图标-巨力.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/5/5a/s85wuu40ecakigjpg34lc7rr5vjb1zh.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%B7%A8%E5%8A%9B.png",
+            "local_path": "icons/survivors/巨力.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2511,
+            "sha1": "f1a50451acea6c75bd0dc80113f49d8013abbdcd",
+            "sha256": "3f5bc4e5cf7021ada12d7822270d697c038be31fd201c05b42c90491c330dc43"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "center",
+          "to": "up_1"
+        },
+        {
+          "from": "up_1",
+          "to": "up_2"
+        },
+        {
+          "from": "up_2",
+          "to": "up_3"
+        },
+        {
+          "from": "up_3",
+          "to": "up_4"
+        },
+        {
+          "from": "up_1",
+          "to": "up_inter_L"
+        },
+        {
+          "from": "up_1",
+          "to": "up_inter_R"
+        },
+        {
+          "from": "up_inter_L",
+          "to": "up_leaf_L1"
+        },
+        {
+          "from": "up_inter_L",
+          "to": "up_leaf_L2"
+        },
+        {
+          "from": "up_inter_R",
+          "to": "up_leaf_R1"
+        },
+        {
+          "from": "up_inter_R",
+          "to": "up_leaf_R2"
+        },
+        {
+          "from": "center",
+          "to": "right_1"
+        },
+        {
+          "from": "right_1",
+          "to": "right_2"
+        },
+        {
+          "from": "right_2",
+          "to": "right_3"
+        },
+        {
+          "from": "right_3",
+          "to": "right_4"
+        },
+        {
+          "from": "right_1",
+          "to": "right_inter_T"
+        },
+        {
+          "from": "right_1",
+          "to": "right_inter_B"
+        },
+        {
+          "from": "right_inter_T",
+          "to": "right_leaf_T1"
+        },
+        {
+          "from": "right_inter_T",
+          "to": "right_leaf_T2"
+        },
+        {
+          "from": "right_inter_B",
+          "to": "right_leaf_B1"
+        },
+        {
+          "from": "right_inter_B",
+          "to": "right_leaf_B2"
+        },
+        {
+          "from": "center",
+          "to": "down_1"
+        },
+        {
+          "from": "down_1",
+          "to": "down_2"
+        },
+        {
+          "from": "down_2",
+          "to": "down_3"
+        },
+        {
+          "from": "down_3",
+          "to": "down_4"
+        },
+        {
+          "from": "down_1",
+          "to": "down_inter_L"
+        },
+        {
+          "from": "down_1",
+          "to": "down_inter_R"
+        },
+        {
+          "from": "down_inter_L",
+          "to": "down_leaf_L1"
+        },
+        {
+          "from": "down_inter_L",
+          "to": "down_leaf_L2"
+        },
+        {
+          "from": "down_inter_R",
+          "to": "down_leaf_R1"
+        },
+        {
+          "from": "down_inter_R",
+          "to": "down_leaf_R2"
+        },
+        {
+          "from": "center",
+          "to": "left_1"
+        },
+        {
+          "from": "left_1",
+          "to": "left_2"
+        },
+        {
+          "from": "left_2",
+          "to": "left_3"
+        },
+        {
+          "from": "left_3",
+          "to": "left_4"
+        },
+        {
+          "from": "left_1",
+          "to": "left_inter_T"
+        },
+        {
+          "from": "left_1",
+          "to": "left_inter_B"
+        },
+        {
+          "from": "left_inter_T",
+          "to": "left_leaf_T1"
+        },
+        {
+          "from": "left_inter_T",
+          "to": "left_leaf_T2"
+        },
+        {
+          "from": "left_inter_B",
+          "to": "left_leaf_B1"
+        },
+        {
+          "from": "left_inter_B",
+          "to": "left_leaf_B2"
+        }
+      ]
+    },
+    "hunter": {
+      "faction": "监管者",
+      "source_url": "https://wiki.biligame.com/dwrg/%E7%9B%91%E7%AE%A1%E8%80%85%E4%BA%BA%E6%A0%BC",
+      "root_id": "center",
+      "talent_count": 40,
+      "nodes": [
+        {
+          "id": "center",
+          "name": "",
+          "x": 0,
+          "y": 0,
+          "is_center": true,
+          "prerequisite_id": null,
+          "icon": null
+        },
+        {
+          "id": "up_1",
+          "name": "恶化",
+          "x": 0,
+          "y": -85,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "center",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%81%B6%E5%8C%96",
+          "icon": {
+            "file_title": "文件:人格图标-恶化.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/a/ab/tgy9teeck5fbb45l4rqhfeuzefgme4h.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%81%B6%E5%8C%96.png",
+            "local_path": "icons/hunters/恶化.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1710,
+            "sha1": "fc4b8fd399a97386fb7f9a087d695f78d2553d01",
+            "sha256": "059be87ba72f244672a7eaa8bfb2a6d2aadafa6adc5096186cb10ab2c59e179e"
+          }
+        },
+        {
+          "id": "up_2",
+          "name": "枯萎",
+          "x": 0,
+          "y": -170,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "up_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%9E%AF%E8%90%8E",
+          "icon": {
+            "file_title": "文件:人格图标-枯萎.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/4/48/9edy2j55gu74hyrt4jqx4cxkunwyray.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%9E%AF%E8%90%8E.png",
+            "local_path": "icons/hunters/枯萎.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1942,
+            "sha1": "50780155152c84e04f4007d0d4667ed5a9837aba",
+            "sha256": "3218c6121bb919c5e5ff62b369156e31324f5be6baca19edd0c7a5ab5637683f"
+          }
+        },
+        {
+          "id": "up_3",
+          "name": "破坏欲",
+          "x": 0,
+          "y": -255,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "up_2",
+          "source_url": "https://wiki.biligame.com/dwrg/%E7%A0%B4%E5%9D%8F%E6%AC%B2",
+          "icon": {
+            "file_title": "文件:人格图标-破坏欲.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/e/ea/jia1hytcsgf2x224vpould5xxb1txxs.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%A0%B4%E5%9D%8F%E6%AC%B2.png",
+            "local_path": "icons/hunters/破坏欲.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2282,
+            "sha1": "a700a011960e1608a5832cbd843869ffa9044e10",
+            "sha256": "b75adf8f4a6085d81a32f177f06e708d3651e620a8c371fba52440e4765b1c08"
+          }
+        },
+        {
+          "id": "up_4",
+          "name": "禁闭空间",
+          "x": 0,
+          "y": -340,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": true,
+          "prerequisite_id": "up_3",
+          "source_url": "https://wiki.biligame.com/dwrg/%E7%A6%81%E9%97%AD%E7%A9%BA%E9%97%B4",
+          "icon": {
+            "file_title": "文件:人格图标-禁闭空间.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/c/c3/atrblqorip0svkcp4yzgoyotad1bgfg.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%A6%81%E9%97%AD%E7%A9%BA%E9%97%B4.png",
+            "local_path": "icons/hunters/禁闭空间.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2602,
+            "sha1": "5caf59c040a6de843248fbfdb265aa9084fffcec",
+            "sha256": "dfbe42a3be9c696cc53b15514fcdbe1cc0023d10821db0b8602857ea598c7a74"
+          }
+        },
+        {
+          "id": "up_inter_L",
+          "name": "恐慌",
+          "x": -60,
+          "y": -145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "up_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%81%90%E6%85%8C",
+          "icon": {
+            "file_title": "文件:人格图标-恐慌.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/1/16/n8w0iumzvkcvcob29ar1rubll0l555k.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%81%90%E6%85%8C.png",
+            "local_path": "icons/hunters/恐慌.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2426,
+            "sha1": "c7034c5a516fafffe5e5ddc7221ad0cae6f86e58",
+            "sha256": "82c5032bb5b3e6f92df099fa20a7d7318d81d75815208a7afe279f4e2b39c232"
+          }
+        },
+        {
+          "id": "up_inter_R",
+          "name": "执念",
+          "x": 60,
+          "y": -145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "up_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%BA%BA%E6%A0%BC%20%E6%89%A7%E5%BF%B5",
+          "icon": {
+            "file_title": "文件:人格图标-执念.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/6/6b/ra1r6rk9depicpmew855rzug25sy8ut.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%89%A7%E5%BF%B5.png",
+            "local_path": "icons/hunters/执念.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1756,
+            "sha1": "e9882b40012f40d09337d53edc78c6835cc75155",
+            "sha256": "f77d104da71c2bdbf557b135a1e61f325913f12c678f816cc8ac8e3c32653019"
+          }
+        },
+        {
+          "id": "up_leaf_L1",
+          "name": "狂暴",
+          "x": -75,
+          "y": -230,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "up_inter_L",
+          "source_url": "https://wiki.biligame.com/dwrg/%E7%8B%82%E6%9A%B4",
+          "icon": {
+            "file_title": "文件:人格图标-狂暴.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/4/4e/2lii838vqevzhtadrgyvszn86pi8duq.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%8B%82%E6%9A%B4.png",
+            "local_path": "icons/hunters/狂暴.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1996,
+            "sha1": "163cdab460f674693f78ebdc67ccc0a1399cae22",
+            "sha256": "f2603bf3e41baf87715ea358acc1e53fc5ec5472fe86b8a89e216085cfa8594f"
+          }
+        },
+        {
+          "id": "up_leaf_L2",
+          "name": "愤怒",
+          "x": -130,
+          "y": -190,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "up_inter_L",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%84%A4%E6%80%92",
+          "icon": {
+            "file_title": "文件:人格图标-愤怒.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/f/ff/49uul2z4qsq3rkzkwmp0ebqrkoyh1yk.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%84%A4%E6%80%92.png",
+            "local_path": "icons/hunters/愤怒.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2856,
+            "sha1": "249658b20d38abf147b63e30ae89de3a2356e62c",
+            "sha256": "995cd8376f761531ee086525cd5f2ac564e3e7b0654a1daeef845682dfba0cfc"
+          }
+        },
+        {
+          "id": "up_leaf_R1",
+          "name": "嬉弄",
+          "x": 75,
+          "y": -230,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "up_inter_R",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%AC%89%E5%BC%84",
+          "icon": {
+            "file_title": "文件:人格图标-嬉弄.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/8/8b/3nhtqryf6cqg7z97yoofqtvx2mfxyb9.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%AC%89%E5%BC%84.png",
+            "local_path": "icons/hunters/嬉弄.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2383,
+            "sha1": "1f4507a50e7dbe96d5be508e80d9d99fd65a12f5",
+            "sha256": "c8d5230faa82498c3e357ca3d5a39e1ee032ba82f843cd2159eb33a5bd5c8220"
+          }
+        },
+        {
+          "id": "up_leaf_R2",
+          "name": "饥荒",
+          "x": 130,
+          "y": -190,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "up_inter_R",
+          "source_url": "https://wiki.biligame.com/dwrg/%E9%A5%A5%E8%8D%92",
+          "icon": {
+            "file_title": "文件:人格图标-饥荒.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/4/45/73txs9wv78r9rrh0ghil23wf6tx4c3s.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E9%A5%A5%E8%8D%92.png",
+            "local_path": "icons/hunters/饥荒.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2819,
+            "sha1": "3cd64224d377bdf0bc7f9ce90a71435c88418b48",
+            "sha256": "8d7ceb8e538acf0d942b1dcf17a33413c7d8b5d5bb371c431ecfb943afb9f40f"
+          }
+        },
+        {
+          "id": "right_1",
+          "name": "封禁",
+          "x": 85,
+          "y": 0,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "center",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%B0%81%E7%A6%81",
+          "icon": {
+            "file_title": "文件:人格图标-封禁.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/a/a0/9bmrx3cx4wlc3t1sj9nfjv5hai6lvbd.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%B0%81%E7%A6%81.png",
+            "local_path": "icons/hunters/封禁.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 4514,
+            "sha1": "4fd04df7794e63be53a268bab9c55e745852bfc9",
+            "sha256": "57a35308bc772eefef76444f9ace2f11e6f820601ea7ed88f290ec1dc5bf08fe"
+          }
+        },
+        {
+          "id": "right_2",
+          "name": "狩猎本能",
+          "x": 170,
+          "y": 0,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "right_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E7%8B%A9%E7%8C%8E%E6%9C%AC%E8%83%BD",
+          "icon": {
+            "file_title": "文件:人格图标-狩猎本能.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/c/cf/mxddmljuqj7yoox43lzqaep65vqzlrk.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%8B%A9%E7%8C%8E%E6%9C%AC%E8%83%BD.png",
+            "local_path": "icons/hunters/狩猎本能.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1767,
+            "sha1": "c446232ddfc4f8fa2698449408727d6d85cf5ef0",
+            "sha256": "4224df41fc871ce98c89a0297bdfcf13a190b9a88ce723856136035041011ade"
+          }
+        },
+        {
+          "id": "right_3",
+          "name": "好客之道",
+          "x": 255,
+          "y": 0,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "right_2",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%A5%BD%E5%AE%A2%E4%B9%8B%E9%81%93",
+          "icon": {
+            "file_title": "文件:人格图标-好客之道.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/b/bd/0g5ffo2nl64onqsdlb6b362iq4hxbhl.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%A5%BD%E5%AE%A2%E4%B9%8B%E9%81%93.png",
+            "local_path": "icons/hunters/好客之道.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2370,
+            "sha1": "03d736431e4b191de59bdc5228ed3feb48881969",
+            "sha256": "32b03c57ebc823aa68a027a84733bf98c0fc72017f7cc0d1aadac60c8b24d558"
+          }
+        },
+        {
+          "id": "right_4",
+          "name": "底牌",
+          "x": 340,
+          "y": 0,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": true,
+          "prerequisite_id": "right_3",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%BA%BA%E6%A0%BC%20%E5%BA%95%E7%89%8C",
+          "icon": {
+            "file_title": "文件:人格图标-底牌.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/b/bd/4aby06f4kbl87b14cihk5o3y1k61e8l.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%BA%95%E7%89%8C.png",
+            "local_path": "icons/hunters/底牌.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1717,
+            "sha1": "24b3412a18dbe7325aae1bbe799d7ef278662455",
+            "sha256": "9606f2b5b0112123ddc04a6fa188a3bf3e35c148cd263f0b47ae531b7bf434b7"
+          }
+        },
+        {
+          "id": "right_inter_T",
+          "name": "报幕",
+          "x": 150,
+          "y": -80,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "right_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%8A%A5%E5%B9%95",
+          "icon": {
+            "file_title": "文件:人格图标-报幕.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/5/5e/5nttaz2s5owdqf8vczmuzuskdzz16xy.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%8A%A5%E5%B9%95.png",
+            "local_path": "icons/hunters/报幕.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2432,
+            "sha1": "307871d1b30f8d39baea37f6e2501771f1bb1866",
+            "sha256": "15464e6ce3d4f09611cb3d1329d0b0fa87ffe819e35e62168071c7a3eba37987"
+          }
+        },
+        {
+          "id": "right_inter_B",
+          "name": "困兽之斗",
+          "x": 150,
+          "y": 80,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "right_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%BA%BA%E6%A0%BC%20%E5%9B%B0%E5%85%BD%E4%B9%8B%E6%96%97",
+          "icon": {
+            "file_title": "文件:人格图标-困兽之斗.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/e/ed/d4h8n5a5oek1lwcxbsb5ot4og0l7rev.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%9B%B0%E5%85%BD%E4%B9%8B%E6%96%97.png",
+            "local_path": "icons/hunters/困兽之斗.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 3473,
+            "sha1": "705b175369c083761dd528cc7ebd497a38bebb87",
+            "sha256": "0de43102e5bc0e9bf0b52fbf6c9cb66dd3a8bd8315f36df231e41a21aa409702"
+          }
+        },
+        {
+          "id": "right_leaf_T1",
+          "name": "崩坏",
+          "x": 230,
+          "y": -75,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "right_inter_T",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%B4%A9%E5%9D%8F",
+          "icon": {
+            "file_title": "文件:人格图标-崩坏.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/a/ad/8ea9e6vugcfryv3zygj9bspjgqhj76j.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%B4%A9%E5%9D%8F.png",
+            "local_path": "icons/hunters/崩坏.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2056,
+            "sha1": "47e2339520aa9b4b4c7a4c29e7badee5ba1ec41b",
+            "sha256": "56181ba889c75836118f40487b23b76f54cee800091da805be2b1e45d98f7966"
+          }
+        },
+        {
+          "id": "right_leaf_T2",
+          "name": "通缉",
+          "x": 190,
+          "y": -145,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "right_inter_T",
+          "source_url": "https://wiki.biligame.com/dwrg/%E9%80%9A%E7%BC%89",
+          "icon": {
+            "file_title": "文件:人格图标-通缉.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/8/8b/osr474mxzxdslgkv7liwbjwdqy4ihhy.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E9%80%9A%E7%BC%89.png",
+            "local_path": "icons/hunters/通缉.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2080,
+            "sha1": "d44c208086b4aeed5d47a8a1e809b484152a5516",
+            "sha256": "9bedaa8655dd3cdb4a350de7aca9449673da979545f7ac4a836ff14d62554a5d"
+          }
+        },
+        {
+          "id": "right_leaf_B1",
+          "name": "成瘾症",
+          "x": 230,
+          "y": 75,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "right_inter_B",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%88%90%E7%98%BE%E7%97%87",
+          "icon": {
+            "file_title": "文件:人格图标-成瘾症.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/e/eb/flp1movyr3427678u7a854cde31icqk.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%88%90%E7%98%BE%E7%97%87.png",
+            "local_path": "icons/hunters/成瘾症.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2619,
+            "sha1": "8592577c04d39b16fa7d63d6b5d6ace3759ebdfc",
+            "sha256": "a5bee5ba4c4e2e50efea393cc4aeffa8ade185267e930bf08e3a034f5d8d6f06"
+          }
+        },
+        {
+          "id": "right_leaf_B2",
+          "name": "念旧癖",
+          "x": 190,
+          "y": 145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "right_inter_B",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%BF%B5%E6%97%A7%E7%99%96",
+          "icon": {
+            "file_title": "文件:人格图标-念旧癖.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/e/ef/80q87s7z71ecm5yhz07bd9lo3hs1g8c.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%BF%B5%E6%97%A7%E7%99%96.png",
+            "local_path": "icons/hunters/念旧癖.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2280,
+            "sha1": "44a8ecbedd8bcdc2601472ebee73e17c024fb86c",
+            "sha256": "814be1e790eeac2b5e15ff2d254b839db8e5903bf61c553b83ed4dc94178d93a"
+          }
+        },
+        {
+          "id": "down_1",
+          "name": "惯性",
+          "x": 0,
+          "y": 85,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "center",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%BA%BA%E6%A0%BC%20%E6%83%AF%E6%80%A7",
+          "icon": {
+            "file_title": "文件:人格图标-惯性.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/1/14/rc8ztb8bbgeu6n8aa4519l73qe91fi2.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%83%AF%E6%80%A7.png",
+            "local_path": "icons/hunters/惯性.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1816,
+            "sha1": "ea0e2a51f0dbca8c5fa8cf358448648f48ea05ba",
+            "sha256": "eb77b250716f143c40f5ecab6dca335e9e08808dd914a68e0e8e2c39485449d6"
+          }
+        },
+        {
+          "id": "down_2",
+          "name": "嘲弄",
+          "x": 0,
+          "y": 170,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "down_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%98%B2%E5%BC%84",
+          "icon": {
+            "file_title": "文件:人格图标-嘲弄.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/1/1e/oqjjx3ekhbhq6cm9e4kbcls4ve6khia.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%98%B2%E5%BC%84.png",
+            "local_path": "icons/hunters/嘲弄.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1735,
+            "sha1": "d3c5954f76a5388b593d5434174998ac514943a2",
+            "sha256": "7a2c5503f093ce496243eb2323707b5c482e689220cddeb3d32b0825ba7729c1"
+          }
+        },
+        {
+          "id": "down_3",
+          "name": "狂欢",
+          "x": 0,
+          "y": 255,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "down_2",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%BA%BA%E6%A0%BC%20%E7%8B%82%E6%AC%A2",
+          "icon": {
+            "file_title": "文件:人格图标-狂欢.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/6/66/g9owt5pcnj58so0xowzz1feawcumbw7.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%8B%82%E6%AC%A2.png",
+            "local_path": "icons/hunters/狂欢.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1915,
+            "sha1": "8b4729b98b037b3d15ebd6f380a92f10445af3b7",
+            "sha256": "26698cbdd71312df2e4eaeff8a95ac2f9d678038c1294151bd253597c183b798"
+          }
+        },
+        {
+          "id": "down_4",
+          "name": "挽留",
+          "x": 0,
+          "y": 340,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": true,
+          "prerequisite_id": "down_3",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%8C%BD%E7%95%99",
+          "icon": {
+            "file_title": "文件:人格图标-挽留.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/4/4b/rc4qgklip5wbuvipeihrh09n2agdg8g.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%8C%BD%E7%95%99.png",
+            "local_path": "icons/hunters/挽留.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1557,
+            "sha1": "ea06f63a0e8c849871f3780b7d27fdc1ec3ceb70",
+            "sha256": "34fca653a8118e940ef5b75987becc5e4dbcd18f59dc9b5c7c8d5220fda4e6ca"
+          }
+        },
+        {
+          "id": "down_inter_L",
+          "name": "摧枯拉朽",
+          "x": -60,
+          "y": 145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "down_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%91%A7%E6%9E%AF%E6%8B%89%E6%9C%BD",
+          "icon": {
+            "file_title": "文件:人格图标-摧枯拉朽.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/c/c0/nophz0m8ecvw970mtahqh0tsidc83zn.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%91%A7%E6%9E%AF%E6%8B%89%E6%9C%BD.png",
+            "local_path": "icons/hunters/摧枯拉朽.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2443,
+            "sha1": "cac64ffebed962c46a5845ff91c8746c27bec633",
+            "sha256": "8b6a4635d94f3ebca41b34e0ca377f5c88ed583fbe467a6869222f4bb42899e3"
+          }
+        },
+        {
+          "id": "down_inter_R",
+          "name": "临界点",
+          "x": 60,
+          "y": 145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "down_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%B8%B4%E7%95%8C%E7%82%B9",
+          "icon": {
+            "file_title": "文件:人格图标-临界点.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/b/be/i486ka9oqo1gxinmm9paucpb3ekw7ao.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E4%B8%B4%E7%95%8C%E7%82%B9.png",
+            "local_path": "icons/hunters/临界点.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1826,
+            "sha1": "9b19a1bbf5cdcc130b749e76a6837e913bbf68f0",
+            "sha256": "b11c98ab9d445838a7fe8ee3cc41d1fa22ef75972de00d5ebe5910ecdc4c93bc"
+          }
+        },
+        {
+          "id": "down_leaf_L1",
+          "name": "冲动",
+          "x": -75,
+          "y": 230,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "down_inter_L",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%86%B2%E5%8A%A8",
+          "icon": {
+            "file_title": "文件:人格图标-冲动.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/3/36/7s5zwko6w8o5dofzihh1icuwd6unab6.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%86%B2%E5%8A%A8.png",
+            "local_path": "icons/hunters/冲动.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2526,
+            "sha1": "429fb2abf3fd0fe05379d1135e061f39c0db19f2",
+            "sha256": "a5f97b51dbd2f30bcc8d0cc53dd2f1385776721284bda8137d4a14d0fa3a2f06"
+          }
+        },
+        {
+          "id": "down_leaf_L2",
+          "name": "惊弓之鸟",
+          "x": -130,
+          "y": 190,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "down_inter_L",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%83%8A%E5%BC%93%E4%B9%8B%E9%B8%9F",
+          "icon": {
+            "file_title": "文件:人格图标-惊弓之鸟.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/0/0c/dmvkzw1a11nxskx0hhoq6bnfslsvw9c.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%83%8A%E5%BC%93%E4%B9%8B%E9%B8%9F.png",
+            "local_path": "icons/hunters/惊弓之鸟.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1587,
+            "sha1": "74bb21ae079d26a8862981b075d96eeb82c24510",
+            "sha256": "dafb751d3e9fabe661a4b725bcd114d7461edda573632c1fc507939207ed0ff1"
+          }
+        },
+        {
+          "id": "down_leaf_R1",
+          "name": "巨钳",
+          "x": 75,
+          "y": 230,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "down_inter_R",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%B7%A8%E9%92%B3",
+          "icon": {
+            "file_title": "文件:人格图标-巨钳.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/9/94/d30ye1pn1adf2s1n5oxkepdm4yda3rf.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%B7%A8%E9%92%B3.png",
+            "local_path": "icons/hunters/巨钳.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 1888,
+            "sha1": "7002ad142b41eb98ec4d2f96ee285398a5a4e68b",
+            "sha256": "17bd77066b03fbbab52e52ab12ae2b9267f9e9d83e60a2aeb0d51234b12e2f2e"
+          }
+        },
+        {
+          "id": "down_leaf_R2",
+          "name": "拘禁狂",
+          "x": 130,
+          "y": 190,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "down_inter_R",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%8B%98%E7%A6%81%E7%8B%82",
+          "icon": {
+            "file_title": "文件:人格图标-拘禁狂.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/8/84/izx6cpgsoxaxpdhw5vivm9dnh63ia9n.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%8B%98%E7%A6%81%E7%8B%82.png",
+            "local_path": "icons/hunters/拘禁狂.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2503,
+            "sha1": "a2a3158b3aba8ae25ac087f49dfb56315d528f7b",
+            "sha256": "78d15276110f75f937327cbc557f8f06952e32f2df737bcecc5cb8405aba2d62"
+          }
+        },
+        {
+          "id": "left_1",
+          "name": "狩鹿",
+          "x": -85,
+          "y": 0,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "center",
+          "source_url": "https://wiki.biligame.com/dwrg/%E7%8B%A9%E9%B9%BF",
+          "icon": {
+            "file_title": "文件:人格图标-狩鹿.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/b/b7/d9ojgfgmihbwmaw6vkmbg96it0s2eb3.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E7%8B%A9%E9%B9%BF.png",
+            "local_path": "icons/hunters/狩鹿.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2364,
+            "sha1": "7197d238d01fc3e374ce9c5583ce3d1b069ea0ef",
+            "sha256": "68d8deceb4874c6bd0396af204c52cdec746b5cf86550e9776fb0894db74bca5"
+          }
+        },
+        {
+          "id": "left_2",
+          "name": "耐受力",
+          "x": -170,
+          "y": 0,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "left_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E8%80%90%E5%8F%97%E5%8A%9B",
+          "icon": {
+            "file_title": "文件:人格图标-耐受力.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/f/f6/3s0kqad251ndm3d16jpaeyc7xduonmh.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E8%80%90%E5%8F%97%E5%8A%9B.png",
+            "local_path": "icons/hunters/耐受力.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2837,
+            "sha1": "20583e7282e30044f53e6cc20783b2650bd58f99",
+            "sha256": "c8170e1147a1d27d3662405f38933f54adb44ec0680b4039bfa95a5819082e61"
+          }
+        },
+        {
+          "id": "left_3",
+          "name": "后遗症",
+          "x": -255,
+          "y": 0,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "left_2",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%90%8E%E9%81%97%E7%97%87",
+          "icon": {
+            "file_title": "文件:人格图标-后遗症.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/1/11/rld1fyyj38hib7l68b5h4h5zyuiaj9b.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%90%8E%E9%81%97%E7%97%87.png",
+            "local_path": "icons/hunters/后遗症.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2251,
+            "sha1": "ec38e61a66c913110e05841a24fc32d3ccdfe9ff",
+            "sha256": "55681f86d0ddb1560caa53dea17bc558d9b44190cd0cb2b37fd0f640e81c753e"
+          }
+        },
+        {
+          "id": "left_4",
+          "name": "张狂",
+          "x": -340,
+          "y": 0,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": true,
+          "prerequisite_id": "left_3",
+          "source_url": "https://wiki.biligame.com/dwrg/%E5%BC%A0%E7%8B%82",
+          "icon": {
+            "file_title": "文件:人格图标-张狂.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/c/c3/ccavmjxuv1fbb6c1k518fm704ryjnud.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%BC%A0%E7%8B%82.png",
+            "local_path": "icons/hunters/张狂.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2403,
+            "sha1": "69a7c724d282b9e705fee55f5a07e112de8fed75",
+            "sha256": "5990d854e7d2d9f7da2987c9524d9c3ae9be92f4029ad3a69e42332236a515a7"
+          }
+        },
+        {
+          "id": "left_inter_T",
+          "name": "掌控欲",
+          "x": -150,
+          "y": -80,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "left_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%8E%8C%E6%8E%A7%E6%AC%B2",
+          "icon": {
+            "file_title": "文件:人格图标-掌控欲.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/a/ae/mz8qmlayh9764yyx92v107r8zu3xxnn.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%8E%8C%E6%8E%A7%E6%AC%B2.png",
+            "local_path": "icons/hunters/掌控欲.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2524,
+            "sha1": "c4b80c014a653e8a533be162325d1e4b15ac73a3",
+            "sha256": "c045b6a6d72d43e76c201d85af6cb4f614d43ccbb1c1be263b26440a2327c311"
+          }
+        },
+        {
+          "id": "left_inter_B",
+          "name": "表现欲",
+          "x": -150,
+          "y": 80,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "left_1",
+          "source_url": "https://wiki.biligame.com/dwrg/%E8%A1%A8%E7%8E%B0%E6%AC%B2",
+          "icon": {
+            "file_title": "文件:人格图标-表现欲.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/f/f4/09t1qnokqpghr980vng318gc2mbnew2.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E8%A1%A8%E7%8E%B0%E6%AC%B2.png",
+            "local_path": "icons/hunters/表现欲.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2678,
+            "sha1": "025503b1b315aa501d3d3a39b9c928086b5dce22",
+            "sha256": "1a576845b94414131fee8743ce9040578d2466536efcd9c72286d0d722c2ebed"
+          }
+        },
+        {
+          "id": "left_leaf_T1",
+          "name": "幽闭恐惧",
+          "x": -230,
+          "y": -75,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "left_inter_T",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%BA%BA%E6%A0%BC%20%E5%B9%BD%E9%97%AD%E6%81%90%E6%83%A7",
+          "icon": {
+            "file_title": "文件:人格图标-幽闭恐惧.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/7/7f/0r543j4h6te5jkei0gkpq1u9bug339h.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E5%B9%BD%E9%97%AD%E6%81%90%E6%83%A7.png",
+            "local_path": "icons/hunters/幽闭恐惧.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 3027,
+            "sha1": "06745386b3a296ce97cdde56354bbab771636b45",
+            "sha256": "b153d2a51f597b3b646e52d5740428503988fde6b081b84c32604881c5275a28"
+          }
+        },
+        {
+          "id": "left_leaf_T2",
+          "name": "余威",
+          "x": -190,
+          "y": -145,
+          "is_center": false,
+          "max_level": 1,
+          "is_ultimate": false,
+          "prerequisite_id": "left_inter_T",
+          "source_url": "https://wiki.biligame.com/dwrg/%E4%BD%99%E5%A8%81",
+          "icon": {
+            "file_title": "文件:人格图标-余威.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/7/78/i25vjq0xfa5na6isxe4nvlkqd97za7u.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E4%BD%99%E5%A8%81.png",
+            "local_path": "icons/hunters/余威.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2559,
+            "sha1": "9a9bfa7282d6aa049de274126a07a8021c3a997a",
+            "sha256": "f50e18e7271380a01dbb5623de0dd1fa2089315318f32206dd274a7219c257f5"
+          }
+        },
+        {
+          "id": "left_leaf_B1",
+          "name": "清道夫",
+          "x": -230,
+          "y": 75,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "left_inter_B",
+          "source_url": "https://wiki.biligame.com/dwrg/%E6%B8%85%E9%81%93%E5%A4%AB",
+          "icon": {
+            "file_title": "文件:人格图标-清道夫.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/b/bd/re4lu3k5iknzh748yg85tcdvla2b0t2.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E6%B8%85%E9%81%93%E5%A4%AB.png",
+            "local_path": "icons/hunters/清道夫.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2180,
+            "sha1": "ea807fa3070fa8f34999c11f6c2e30fa0fe892d6",
+            "sha256": "87a2a1a1da8c6e85975bd08a8c8c6fffcbf9e237862a5b5915b25d2c3d76e24f"
+          }
+        },
+        {
+          "id": "left_leaf_B2",
+          "name": "追猎",
+          "x": -190,
+          "y": 145,
+          "is_center": false,
+          "max_level": 3,
+          "is_ultimate": false,
+          "prerequisite_id": "left_inter_B",
+          "source_url": "https://wiki.biligame.com/dwrg/%E8%BF%BD%E7%8C%8E",
+          "icon": {
+            "file_title": "文件:人格图标-追猎.png",
+            "url": "https://patchwiki.biligame.com/images/dwrg/3/3b/9vr6n98dn8ncs3ey2a2j7r0pre662qz.png",
+            "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BA%BA%E6%A0%BC%E5%9B%BE%E6%A0%87-%E8%BF%BD%E7%8C%8E.png",
+            "local_path": "icons/hunters/追猎.png",
+            "width": 80,
+            "height": 80,
+            "size_bytes": 2053,
+            "sha1": "54994cd72a93617a631664c284d750e0a0ea016b",
+            "sha256": "d277a7bdbf68cb24592894a6f99e80ad49c4458ae089c501cf31eb0e8aaab8c2"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "center",
+          "to": "up_1"
+        },
+        {
+          "from": "up_1",
+          "to": "up_2"
+        },
+        {
+          "from": "up_2",
+          "to": "up_3"
+        },
+        {
+          "from": "up_3",
+          "to": "up_4"
+        },
+        {
+          "from": "up_1",
+          "to": "up_inter_L"
+        },
+        {
+          "from": "up_1",
+          "to": "up_inter_R"
+        },
+        {
+          "from": "up_inter_L",
+          "to": "up_leaf_L1"
+        },
+        {
+          "from": "up_inter_L",
+          "to": "up_leaf_L2"
+        },
+        {
+          "from": "up_inter_R",
+          "to": "up_leaf_R1"
+        },
+        {
+          "from": "up_inter_R",
+          "to": "up_leaf_R2"
+        },
+        {
+          "from": "center",
+          "to": "right_1"
+        },
+        {
+          "from": "right_1",
+          "to": "right_2"
+        },
+        {
+          "from": "right_2",
+          "to": "right_3"
+        },
+        {
+          "from": "right_3",
+          "to": "right_4"
+        },
+        {
+          "from": "right_1",
+          "to": "right_inter_T"
+        },
+        {
+          "from": "right_1",
+          "to": "right_inter_B"
+        },
+        {
+          "from": "right_inter_T",
+          "to": "right_leaf_T1"
+        },
+        {
+          "from": "right_inter_T",
+          "to": "right_leaf_T2"
+        },
+        {
+          "from": "right_inter_B",
+          "to": "right_leaf_B1"
+        },
+        {
+          "from": "right_inter_B",
+          "to": "right_leaf_B2"
+        },
+        {
+          "from": "center",
+          "to": "down_1"
+        },
+        {
+          "from": "down_1",
+          "to": "down_2"
+        },
+        {
+          "from": "down_2",
+          "to": "down_3"
+        },
+        {
+          "from": "down_3",
+          "to": "down_4"
+        },
+        {
+          "from": "down_1",
+          "to": "down_inter_L"
+        },
+        {
+          "from": "down_1",
+          "to": "down_inter_R"
+        },
+        {
+          "from": "down_inter_L",
+          "to": "down_leaf_L1"
+        },
+        {
+          "from": "down_inter_L",
+          "to": "down_leaf_L2"
+        },
+        {
+          "from": "down_inter_R",
+          "to": "down_leaf_R1"
+        },
+        {
+          "from": "down_inter_R",
+          "to": "down_leaf_R2"
+        },
+        {
+          "from": "center",
+          "to": "left_1"
+        },
+        {
+          "from": "left_1",
+          "to": "left_2"
+        },
+        {
+          "from": "left_2",
+          "to": "left_3"
+        },
+        {
+          "from": "left_3",
+          "to": "left_4"
+        },
+        {
+          "from": "left_1",
+          "to": "left_inter_T"
+        },
+        {
+          "from": "left_1",
+          "to": "left_inter_B"
+        },
+        {
+          "from": "left_inter_T",
+          "to": "left_leaf_T1"
+        },
+        {
+          "from": "left_inter_T",
+          "to": "left_leaf_T2"
+        },
+        {
+          "from": "left_inter_B",
+          "to": "left_leaf_B1"
+        },
+        {
+          "from": "left_inter_B",
+          "to": "left_leaf_B2"
+        }
+      ]
+    }
+  },
+  "verification": {
+    "verified_at": "2026-10-29T09:27:46.050003+00:00",
+    "method": "原站 imageinfo SHA-1、字节数、PNG 签名及尺寸核对。"
+  }
+}

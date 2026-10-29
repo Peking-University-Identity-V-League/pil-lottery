@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.deploy/
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+__pycache__/
+*.py[cod]
+*.log
+.DS_Store
+Thumbs.db
+*Zone.Identifier
+
+# Local maintenance and build tooling
+/infra/
+/scripts/
+/package.json
+/package-lock.json

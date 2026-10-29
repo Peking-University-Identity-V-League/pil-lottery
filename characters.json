@@ -1,0 +1,728 @@
+{
+  "survivors": [
+    {
+      "id": "surv_1",
+      "name": "幸运儿",
+      "roles": [
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/幸运儿.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/f/f4/1gpos8s1uq6utxsnwi0zdtn7xizt7tj.png"
+    },
+    {
+      "id": "surv_2",
+      "name": "医生",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/医生.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/d/db/axt765jd7wtywdr316xc4ta3xfri3op.png"
+    },
+    {
+      "id": "surv_3",
+      "name": "律师",
+      "roles": [
+        "破译型"
+      ],
+      "portrait": "portraits/survivors/律师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/2/20/6oeqlr1pchs6nv23h2tbmrdkgfewatn.png"
+    },
+    {
+      "id": "surv_4",
+      "name": "“慈善家”",
+      "roles": [
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/“慈善家”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/e/e3/bz9o1ba3uc9ndjj3hj9kx1634u25c5m.png"
+    },
+    {
+      "id": "surv_5",
+      "name": "园丁",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/园丁.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/2/2a/g9p48a92ukc57gp3fne3fvna22ibhdk.png"
+    },
+    {
+      "id": "surv_6",
+      "name": "魔术师",
+      "roles": [
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/魔术师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/c/c7/68458ippn8ksgtuty9vum6z65fle5k7.png"
+    },
+    {
+      "id": "surv_7",
+      "name": "冒险家",
+      "roles": [
+        "破译型"
+      ],
+      "portrait": "portraits/survivors/冒险家.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/09/1plqqonwmtwl21szaok0e57rqsncere.png"
+    },
+    {
+      "id": "surv_8",
+      "name": "佣兵",
+      "roles": [
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/佣兵.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/2/2b/sg7fqtvlp8jza3ryyabwrcqcbkmxorw.png"
+    },
+    {
+      "id": "surv_9",
+      "name": "空军",
+      "roles": [
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/空军.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/0c/m0zp1wbxgj65mvd57y966m1uc2v829e.png"
+    },
+    {
+      "id": "surv_10",
+      "name": "机械师",
+      "roles": [
+        "破译型"
+      ],
+      "portrait": "portraits/survivors/机械师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/b/b6/bsyma6g9d3qrxv2jwzdn7zmhs8u5b5x.png"
+    },
+    {
+      "id": "surv_11",
+      "name": "前锋",
+      "roles": [
+        "辅助型",
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/前锋.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/7/75/ck4a7oqrwxkwkg8lqrafdq0z87902tp.png"
+    },
+    {
+      "id": "surv_12",
+      "name": "盲女",
+      "roles": [
+        "破译型"
+      ],
+      "portrait": "portraits/survivors/盲女.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/b/be/no3qmmuylejxaeinw47xfwquese9hfl.png"
+    },
+    {
+      "id": "surv_13",
+      "name": "祭司",
+      "roles": [
+        "辅助型",
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/祭司.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/d/dd/718is6rkn9keywnh6n0nml58pv3c7xf.png"
+    },
+    {
+      "id": "surv_14",
+      "name": "调香师",
+      "roles": [
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/调香师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/d/d5/n7m6kg8dy22bmllr0fvbsnoi306w2gv.png"
+    },
+    {
+      "id": "surv_15",
+      "name": "牛仔",
+      "roles": [
+        "辅助型",
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/牛仔.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/9/9d/tg9ktnmo89jqimm813duhx8z0prltbx.png"
+    },
+    {
+      "id": "surv_16",
+      "name": "舞女",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/舞女.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/e/e8/b86u5blf6w5ujwvsqdyqfovkku5fcsq.png"
+    },
+    {
+      "id": "surv_17",
+      "name": "先知",
+      "roles": [
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/先知.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/2/23/psh5intt7havuywhcd5raul3vso363b.png"
+    },
+    {
+      "id": "surv_18",
+      "name": "入殓师",
+      "roles": [
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/入殓师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/0a/phuewg60wn5l9waffhzgl46w5poi3nv.png"
+    },
+    {
+      "id": "surv_19",
+      "name": "勘探员",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/勘探员.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/4/4e/ehrto0h4svxs846jwz06nq5g37b2623.png"
+    },
+    {
+      "id": "surv_20",
+      "name": "咒术师",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/咒术师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/0f/mlvcugalnvqg8560st3jr7u6ekfh0c3.png"
+    },
+    {
+      "id": "surv_21",
+      "name": "野人",
+      "roles": [
+        "辅助型",
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/野人.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/d/d1/0s3zzwmthmrutadh0f2s7v4jn83ro5i.png"
+    },
+    {
+      "id": "surv_22",
+      "name": "杂技演员",
+      "roles": [
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/杂技演员.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/5/50/kas8lgvy3wv1lhsnturzwyi7cd3s3wb.png"
+    },
+    {
+      "id": "surv_23",
+      "name": "大副",
+      "roles": [
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/大副.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/f/ff/f1lb14xovzpkbif8ueuhufyeglp0bj9.png"
+    },
+    {
+      "id": "surv_24",
+      "name": "调酒师",
+      "roles": [
+        "辅助型",
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/调酒师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/2/23/klwoyh54ruzf9o58m9viqwxmocl0jps.png"
+    },
+    {
+      "id": "surv_25",
+      "name": "邮差",
+      "roles": [
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/邮差.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/d/d0/cjab6hwztf7p3njsq68smlvmqztv70x.png"
+    },
+    {
+      "id": "surv_26",
+      "name": "守墓人",
+      "roles": [
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/守墓人.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/6/68/ta4sx6146hiumyu4cqepvzuvd4qenoo.png"
+    },
+    {
+      "id": "surv_27",
+      "name": "“囚徒”",
+      "roles": [
+        "破译型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/“囚徒”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/04/j464yicp5ia251w81xkljm2fflig0aw.png"
+    },
+    {
+      "id": "surv_28",
+      "name": "昆虫学者",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/昆虫学者.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/e/ee/7yuvwbu3pgkznwe3bz32xxjb1wp0fgr.png"
+    },
+    {
+      "id": "surv_29",
+      "name": "画家",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/画家.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/9/99/1rqhs38563rpvkhzhsbu0qwvaoy907l.png"
+    },
+    {
+      "id": "surv_30",
+      "name": "击球手",
+      "roles": [
+        "辅助型",
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/击球手.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/9/98/l40dars4wlyfkq3qo5nwlipfk6c623t.png"
+    },
+    {
+      "id": "surv_31",
+      "name": "玩具商",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/玩具商.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/3/35/lqnvihxmb5k4cymyh56pn5zyeuzdh9k.png"
+    },
+    {
+      "id": "surv_32",
+      "name": "“心理学家”",
+      "roles": [
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/“心理学家”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/1/11/oe7xzgsuezj4c7p7u40g5coe4rozxkf.png"
+    },
+    {
+      "id": "surv_33",
+      "name": "病患",
+      "roles": [
+        "牵制型",
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/病患.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/a/a1/85do1534i2b5k86gm0dwz8t9dz6fxhj.png"
+    },
+    {
+      "id": "surv_34",
+      "name": "小说家",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/小说家.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/d/dc/92ezh6djcg03mfrfvgkgfy9w90vi6fg.png"
+    },
+    {
+      "id": "surv_35",
+      "name": "“小女孩”",
+      "roles": [
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/“小女孩”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/1/1b/fej1yd85my9rec8x43sda53u243kh08.png"
+    },
+    {
+      "id": "surv_36",
+      "name": "哭泣小丑",
+      "roles": [
+        "救援型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/哭泣小丑.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/2/2e/19s9c9qv6qeme2uf08orw7m2wwve6uf.png"
+    },
+    {
+      "id": "surv_37",
+      "name": "教授",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/教授.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/9/9a/on329ac7hn32ecui69xi5cpnt1ju51e.png"
+    },
+    {
+      "id": "surv_38",
+      "name": "古董商",
+      "roles": [
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/古董商.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/3/3e/si9um8evyf4fvjge76jpyxu06rrv954.png"
+    },
+    {
+      "id": "surv_39",
+      "name": "作曲家",
+      "roles": [
+        "破译型"
+      ],
+      "portrait": "portraits/survivors/作曲家.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/d/da/d329r3if67je2zhp676w2mwngpr2q20.png"
+    },
+    {
+      "id": "surv_40",
+      "name": "记者",
+      "roles": [
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/记者.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/c/c7/auv5h7jcm4pv9mwaojurtze7x7ob7ls.png"
+    },
+    {
+      "id": "surv_41",
+      "name": "飞行家",
+      "roles": [
+        "牵制型",
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/飞行家.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/06/jsircv28o85lq0hlfmk2p30lhptpzhq.png"
+    },
+    {
+      "id": "surv_42",
+      "name": "拉拉队员",
+      "roles": [
+        "辅助型",
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/拉拉队员.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/c/cd/r5ritrezrdj1imvzkf3jougnzmo0alj.png"
+    },
+    {
+      "id": "surv_43",
+      "name": "木偶师",
+      "roles": [
+        "牵制型",
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/木偶师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/6/6d/mnevehtjp4dyctfznrrvc01gzr53d0c.png"
+    },
+    {
+      "id": "surv_44",
+      "name": "火灾调查员",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/火灾调查员.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/8/89/f9hsho776az2rb81z1yz2kr4xyexawf.png"
+    },
+    {
+      "id": "surv_45",
+      "name": "“法罗女士”",
+      "roles": [
+        "破译型"
+      ],
+      "portrait": "portraits/survivors/“法罗女士”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/9/9b/fsmabr3qvqug2u2qc1ffpwjkulch0de.png"
+    },
+    {
+      "id": "surv_46",
+      "name": "“骑士”",
+      "roles": [
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/“骑士”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/5/5d/1wkv1rzwhjk83jjev3mu4vgq91idrcj.png"
+    },
+    {
+      "id": "surv_47",
+      "name": "气象学家",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/气象学家.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/a/aa/6jv9jwy47ypor014ln9pzp5mqpeerx6.png"
+    },
+    {
+      "id": "surv_48",
+      "name": "弓箭手",
+      "roles": [
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/弓箭手.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/1/15/my6bqh8fufiibwserer32pm304cz2lr.png"
+    },
+    {
+      "id": "surv_49",
+      "name": "“逃脱大师”",
+      "roles": [
+        "辅助型",
+        "救援型"
+      ],
+      "portrait": "portraits/survivors/“逃脱大师”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/00/hqngytt2m2f30bkoxmyomi1fpzu28iv.png"
+    },
+    {
+      "id": "surv_50",
+      "name": "幻灯师",
+      "roles": [
+        "辅助型",
+        "牵制型"
+      ],
+      "portrait": "portraits/survivors/幻灯师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/7/7c/7gv1r70czfh137ygdmhvxtmzufw5d0n.png"
+    },
+    {
+      "id": "surv_51",
+      "name": "斗牛士",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/斗牛士.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/0b/kh0elt6jm5er0xd6mj848s3m6lt43nr.png"
+    },
+    {
+      "id": "surv_52",
+      "name": "默剧艺人",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/默剧艺人.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/e/ef/4unma6mbgpcubyphu3t92bscet8mex5.png"
+    },
+    {
+      "id": "surv_53",
+      "name": "“神童”",
+      "roles": [
+        "牵制型",
+        "辅助型"
+      ],
+      "portrait": "portraits/survivors/“神童”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/7/78/85po945v2gpn0cp55ndvjek1wj75tso.png"
+    }
+  ],
+  "hunters": [
+    {
+      "id": "hunt_1",
+      "name": "厂长",
+      "portrait": "portraits/hunters/厂长.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/9/90/tazfksttk392u9xkzq59lwx0kl6ria7.png"
+    },
+    {
+      "id": "hunt_2",
+      "name": "小丑",
+      "portrait": "portraits/hunters/小丑.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/c/c1/mkth6jlf66katfv5wowurl3cr0vy54o.png"
+    },
+    {
+      "id": "hunt_3",
+      "name": "鹿头",
+      "portrait": "portraits/hunters/鹿头.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/d/d9/7u24lck129eh7vbgmg62aagi7938vgj.png"
+    },
+    {
+      "id": "hunt_4",
+      "name": "“杰克”",
+      "portrait": "portraits/hunters/“杰克”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/c/c3/aftuc5lz0t8mrkpsy1b6ywnlcptwa35.png"
+    },
+    {
+      "id": "hunt_5",
+      "name": "蜘蛛",
+      "portrait": "portraits/hunters/蜘蛛.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/1/11/qrqaydd2ggaq72wh5o1xhws4dd61pgu.png"
+    },
+    {
+      "id": "hunt_6",
+      "name": "红蝶",
+      "portrait": "portraits/hunters/红蝶.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/4/4a/7r49607kikj290byzd5ltbah9rw64jw.png"
+    },
+    {
+      "id": "hunt_7",
+      "name": "黄衣之主",
+      "portrait": "portraits/hunters/黄衣之主.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/2/24/qn7ul5nb9sr5k8hv2aglicnuxhq0m6a.png"
+    },
+    {
+      "id": "hunt_8",
+      "name": "宿伞之魂",
+      "portrait": "portraits/hunters/宿伞之魂.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/5/55/sp82i4nw8r2t0k9k5rp31fwq5dl330o.png"
+    },
+    {
+      "id": "hunt_9",
+      "name": "摄影师",
+      "portrait": "portraits/hunters/摄影师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/2/2a/68mdgot4z1xkohgn6xn44c6d0akdd4j.png"
+    },
+    {
+      "id": "hunt_10",
+      "name": "疯眼",
+      "portrait": "portraits/hunters/疯眼.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/8/89/4y35yj83xlf40zn1nbtle1yqoezn61u.png"
+    },
+    {
+      "id": "hunt_11",
+      "name": "梦之女巫",
+      "portrait": "portraits/hunters/梦之女巫.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/f/f2/75rqrmgfz78o7eav3eysrrmlu4kwg4i.png"
+    },
+    {
+      "id": "hunt_12",
+      "name": "爱哭鬼",
+      "portrait": "portraits/hunters/爱哭鬼.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/0e/7qh9z450ks1jrlxmepdi6cd29ookjjk.png"
+    },
+    {
+      "id": "hunt_13",
+      "name": "孽蜥",
+      "portrait": "portraits/hunters/孽蜥.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/5/53/4cp154vfk0co1814skw9gayirz6z92y.png"
+    },
+    {
+      "id": "hunt_14",
+      "name": "红夫人",
+      "portrait": "portraits/hunters/红夫人.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/1/1e/ds3ymrxf3tmbbebcwk13k8hy01w7v0g.png"
+    },
+    {
+      "id": "hunt_15",
+      "name": "26号守卫",
+      "portrait": "portraits/hunters/26号守卫.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/3/31/gegzwzr07w7ozrzsnzao1kiit931hr0.png"
+    },
+    {
+      "id": "hunt_16",
+      "name": "“使徒”",
+      "portrait": "portraits/hunters/“使徒”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/5/5c/nuqvoym269rjw4imet17qkxdfssps7r.png"
+    },
+    {
+      "id": "hunt_17",
+      "name": "小提琴家",
+      "portrait": "portraits/hunters/小提琴家.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/c/cc/n27llfxvz0orh9qjlwsqziovv3utqrs.png"
+    },
+    {
+      "id": "hunt_18",
+      "name": "雕刻家",
+      "portrait": "portraits/hunters/雕刻家.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/5/55/sakbnna2k8o98s42hlw3k902htmpfzo.png"
+    },
+    {
+      "id": "hunt_19",
+      "name": "“博士”",
+      "portrait": "portraits/hunters/“博士”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/e/e9/tlkyism5ossvhwg3fg0n2l6xbb8f5ze.png"
+    },
+    {
+      "id": "hunt_20",
+      "name": "破轮",
+      "portrait": "portraits/hunters/破轮.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/8/88/k4dt5h7oxxpsspg6sfsdvnnpaecsd6o.png"
+    },
+    {
+      "id": "hunt_21",
+      "name": "渔女",
+      "portrait": "portraits/hunters/渔女.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/a/ad/j90jl8xichfk9dqdx7nho2ikheca68q.png"
+    },
+    {
+      "id": "hunt_22",
+      "name": "蜡像师",
+      "portrait": "portraits/hunters/蜡像师.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/8/82/g20xpd2q53ztoen8i78u4jp8hgn153f.png"
+    },
+    {
+      "id": "hunt_23",
+      "name": "“噩梦”",
+      "portrait": "portraits/hunters/“噩梦”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/9/93/qmf6p0ytnlbqjcdiym3n6kx2zzbj9uo.png"
+    },
+    {
+      "id": "hunt_24",
+      "name": "“记录员”",
+      "portrait": "portraits/hunters/“记录员”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/f/fd/7ypgtdw66yxx1gt8mondz17cvef625p.png"
+    },
+    {
+      "id": "hunt_25",
+      "name": "隐士",
+      "portrait": "portraits/hunters/隐士.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/f/f0/951m59kzego1sul8xkg6yfrcnb6posn.png"
+    },
+    {
+      "id": "hunt_26",
+      "name": "守夜人",
+      "portrait": "portraits/hunters/守夜人.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/5/53/c6sfq02pii530g8aammy68zhvph2jtp.png"
+    },
+    {
+      "id": "hunt_27",
+      "name": "歌剧演员",
+      "portrait": "portraits/hunters/歌剧演员.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/1/11/ehunieqzo2kmxkxxrjbyauihjbpu7nc.png"
+    },
+    {
+      "id": "hunt_28",
+      "name": "“愚人金”",
+      "portrait": "portraits/hunters/“愚人金”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/6/6e/skudmdcfo675bm4wjsq9uoj0c3d6h4o.png"
+    },
+    {
+      "id": "hunt_29",
+      "name": "时空之影",
+      "portrait": "portraits/hunters/时空之影.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/c/cd/pnwu6andsx6giwmhqartwthf876gav1.png"
+    },
+    {
+      "id": "hunt_30",
+      "name": "“跛脚羊”",
+      "portrait": "portraits/hunters/“跛脚羊”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/b/bd/i2w28u7r8n6ckkf5c9w2xxctu3yql0l.png"
+    },
+    {
+      "id": "hunt_31",
+      "name": "“喧嚣”",
+      "portrait": "portraits/hunters/“喧嚣”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/07/6qzvw2af8r1gjmx1n26b39w0snntqc6.png"
+    },
+    {
+      "id": "hunt_32",
+      "name": "杂货商",
+      "portrait": "portraits/hunters/杂货商.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/c/c6/b49o7o8k6ngyyawqaqibsou2ido8plm.png"
+    },
+    {
+      "id": "hunt_33",
+      "name": "“台球手”",
+      "portrait": "portraits/hunters/“台球手”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/7/7d/a0cowdrw14hmrhslkkipdwei291pvco.png"
+    },
+    {
+      "id": "hunt_34",
+      "name": "“女王蜂”",
+      "portrait": "portraits/hunters/“女王蜂”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/0/03/kegfwui57olyai8pokz8qpulgbvy149.png"
+    },
+    {
+      "id": "hunt_35",
+      "name": "“牙医”",
+      "portrait": "portraits/hunters/“牙医”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/7/74/hqt2bvo10uoi19axnjaq5hwm1101fic.png"
+    },
+    {
+      "id": "hunt_36",
+      "name": "“心兽”",
+      "portrait": "portraits/hunters/“心兽”.png",
+      "original_url": "https://patchwiki.biligame.com/images/dwrg/4/47/f1wh49a2tvjgblm8c4c8uohjzwgqbm1.png"
+    }
+  ]
+}

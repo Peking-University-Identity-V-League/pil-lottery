@@ -1,0 +1,148 @@
+{
+  "source": {
+    "title": "辅助特质",
+    "url": "https://wiki.biligame.com/dwrg/%E8%BE%85%E5%8A%A9%E7%89%B9%E8%B4%A8",
+    "fetched_at": "2026-10-29T09:24:04.694314+00:00",
+    "revision_id": 170922,
+    "html_sha256": "a98f2ce5e6dce5acc8f5ce2e1c955060feafa63c1482c82bc04e376e0fdacc28"
+  },
+  "excluded_names": [
+    "匿迹",
+    "寒栗"
+  ],
+  "count": 8,
+  "traits": [
+    {
+      "name": "聆听",
+      "faction": "监管者",
+      "source_url": "https://wiki.biligame.com/dwrg/%E8%81%86%E5%90%AC",
+      "icon": {
+        "file_title": "文件:聆听图标 底图.png",
+        "url": "https://patchwiki.biligame.com/images/dwrg/0/04/2chduncm4bqru8z5bt530q0aiypcvwg.png",
+        "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E8%81%86%E5%90%AC%E5%9B%BE%E6%A0%87_%E5%BA%95%E5%9B%BE.png",
+        "local_path": "icons/traits/聆听.png",
+        "width": 148,
+        "height": 140,
+        "size_bytes": 26867,
+        "sha1": "141710a260e5b675e210e89f37385d5b12994d80",
+        "sha256": "77c6c4b523461aca26a00367b75117b60c81dc80fc3e0a965d87af99e6b7d1be"
+      }
+    },
+    {
+      "name": "失常",
+      "faction": "监管者",
+      "source_url": "https://wiki.biligame.com/dwrg/%E5%A4%B1%E5%B8%B8",
+      "icon": {
+        "file_title": "文件:失常图标 底图.png",
+        "url": "https://patchwiki.biligame.com/images/dwrg/b/b0/rg1ymnj8delhrzy7r6yu6wnxmuy4ojc.png",
+        "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E5%A4%B1%E5%B8%B8%E5%9B%BE%E6%A0%87_%E5%BA%95%E5%9B%BE.png",
+        "local_path": "icons/traits/失常.png",
+        "width": 148,
+        "height": 140,
+        "size_bytes": 29220,
+        "sha1": "eaf5c7c8ba28f5568cdfad644b4b2470e7d28f38",
+        "sha256": "6bc8693bd2a593f097cc3572c64f88c9ac60a6d14d2640cefd48101df7c3eca6"
+      }
+    },
+    {
+      "name": "兴奋",
+      "faction": "监管者",
+      "source_url": "https://wiki.biligame.com/dwrg/%E5%85%B4%E5%A5%8B",
+      "icon": {
+        "file_title": "文件:兴奋图标 底图.png",
+        "url": "https://patchwiki.biligame.com/images/dwrg/d/d8/ca67buan0y28ov17v8iisvk5idhmkch.png",
+        "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E5%85%B4%E5%A5%8B%E5%9B%BE%E6%A0%87_%E5%BA%95%E5%9B%BE.png",
+        "local_path": "icons/traits/兴奋.png",
+        "width": 148,
+        "height": 140,
+        "size_bytes": 27327,
+        "sha1": "69261e559a4b5c827d185765304fd1b90b147581",
+        "sha256": "c4ad537775ca0191ae877924b33b106b83d9520aac0deceec79bc06c3fabbe15"
+      }
+    },
+    {
+      "name": "巡视者",
+      "faction": "监管者",
+      "source_url": "https://wiki.biligame.com/dwrg/%E5%B7%A1%E8%A7%86%E8%80%85",
+      "icon": {
+        "file_title": "文件:巡视者图标 底图.png",
+        "url": "https://patchwiki.biligame.com/images/dwrg/3/37/2e6dov3xz1lsfr46pgxq0wyiafy0wp2.png",
+        "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E5%B7%A1%E8%A7%86%E8%80%85%E5%9B%BE%E6%A0%87_%E5%BA%95%E5%9B%BE.png",
+        "local_path": "icons/traits/巡视者.png",
+        "width": 148,
+        "height": 153,
+        "size_bytes": 28678,
+        "sha1": "147e35c93b3cc0a20dc6ffa83ce4f400e530c386",
+        "sha256": "9f2e2e644a582fc86f2f95a11b5257fcd2956aff1353cf2f372acc61a7f04f12"
+      }
+    },
+    {
+      "name": "传送",
+      "faction": "监管者",
+      "source_url": "https://wiki.biligame.com/dwrg/%E4%BC%A0%E9%80%81",
+      "icon": {
+        "file_title": "文件:传送图标 底图.png",
+        "url": "https://patchwiki.biligame.com/images/dwrg/6/6b/r970o0sdinw3i0jpdrwbpzn93ism6p8.png",
+        "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E4%BC%A0%E9%80%81%E5%9B%BE%E6%A0%87_%E5%BA%95%E5%9B%BE.png",
+        "local_path": "icons/traits/传送.png",
+        "width": 147,
+        "height": 140,
+        "size_bytes": 28240,
+        "sha1": "e954313f13e3fd79a5160b09773546039cdd5f6c",
+        "sha256": "5c0ea3e1cab16f060637c88a192bf2dcb6e7eb85eda71dda9f0dd0cdcc56eed3"
+      }
+    },
+    {
+      "name": "窥视者",
+      "faction": "监管者",
+      "source_url": "https://wiki.biligame.com/dwrg/%E7%AA%A5%E8%A7%86%E8%80%85",
+      "icon": {
+        "file_title": "文件:窥视者图标 底图.png",
+        "url": "https://patchwiki.biligame.com/images/dwrg/7/75/34e83tzuvhwkoifqke47fkoula1fg0k.png",
+        "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E7%AA%A5%E8%A7%86%E8%80%85%E5%9B%BE%E6%A0%87_%E5%BA%95%E5%9B%BE.png",
+        "local_path": "icons/traits/窥视者.png",
+        "width": 147,
+        "height": 141,
+        "size_bytes": 27459,
+        "sha1": "1aba47151c7abac65632e38da25613d0fb7ed7d4",
+        "sha256": "5e06cbe422cf3294bd0d41392d8d69ee25e2d6312147b156a97ce83ba3cd60cb"
+      }
+    },
+    {
+      "name": "闪现",
+      "faction": "监管者",
+      "source_url": "https://wiki.biligame.com/dwrg/%E9%97%AA%E7%8E%B0",
+      "icon": {
+        "file_title": "文件:闪现图标 底图.png",
+        "url": "https://patchwiki.biligame.com/images/dwrg/2/28/7a5afuasyclnk6ai7u3hnajl98xvson.png",
+        "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E9%97%AA%E7%8E%B0%E5%9B%BE%E6%A0%87_%E5%BA%95%E5%9B%BE.png",
+        "local_path": "icons/traits/闪现.png",
+        "width": 148,
+        "height": 140,
+        "size_bytes": 27697,
+        "sha1": "3e56b74d200885409dec1e00fb2470e05b1753f7",
+        "sha256": "5dbc84089a06e8bea87efedc93ac61625ab0a3fc18bd35519233d1f57e702e33"
+      }
+    },
+    {
+      "name": "移形",
+      "faction": "监管者",
+      "source_url": "https://wiki.biligame.com/dwrg/%E7%A7%BB%E5%BD%A2",
+      "icon": {
+        "file_title": "文件:移形图标 底图.png",
+        "url": "https://patchwiki.biligame.com/images/dwrg/a/a5/defubcu0komj51meysmj3l5mauaja5c.png",
+        "source_url": "https://wiki.biligame.com/dwrg/%E6%96%87%E4%BB%B6:%E7%A7%BB%E5%BD%A2%E5%9B%BE%E6%A0%87_%E5%BA%95%E5%9B%BE.png",
+        "local_path": "icons/traits/移形.png",
+        "width": 148,
+        "height": 140,
+        "size_bytes": 29776,
+        "sha1": "72b97f380fca301182eba167540071794de65c20",
+        "sha256": "d9bc582f2f3f06c0b07596dfb470c28fd4080d0e26f3b5fbba4d119cb953d4f5"
+      }
+    }
+  ],
+  "verification": {
+    "verified_at": "2026-10-29T09:27:46.050003+00:00",
+    "method": "原站 imageinfo SHA-1、字节数、PNG 签名及尺寸核对。"
+  }
+}

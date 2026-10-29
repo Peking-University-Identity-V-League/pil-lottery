@@ -1,0 +1,2322 @@
+{
+    "survivor": {
+        "name": "求生者",
+        "MAX_SKILL_POINTS": 26,
+        "MAX_ULTIMATE_TALENTS": 2,
+        "ULTIMATE_TALENT_IDS": [
+            "up_4",
+            "right_4",
+            "down_4",
+            "left_4"
+        ],
+        "theme": {
+            "--line-color": "#3A5C6A",
+            "--node-default-stroke": "#598792",
+            "--node-default-fill": "rgba(95, 226, 233, 0.15)",
+            "--line-learned-color": "#61D5DD",
+            "--glow-color": "#A6F7FA"
+        },
+        "treeData": {
+            "nodes": [
+                {
+                    "id": "center",
+                    "x": 0,
+                    "y": 0,
+                    "name": "",
+                    "label": "",
+                    "isCenter": true,
+                    "content": ""
+                },
+                {
+                    "id": "up_1",
+                    "x": 0,
+                    "y": -85,
+                    "name": "关系场",
+                    "label": "0/1",
+                    "content": "被监管者持续追击超过5秒后，若离开监管者的警戒范围且该监管者不处于追击状态，则会向所有求生者显示监管者的轮廓，持续3秒<br>被施加该效果的监管者在轮廓显示结束后的40秒内将免疫该效果",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "被敌方骑士持续追击超过5秒后，若离开敌方骑士的警戒范围且该监管者不处于追击状态，则会向所有队友显示敌方骑士的轮廓，持续3秒<br>被施加该效果的敌方骑士在轮廓显示结束后的40秒内将免疫该效果",
+                    "describe": "你的努力，其他人也能受益"
+                },
+                {
+                    "id": "up_2",
+                    "x": 0,
+                    "y": -170,
+                    "name": "祸福相依",
+                    "label": "0/3",
+                    "content": "当求生者破译密码机触电，会显示监管者的位置3/5/7秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "破译密码机触电，会显示敌方骑士的位置3/5/7秒",
+                    "describe": "得与失，往往在一线之间…"
+                },
+                {
+                    "id": "up_3",
+                    "x": 0,
+                    "y": -255,
+                    "name": "韦伯定律",
+                    "label": "0/3",
+                    "content": "被监管者在其18米范围内持续追击3秒时，立即增加10%/15%/20%移动速度，持续3.5秒，该效果一局仅触发一次",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "被敌方骑士在其18米范围内持续追击3秒时，立即增加10%/15%/20%移动速度，持续3.5秒，该效果一局仅触发一次",
+                    "describe": "只有第一次才是最大的刺激",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.10, 0.15, 0.20],
+                            "condition": "被追击3秒时",
+                            "notes": "一局仅触发一次，持续3.5秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_4",
+                    "x": 0,
+                    "y": -340,
+                    "name": "飞轮效应",
+                    "label": "0/1",
+                    "content": "携带该特质会获得主动技能-飞轮效应，技能效果：向角色面朝方向冲刺3.5米，0.4秒内免疫绝大多数伤害和控制，冷却时间135秒，开局冷却时间50秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "万事开头难！"
+                },
+                {
+                    "id": "up_inter_L",
+                    "x": -60,
+                    "y": -145,
+                    "name": "幸存者本能",
+                    "label": "0/1",
+                    "content": "有1/2/3名求生者被淘汰时，自身破译密码机的速度增加6%/18%/36%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "至暗之处，方可见至亮之光",
+                    "effects": [
+                        {
+                            "statKey": "decodingSpeed",
+                            "type": "additive",
+                            "values": [[0.06, 0.36]],
+                            "condition": "有1/2/3名求生者被淘汰时生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_inter_R",
+                    "x": 60,
+                    "y": -145,
+                    "name": "相濡以沫",
+                    "label": "0/1",
+                    "content": "与未被监管者追击的受伤求生者相互可见，奔向该求生者的移动速度增加4%~8%，距离越远加速越多，若进入被追击状态，加速效果消失。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "别担心，我来帮你",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [[0.04,0.08]],
+                            "condition": "奔向未被监管者追击的受伤求生者时",
+                            "notes": "距离越远加速越多，若进入被追击状态，加速效果消失。"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_leaf_L1",
+                    "x": -75,
+                    "y": -230,
+                    "name": "防御机制",
+                    "label": "0/3",
+                    "content": "受伤状态下，跨越木板和窗户的交互速度增加6%/9%/12%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "感受到过载压力时，自我防御开启",
+                    "effects": [
+                        {
+                            "statKey": "vaultingSpeed",
+                            "type": "additive",
+                            "values": [0.06, 0.09, 0.12],
+                            "condition": "受伤状态下"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_leaf_L2",
+                    "x": -130,
+                    "y": -190,
+                    "name": "愈合",
+                    "label": "0/3",
+                    "content": "受到他人治疗的时间减少10%。受伤状态下治疗进度将缓慢地自动增加，每秒增加0.16%/0.32%/0.48%，最多增加到16%/32%/48%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "强大的意志力造就了强大的身躯！",
+                    "effects": [
+                        {
+                            "statKey": "healingSpeed",
+                            "type": "additive",
+                            "values": [0.11, 0.11, 0.11],
+                            "notes": "固定10%"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_leaf_R1",
+                    "x": 75,
+                    "y": -230,
+                    "name": "共生效应",
+                    "label": "0/1",
+                    "content": "奔向被挂上狂欢之椅的求生者时，移动速度增加6%~10%，距离被挂上狂欢之椅的求生者越远移动速度的增加量越大",
+                    "boshi": "奔向倒地的求生者时，移动速度增加6%~10%，距离倒地的求生者越远移动速度的增加量越大",
+                    "lianhe": "",
+                    "taluo": "奔向被挂上狂欢之椅的己方国王时，移动速度增加6%~10%，距离国王越远移动速度的增加量越大",
+                    "describe": "也许你能拯救的，不仅仅只有自己",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [[0.06,0.1]],
+                            "condition": "奔向被挂上狂欢之椅的求生者时",
+                            "notes": "距离被挂上狂欢之椅的求生者越远移动速度的增加量越大"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_leaf_R2",
+                    "x": 130,
+                    "y": -190,
+                    "name": "依恋效应",
+                    "label": "0/1",
+                    "content": "治疗受伤状态队友的速度增加10%，若本次治疗未完成，已治疗进度的30%会以每秒1.4%总进度的速率继续增加，本次治疗完成后效果消失。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "短暂的依恋，足以撑过漫长的疗愈",
+                    "effects": [
+                        {
+                            "statKey": "healingSpeed",
+                            "type": "additive",
+                            "values": [0.1],
+                            "condition": "治疗受伤状态队友的速度增加"
+                        }
+                    ]
+                },
+                {
+                    "id": "right_1",
+                    "x": 85,
+                    "y": 0,
+                    "name": "好奇心",
+                    "page": "人格_好奇心",
+                    "label": "0/1",
+                    "content": "当场上仅剩3台未完全破译的密码机时，永久显示所有密码机的轮廓，若密码机破译进度大于50%，该密码机的轮廓颜色将发生变化。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "谁能控制住对解密的好奇心？"
+                },
+                {
+                    "id": "right_2",
+                    "x": 170,
+                    "y": 0,
+                    "name": "不屈不挠",
+                    "label": "0/3",
+                    "content": "倒地自愈速度提高10%/15%/20%，倒地移动速度提高30%/60%/90%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "永远不会真正倒下!",
+                    "effects": [
+                        {
+                            "statKey": "downedSelfHealingSpeed",
+                            "type": "additive",
+                            "values": [0.10, 0.15, 0.20],
+                            "condition": "全局",
+                            "notes": ""
+                        },
+                        {
+                            "statKey": "downedMovementSpeed",
+                            "type": "additive",
+                            "values": [0.30, 0.60, 0.90],
+                            "condition": "全局",
+                            "notes": ""
+                        }
+                    ]
+                },
+                {
+                    "id": "right_3",
+                    "x": 255,
+                    "y": 0,
+                    "name": "逃逸",
+                    "label": "0/3",
+                    "content": "逃脱门通电后，立刻增加3%/4%/5%移动速度，持续120秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "己方破译进度满300%时，立刻增加3%/4%/5%移动速度，持续60秒",
+                    "describe": "如果你只懂得逃跑，那就逃吧！",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.03, 0.04, 0.05],
+                            "condition": "逃脱门通电后生效",
+                            "notes": "持续120秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "right_4",
+                    "x": 340,
+                    "y": 0,
+                    "name": "回光返照",
+                    "label": "0/1",
+                    "content": "逃脱门通电后，立刻恢复一半恐惧值并增加50%冲刺速度，持续5秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "己方破译进度满300%时，立刻恢复一半恐惧值并增加50%冲刺速度，持续5秒",
+                    "describe": "最后的一线希望会导向什么结局？",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.5,0.5,0.5],
+                            "condition": "逃脱门通电后瞬间生效",
+                            "notes": "持续5秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "right_inter_T",
+                    "x": 150,
+                    "y": -80,
+                    "name": "分心",
+                    "label": "0/1",
+                    "content": "逃脱门通电后，若监管者在自身32米范围内，每15秒显示监管者5秒。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "不要懈怠——牢记：黎明之前，最为黑暗"
+                },
+                {
+                    "id": "right_inter_B",
+                    "x": 150,
+                    "y": 80,
+                    "name": "心灵感应",
+                    "label": "0/1",
+                    "content": "逃脱门通电后，每40秒显示所有求生者5秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "逃脱门通电后，每40秒显示队友5秒",
+                    "describe": "你不是一个人！"
+                },
+                {
+                    "id": "right_leaf_T1",
+                    "x": 230,
+                    "y": -75,
+                    "name": "触摸效应",
+                    "label": "0/3",
+                    "content": "成功治疗自己或队友时，被治疗的目标立即增加16%/28%/40%移动速度，持续1.5秒，不处于追击状态时，加速时间延长3秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "危险中的紧急疗愈，更加振奋人心",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.16, 0.28, 0.40],
+                            "scope": "team",
+                            "condition": "成功治疗自己或队友时生效",
+                            "notes": "持续1.5秒，不处于追击状态时延长3秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "right_leaf_T2",
+                    "x": 190,
+                    "y": -145,
+                    "name": "假寐",
+                    "label": "0/3",
+                    "content": "减缓狂欢之椅上3%/6%/9%起飞倒计时速度",
+                    "boshi": "减缓倒地被淘汰3%/6%/9%的速度",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "仅靠假装，并不会改变现有的一切",
+                    "effects": [
+                        {
+                            "statKey": "chairFlySpeed",
+                            "type": "multiplicative",
+                            "values": [0.03, 0.06, 0.09],
+                            "condition": "全局",
+                            "notes": ""
+                        }
+                    ]
+                },
+                {
+                    "id": "right_leaf_B1",
+                    "x": 230,
+                    "y": 75,
+                    "name": "结伴效应",
+                    "label": "0/1",
+                    "content": "从狂欢之椅上被救下后，自身获得28%的移速加成，持续2秒",
+                    "boshi": "倒地状态下被队友成功治疗后，自身获得28%的移速加成，持续2秒",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "跟上同伴，逃离这里",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.28],
+                            "condition": "从狂欢之椅上被救下后生效",
+                            "notes": "持续2秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "right_leaf_B2",
+                    "x": 190,
+                    "y": 145,
+                    "name": "观众效应",
+                    "label": "0/1",
+                    "content": "有其他求生者处于狂欢之椅上时，自身破译密码机速度增加10%。当场上总破译进度达到300%时永久失去该效果",
+                    "boshi": "有其他求生者处于倒地状态时，自身破译密码机速度增加10%。当场上总破译进度达到300%永久失去该效果",
+                    "lianhe": "",
+                    "taluo": "我方国王处于狂欢之椅上时，自身破译密码机速度增加10%。当场上总破译进度达到300%永久失去该效果",
+                    "describe": "观众已经就位，需要更加卖力地表演了",
+                    "effects": [
+                        {
+                            "statKey": "decodingSpeed",
+                            "type": "additive",
+                            "values": [0.10],
+                            "condition": "有其他求生者处于狂欢之椅上时生效",
+                            "notes": "当场上总破译进度达到300%时永久失去该效果"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_1",
+                    "x": 0,
+                    "y": 85,
+                    "name": "鸟笼效应",
+                    "label": "0/1",
+                    "content": "当有其他求生者与自己身处地下室内时，自身移动速度提升10%，受击加速效果提升20%",
+                    "boshi": "",
+                    "lianhe": "当有其他求生者与自己身处同一地下室内时，自身移动速度提升10%，受击加速效果提升20%",
+                    "taluo": "",
+                    "describe": "配上金丝雀的空鸟笼，才格外赏心悦目",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.10],
+                            "condition": "当有其他求生者与自己身处地下室内时生效"
+                        },
+                        {
+                            "statKey": "hitRecoverySpeed",
+                            "type": "additive",
+                            "values": [0.20],
+                            "condition": "当有其他求生者与自己身处地下室内时生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_2",
+                    "x": 0,
+                    "y": 170,
+                    "name": "救世主情结",
+                    "label": "0/3",
+                    "content": "从狂欢之椅上救下队友后，自身获得5%/10%/15%的移速加成，持续3秒",
+                    "boshi": "成功治疗倒地队友后，自身获得5%/10%/15%的移速加成，持续3秒",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "拯救那些受困的人，能给我们指引光的讯息与爱的鼓励",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.05, 0.10, 0.15],
+                            "condition": "从狂欢之椅上救下队友后生效",
+                            "notes": "持续3秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_3",
+                    "x": 0,
+                    "y": 255,
+                    "name": "从众心理",
+                    "label": "0/3",
+                    "content": "当有其他求生者被放上狂欢之椅时，在狂欢之椅12/18/24米半径范围内，自身移动速度增加4%/6%/8%",
+                    "boshi": "在倒地求生者附近12/18/24米半径范围内，自身移动速度增加4%/6%/8%",
+                    "lianhe": "",
+                    "taluo": "当己方国王被放上狂欢之椅时，在狂欢之椅12/18/24米半径范围内，自身移动速度增加4%/6%/8%",
+                    "describe": "已经有人成为榜样了，你想成为下一个么？",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.04, 0.06, 0.08],
+                            "condition": "当有其他求生者被放上狂欢之椅时，在狂欢之椅12/18/24米半径范围内生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_4",
+                    "x": 0,
+                    "y": 340,
+                    "name": "化险为夷",
+                    "label": "0/1",
+                    "content": "当在狂欢之椅上成功救下求生者后，自身和该求生者会进入20秒无敌时间，期间不会进入倒地状态，不能被治疗；期间受到的导致倒地的伤害将在无敌时间过后瞬间生效；成功救下求生者后，施救者的该天赋不会再次触发",
+                    "boshi": "成功治疗倒地的求生者后自身和该求生者会进入20秒无敌时间，期间不会进入倒地状态，不能被治疗；期间受到的导致倒地的伤害将在无敌时间过后瞬间生效；成功救下求生者后，施救者的该天赋不会再次触发",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "不要放弃，才能创造奇迹"
+                },
+                {
+                    "id": "down_inter_L",
+                    "x": -60,
+                    "y": 145,
+                    "name": "宣泄效应",
+                    "label": "0/1",
+                    "content": "受击加速持续时间延长0.3秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "将恐惧的压力转化成动力吧！"
+                },
+                {
+                    "id": "down_inter_R",
+                    "x": 60,
+                    "y": 145,
+                    "name": "悄无声息",
+                    "label": "0/1",
+                    "content": "当有其他求生者被放上狂欢之椅时，在狂欢之椅22米半径范围内，跑动过程中不会留下脚印",
+                    "boshi": "在倒地求生者附近22米半径范围内，跑动过程中不会留下脚印",
+                    "lianhe": "",
+                    "taluo": "当己方国王被放上狂欢之椅时，在狂欢之椅22米半径范围内，跑动过程中不会留下脚印",
+                    "describe": "现在的我…永远没有人能听见！"
+                },
+                {
+                    "id": "down_leaf_L1",
+                    "x": -75,
+                    "y": 230,
+                    "name": "应急储备",
+                    "label": "0/1",
+                    "content": "主手持物消耗完后（仅支持消耗性手持物），显示距离最近的箱子，且可以瞬间开启下一个箱子，该效果在化险为夷状态下无法生效。（仅限一次）",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "弹尽粮绝？不，还有机会。"
+                },
+                {
+                    "id": "down_leaf_L2",
+                    "x": -130,
+                    "y": 190,
+                    "name": "共情",
+                    "label": "0/1",
+                    "content": "有求生者倒地后，增加14%的移动速度，持续12秒，当附近14米范围内有监管者或队友离开倒地状态时，效果立即结束，冷却30秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "有求生者队友倒地后，增加14%的移动速度，持续12秒，当附近14米范围内有敌方骑士或队友离开倒地状态时，效果立即结束，冷却30秒",
+                    "describe": "受害者带来的共情，更加触目惊心",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.14],
+                            "condition": "有求生者倒地后生效",
+                            "notes": "持续12秒，有条件结束，冷却30秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_leaf_R1",
+                    "x": 75,
+                    "y": 230,
+                    "name": "避难所",
+                    "label": "0/3",
+                    "content": "每在狂欢之椅上救下求生者后，增加8%/16%/24%倒地自愈和被治疗的速度，可叠加2层",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "劫后余生的人会向你祈求最后一丝抚慰和疗伤",
+                    "effects": [
+                        {
+                            "statKey": "downedSelfHealingSpeed",
+                            "type": "additive",
+                            "values": [[0.08,0.16], [0.16,0.32], [0.24,0.48]],
+                            "condition": "每在狂欢之椅上救下求生者后生效",
+                            "notes": "可叠加2层"
+                        },
+                        {
+                            "statKey": "healingSpeed",
+                            "type": "additive",
+                            "values": [[0.08,0.16], [0.16,0.32], [0.24,0.48]],
+                            "condition": "每在狂欢之椅上救下求生者后生效",
+                            "notes": "可叠加2层"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_leaf_R2",
+                    "x": 130,
+                    "y": 190,
+                    "name": "医者",
+                    "label": "0/3",
+                    "content": "受伤自愈和治疗他人的速度提高15%/20%/25%。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "久病成医，但顽疾难祛",
+                    "effects": [
+                        {
+                            "statKey": "selfHealingSpeed",
+                            "type": "additive",
+                            "values": [0.15, 0.20, 0.25],
+                            "condition":"全局"
+                        },
+                        {
+                            "statKey": "healSpeed",
+                            "type": "additive",
+                            "values": [0.15, 0.20, 0.25],
+                            "condition":"全局"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_1",
+                    "x": -85,
+                    "y": 0,
+                    "name": "火中取栗",
+                    "label": "0/1",
+                    "content": "从狂欢之椅上救人速度增加40%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "这双手甚至能解下受难耶稣的荆棘之冠",
+                    "effects": [
+                        {
+                            "statKey": "chairRescueSpeed",
+                            "type": "additive",
+                            "values": [0.40],
+                            "condition": "全局"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_2",
+                    "x": -170,
+                    "y": 0,
+                    "name": "马蝇效应",
+                    "label": "0/3",
+                    "content": "15米范围内存在监管者持续8秒，放板速度提升8%/14%/20%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "15米范围内存在敌方骑士持续8秒，放板速度提升8%/14%/20%",
+                    "describe": "你可以再快一点",
+                    "effects": [
+                        {
+                            "statKey": "boardDropSpeed",
+                            "type": "additive",
+                            "values": [0.08, 0.14, 0.20],
+                            "condition": "15米范围内存在监管者持续8秒时生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_3",
+                    "x": -255,
+                    "y": 0,
+                    "name": "肌肉记忆",
+                    "label": "0/3",
+                    "content": "跨越木板和窗户的交互速度提升5%/10%/15%，冷却时间25秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "成熟的猎物．往往具备高效逃脱的手段",
+                    "effects": [
+                        {
+                            "statKey": "vaultingSpeed",
+                            "type": "additive",
+                            "values": [0.05, 0.10, 0.15],
+                            "notes": "冷却时间25秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_4",
+                    "x": -340,
+                    "y": 0,
+                    "name": "膝跳反射",
+                    "label": "0/1",
+                    "content": "跨越窗户后，冲刺时增加50%移动速度，持续时间3秒，冷却时间40秒<br>跨越木板后，冲刺时增加50%移动速度，持续时间3秒，冷却时间40秒<br>两种效果的冷却时间独立计算，若在监管者的警戒范围外触发，则移动速度的增加值降低为25%<br>效果结束后，若在监管者的警戒范围内，则额外增加8%移动速度，持续4秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "跨越窗户后，冲刺时增加50%移动速度，持续时间3秒，冷却时间40秒<br>跨越木板后，冲刺时增加50%移动速度，持续时间3秒，冷却时间40秒<br>两种效果的冷却时间独立计算，若在敌方骑士的警戒范围外触发，则移动速度的增加值降低为25%<br>效果结束后，若在监管者的警戒范围内，则额外增加8%移动速度，持续4秒",
+                    "describe": "危机感不过是另一种强烈的刺激而已",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [[0.08,0.25,0.50]],
+                            "condition": "跨越窗户、板子后",
+                            "notes": "冲刺时增加50%移动速度，持续时间3秒，冷却时间40秒。两种效果的冷却时间独立计算，若在敌方骑士的警戒范围外触发，则移动速度的增加值降低为25%；效果结束后，若在监管者的警戒范围内，则额外增加8%移动速度，持续4秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_inter_T",
+                    "x": -150,
+                    "y": -80,
+                    "name": "绝处逢生",
+                    "label": "0/1",
+                    "content": "倒地后可以突破自愈上限，自行恢复到受伤状态；同场游戏中只能恢复1次",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "倒地后可以突破自愈上限，自行恢复到受伤状态；无视自愈次数限制。",
+                    "describe": "在这个危险的游戏中，你最需要依靠的还是自己"
+                },
+                {
+                    "id": "left_inter_B",
+                    "x": -150,
+                    "y": 80,
+                    "name": "劳有所得",
+                    "label": "0/1",
+                    "content": "自身破译完成密码机后，增加25%的移动速度并获得抵挡监管者大部分攻击1次的效果，持续4秒。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "做得不错，现在，跑起来",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.25],
+                            "condition": "自身破译完成密码机后",
+                            "notes": "增加25%的移动速度并获得抵挡监管者大部分攻击1次的效果，持续4秒。"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_leaf_T1",
+                    "x": -230,
+                    "y": -75,
+                    "name": "酝酿效应",
+                    "label": "0/1",
+                    "content": "有求生者上椅或破译加速阶段开始后，求生者在非破译状态的破译速度每秒增加1%，最多增加12%，开始破译10秒后或脱离破译状态时，该增益效果清除。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "稍许的搁置，或许能带来新的思路",
+                    "effects": [
+                        {
+                            "statKey": "decodingSpeed",
+                            "type": "additive",
+                            "values": [[0.01,0.12]],
+                            "condition": "有求生者上椅或破译加速阶段开始后，求生者在非破译状态的破译速度每秒增加1%，最多增加12%",
+                            "notes": "开始破译10秒后或脱离破译状态时，该增益效果清除。"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_leaf_T2",
+                    "x": -190,
+                    "y": -145,
+                    "name": "感觉适应",
+                    "label": "0/1",
+                    "content": "16米范围内监管者通过交互行为破坏木板或翻越窗户时，显示监管者轮廓，持续7秒，冷却时间16秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "16米范围内敌方骑士通过交互行为破坏木板或翻越窗户时，显示敌方骑士轮廓，持续7秒，冷却时间16秒",
+                    "describe": "你的视觉和听觉早已适应身处庄园游戏之中"
+                },
+                {
+                    "id": "left_leaf_B1",
+                    "x": -230,
+                    "y": 75,
+                    "name": "求生意志",
+                    "label": "0/3",
+                    "content": "绑上气球上的挣扎速度增加10%/15%/20%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "如同搁浅的鲸鱼，不挣扎，就剩绝望",
+                    "effects": [
+                        {
+                            "statKey": "struggleSpeed",
+                            "type": "additive",
+                            "values": [0.10, 0.15, 0.20],
+                            "condition": "全局"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_leaf_B2",
+                    "x": -190,
+                    "y": 145,
+                    "name": "巨力",
+                    "label": "0/3",
+                    "content": "巨大的力量使你用木板击中监管者后，监管者的眩晕恢复速率将减少10%/15%/20%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "千钧一发才能激发出真正的潜能",
+                    "effects": [
+                        {
+                            "statKey": "stunRecoverySpeed",
+                            "type": "multiplicative",
+                            "values": [0.10, 0.15, 0.20],
+                            "scope": "opponent",
+                            "condition": "用木板击中监管者后生效"
+                        }
+                    ]
+                }
+            ],
+            "edges": [
+                {
+                    "from": "center",
+                    "to": "up_1"
+                },
+                {
+                    "from": "up_1",
+                    "to": "up_2"
+                },
+                {
+                    "from": "up_2",
+                    "to": "up_3"
+                },
+                {
+                    "from": "up_3",
+                    "to": "up_4"
+                },
+                {
+                    "from": "up_1",
+                    "to": "up_inter_L"
+                },
+                {
+                    "from": "up_1",
+                    "to": "up_inter_R"
+                },
+                {
+                    "from": "up_inter_L",
+                    "to": "up_leaf_L1"
+                },
+                {
+                    "from": "up_inter_L",
+                    "to": "up_leaf_L2"
+                },
+                {
+                    "from": "up_inter_R",
+                    "to": "up_leaf_R1"
+                },
+                {
+                    "from": "up_inter_R",
+                    "to": "up_leaf_R2"
+                },
+                {
+                    "from": "center",
+                    "to": "right_1"
+                },
+                {
+                    "from": "right_1",
+                    "to": "right_2"
+                },
+                {
+                    "from": "right_2",
+                    "to": "right_3"
+                },
+                {
+                    "from": "right_3",
+                    "to": "right_4"
+                },
+                {
+                    "from": "right_1",
+                    "to": "right_inter_T"
+                },
+                {
+                    "from": "right_1",
+                    "to": "right_inter_B"
+                },
+                {
+                    "from": "right_inter_T",
+                    "to": "right_leaf_T1"
+                },
+                {
+                    "from": "right_inter_T",
+                    "to": "right_leaf_T2"
+                },
+                {
+                    "from": "right_inter_B",
+                    "to": "right_leaf_B1"
+                },
+                {
+                    "from": "right_inter_B",
+                    "to": "right_leaf_B2"
+                },
+                {
+                    "from": "center",
+                    "to": "down_1"
+                },
+                {
+                    "from": "down_1",
+                    "to": "down_2"
+                },
+                {
+                    "from": "down_2",
+                    "to": "down_3"
+                },
+                {
+                    "from": "down_3",
+                    "to": "down_4"
+                },
+                {
+                    "from": "down_1",
+                    "to": "down_inter_L"
+                },
+                {
+                    "from": "down_1",
+                    "to": "down_inter_R"
+                },
+                {
+                    "from": "down_inter_L",
+                    "to": "down_leaf_L1"
+                },
+                {
+                    "from": "down_inter_L",
+                    "to": "down_leaf_L2"
+                },
+                {
+                    "from": "down_inter_R",
+                    "to": "down_leaf_R1"
+                },
+                {
+                    "from": "down_inter_R",
+                    "to": "down_leaf_R2"
+                },
+                {
+                    "from": "center",
+                    "to": "left_1"
+                },
+                {
+                    "from": "left_1",
+                    "to": "left_2"
+                },
+                {
+                    "from": "left_2",
+                    "to": "left_3"
+                },
+                {
+                    "from": "left_3",
+                    "to": "left_4"
+                },
+                {
+                    "from": "left_1",
+                    "to": "left_inter_T"
+                },
+                {
+                    "from": "left_1",
+                    "to": "left_inter_B"
+                },
+                {
+                    "from": "left_inter_T",
+                    "to": "left_leaf_T1"
+                },
+                {
+                    "from": "left_inter_T",
+                    "to": "left_leaf_T2"
+                },
+                {
+                    "from": "left_inter_B",
+                    "to": "left_leaf_B1"
+                },
+                {
+                    "from": "left_inter_B",
+                    "to": "left_leaf_B2"
+                }
+            ]
+        }
+    },
+    "hunter": {
+        "name": "监管者",
+        "MAX_SKILL_POINTS": 26,
+        "MAX_ULTIMATE_TALENTS": 2,
+        "ULTIMATE_TALENT_IDS": [
+            "up_4",
+            "right_4",
+            "down_4",
+            "left_4"
+        ],
+        "theme": {
+            "--line-color": "#5A4A44",
+            "--node-default-stroke": "#8C6F62",
+            "--node-default-fill": "rgba(217, 138, 112, 0.2)",
+            "--line-learned-color": "#D98A70",
+            "--glow-color": "#FFB59B"
+        },
+        "treeData": {
+            "nodes": [
+                {
+                    "id": "center",
+                    "x": 0,
+                    "y": 0,
+                    "name": "",
+                    "label": "",
+                    "isCenter": true,
+                    "content": ""
+                },
+                {
+                    "id": "up_1",
+                    "x": 0,
+                    "y": -85,
+                    "name": "恶化",
+                    "label": "0/1",
+                    "content": "受伤的求生者破译、治疗和破坏速度减少5%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "受伤的敌方求生者破译、治疗和破坏速度减少5%",
+                    "describe": "恶化的不仅仅是伤口，还有心里不断渗透的惧意",
+                    "effects": [
+                        {
+                            "statKey": "decodingSpeed",
+                            "type": "multiplicative",
+                            "values": [0.05],
+                            "scope": "opponent",
+                            "condition": "受伤求生者生效"
+                        },
+                        {
+                            "statKey": "healingSpeed",
+                            "type": "multiplicative",
+                            "values": [0.05],
+                            "scope": "opponent",
+                            "condition": "受伤求生者生效"
+                        },
+                        {
+                            "statKey": "destructionSpeed",
+                            "type": "multiplicative",
+                            "values": [0.05],
+                            "scope": "opponent",
+                            "condition": "受伤求生者生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_2",
+                    "x": 0,
+                    "y": -170,
+                    "name": "枯萎",
+                    "label": "0/3",
+                    "content": "当有求生者被放上狂欢之椅时，且监管者距离狂欢之椅10米范围外时，监管者的普通攻击会使求生者的受击加速效果减少15%/25%/35%",
+                    "boshi": "当有求生者处于倒地状态，且监管者距离该求生者10米范围外时，监管者的普通攻击会使求生者的受击加速效果减少15%/25%/35%",
+                    "lianhe": "",
+                    "taluo": "当敌方国王被放上狂欢之椅时，且自己距离狂欢之椅10米范围外时，普通攻击会使敌方侍从的受击加速效果减少15%/25%/35%",
+                    "describe": "通往终局的加速进程",
+                    "effects": [
+                        {
+                            "statKey": "hitRecoverySpeed",
+                            "type": "multiplicative",
+                            "values": [0.15, 0.25, 0.35],
+                            "scope": "opponent",
+                            "condition": "当有求生者被放上狂欢之椅时，且监管者距离狂欢之椅10米范围外时，普通攻击命中后生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_3",
+                    "x": 0,
+                    "y": -255,
+                    "name": "破坏欲",
+                    "label": "0/3",
+                    "content": "摧毁木板的速度增加20%/30%/40%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "只有不断破坏才能发泄，一个都不放过！",
+                    "effects": [
+                        {
+                            "statKey": "boardBreakSpeed",
+                            "type": "additive",
+                            "values": [0.20, 0.30, 0.40],
+                            "condition": "全局",
+                            "notes": ""
+                        }
+                    ]
+                },
+                {
+                    "id": "up_4",
+                    "x": 0,
+                    "y": -340,
+                    "name": "禁闭空间",
+                    "label": "0/1",
+                    "content": "当监管者跨过窗户时，交互速度提高10%，同时可以封住窗户20秒，封禁效果持续期间求生者不能再翻越此窗户。监管者再次跨过被封住的窗户时，封禁效果时长重置。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "盒子里的猎物，永远逃不出手掌心！",
+                    "effects": [
+                        {
+                            "statKey": "vaultingSpeed",
+                            "type": "additive",
+                            "values": [0.10],
+                            "condition": "当监管者跨过窗户时"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_inter_L",
+                    "x": -60,
+                    "y": -145,
+                    "name": "恐慌",
+                    "label": "0/1",
+                    "content": "每当有求生者受伤、倒地或者被放上狂欢之椅时，会使所有求生者的破译、治疗和破坏的速度降低2.5%，效果会叠加",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "每当敌方求生者受伤、倒地或者被放上狂欢之椅时，会使敌方求生者的破译、治疗和破坏的速度降低2.5%，效果会叠加",
+                    "describe": "临近绝望的恐慌会传染，一个，两个，三个，四个……",
+                    "effects": [
+                        {
+                            "statKey": "decodingSpeed",
+                            "type": "multiplicative",
+                            "values": [[0.025,0.1]],
+                            "scope": "opponent",
+                            "condition": "每当有求生者受伤、倒地或者被放上狂欢之椅时生效",
+                            "notes": "效果会叠加"
+                        },
+                        {
+                            "statKey": "healingSpeed",
+                            "type": "multiplicative",
+                            "values": [[0.025,0.1]],
+                            "scope": "opponent",
+                            "condition": "每当有求生者受伤、倒地或者被放上狂欢之椅时生效",
+                            "notes": "效果会叠加"
+                        },
+                        {
+                            "statKey": "destructionSpeed",
+                            "type": "multiplicative",
+                            "values": [[0.025,0.1]],
+                            "scope": "opponent",
+                            "condition": "每当有求生者受伤、倒地或者被放上狂欢之椅时生效",
+                            "notes": "效果会叠加"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_inter_R",
+                    "x": 60,
+                    "y": -145,
+                    "name": "执念",
+                    "label": "0/1",
+                    "content": "脱离追击状态后且自身附近16米范围内没有可行动的求生者时移动速度增加5%，持续15秒。再次进入追击、牵起气球或自身附近16米范围出现可行动的求生者时提前结束此效果。<br>【WIKI编辑组注：持续1秒没有可行动的求生者后可触发，并且隔着场景障碍物的可行动求生者也会影响执念的触发和提前结束】",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "已经锁定的猎物，不会轻易放过。",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.05],
+                            "condition": "脱离追击状态后且自身附近16米范围内没有可行动的求生者时生效",
+                            "notes": "持续15秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_leaf_L1",
+                    "x": -75,
+                    "y": -230,
+                    "name": "狂暴",
+                    "label": "0/3",
+                    "content": "当有求生者被放上狂欢之椅时，自身攻击恢复速度增加10%/15%/20%",
+                    "boshi": "当有求生者处于倒地状态时，自身攻击恢复速度增加10%/15%/20%",
+                    "lianhe": "【WIKI编辑组测试：联合狩猎模式中，仅在放置求生者的狂欢之椅约25.3米范围内生效。】",
+                    "taluo": "当敌方国王被放上狂欢之椅时，自身攻击恢复速度增加15%/20%/25%",
+                    "describe": "逐渐失去视觉的慌乱，会令人陷入绝望",
+                    "effects": [
+                        {
+                            "statKey": "attackRecoverySpeed",
+                            "type": "additive",
+                            "values": [0.10, 0.15, 0.20],
+                            "condition": "当有求生者被放上狂欢之椅时生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_leaf_L2",
+                    "x": -130,
+                    "y": -190,
+                    "name": "愤怒",
+                    "label": "0/3",
+                    "content": "铁血特质让监管者被击晕、被挣扎掉落和被其他强力控制后的恢复速率增加7%/15%/20%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "惹怒了不该招惹的存在，连后悔都没有机会",
+                    "effects": [
+                        {
+                            "statKey": "stunRecoverySpeed",
+                            "type": "additive",
+                            "values": [0.07, 0.15, 0.20],
+                            "condition": "全局"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_leaf_R1",
+                    "x": 75,
+                    "y": -230,
+                    "name": "嬉弄",
+                    "label": "0/1",
+                    "content": "牵起气球的速度加快20%。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "你喜欢什么颜色的气球？",
+                    "effects": [
+                        {
+                            "statKey": "ballooningSpeed",
+                            "type": "additive",
+                            "values": [0.20],
+                            "condition": "全局"
+                        }
+                    ]
+                },
+                {
+                    "id": "up_leaf_R2",
+                    "x": 130,
+                    "y": -190,
+                    "name": "饥荒",
+                    "label": "0/1",
+                    "content": "游戏开始的前50秒内，若自身16米范围内没有求生者，则会使所有求生者的破译速度降低12%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "游戏开始的前50秒内，若自身16米范围内没有敌方求生者，则会使所有敌方求生者的破译速度降低12%",
+                    "describe": "饥饿带来的气场，足以影响一切",
+                    "effects": [
+                        {
+                            "statKey": "decodingSpeed",
+                            "type": "multiplicative",
+                            "values": [0.12],
+                            "scope": "opponent",
+                            "condition": "游戏开始的前50秒内，若自身18米范围内没有求生者生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "right_1",
+                    "x": 85,
+                    "y": 0,
+                    "name": "封禁",
+                    "label": "0/1",
+                    "content": "游戏开始时距离自身最远的1台密码机会进入无法破译状态，持续30秒（黑杰克模式不可用）<br>【WIKI编辑组注：求生者靠近被封锁的密码机18米范围内时可以看见其特殊的轮廓。】",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "从一开始，就注定没有逃跑的希望"
+                },
+                {
+                    "id": "right_2",
+                    "x": 170,
+                    "y": 0,
+                    "name": "狩猎本能",
+                    "label": "0/3",
+                    "content": "每一个未受伤的求生者会让监管者在非追击状态时的移速提升1%/1.5%/2%，一阶技能解锁后不再提供",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "每一个未受伤的敌方求生者会让自己在非追击状态时的移速提升1%/1.5%/2%，一阶技能解锁后不再提供",
+                    "describe": "鲨鱼如何狩猎？",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [[0.01,0.04], [0.015,0.06], [0.02,0.08]],
+                            "condition": "非追击状态时生效",
+                            "notes": "每一个未受伤的求生者叠加，一阶技能解锁后不再提供"
+                        }
+                    ]
+                },
+                {
+                    "id": "right_3",
+                    "x": 255,
+                    "y": 0,
+                    "name": "好客之道",
+                    "label": "0/3",
+                    "content": "牵气球时的移动速度增加4%/6%/8%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "好客是一种礼节，但也因人而异",
+                    "effects": [
+                        {
+                            "statKey": "ballooningMovementSpeed",
+                            "type": "additive",
+                            "values": [0.04, 0.06, 0.08],
+                            "condition": "全局"
+                        }
+                    ]
+                },
+                {
+                    "id": "right_4",
+                    "x": 340,
+                    "y": 0,
+                    "name": "底牌",
+                    "label": "0/1",
+                    "content": "战斗开始120秒后可更换一次辅助技能，冷却时间按照比例返还，只能更换一次",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "狡黠的玩家，不会亮出所有底牌"
+                },
+                {
+                    "id": "right_inter_T",
+                    "x": 150,
+                    "y": -80,
+                    "name": "报幕",
+                    "label": "0/1",
+                    "content": "逃脱门通电时，额外显示求生者5秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "落幕之前，追逐表演的奉献者们都不会错过最后的报幕"
+                },
+                {
+                    "id": "right_inter_B",
+                    "x": 150,
+                    "y": 80,
+                    "name": "困兽之斗",
+                    "label": "0/1",
+                    "content": "被晕眩或强力控制后15秒内再次受到该类效果，此效果的恢复速度提升20%，最多提升60%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "那些无谓的反抗，只会让猎人变得更兴奋",
+                    "effects": [
+                        {
+                            "statKey": "stunRecoverySpeed",
+                            "type": "additive",
+                            "values": [[0.20,0.60]],
+                            "condition": "被晕眩或强力控制后15秒内再次受到该类效果生效",
+                            "notes": "最多提升60%"
+                        }
+                    ]
+                },
+                {
+                    "id": "right_leaf_T1",
+                    "x": 230,
+                    "y": -75,
+                    "name": "崩坏",
+                    "label": "0/3",
+                    "content": "被普通攻击击中的求生者下一次受伤自愈（不包括倒地自愈）或被他人治疗的时间增加20%/30%/40%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "力量…终将会体现…",
+                    "effects": [
+                        {
+                            "statKey": "selfHealingSpeed",
+                            "type": "multiplicative",
+                            "values": [0.17,0.23, 0.286],
+                            "scope": "opponent",
+                            "condition": "被普通攻击击中后生效",
+                            "notes": ""
+                        },
+                        {
+                            "statKey": "healingSpeed",
+                            "type": "multiplicative",
+                            "values": [0.17,0.23, 0.286],
+                            "scope": "opponent",
+                            "condition": "被普通攻击击中后生效",
+                            "notes": ""
+                        }
+                    ]
+                },
+                {
+                    "id": "right_leaf_T2",
+                    "x": 190,
+                    "y": -145,
+                    "name": "通缉",
+                    "label": "0/3",
+                    "content": "当有求生者被放上狂欢之椅时，若场上其他3个求生者是处于健康或者受伤的状态，则随机锁定其中1位显示其轮廓，自身移动速度降低2%/1%/0%，当狂欢之椅上求生者被救下后，移速降低效果会立刻消失，而被锁定者的轮廓会在上椅10秒/30秒/下椅20秒后消失",
+                    "boshi": "当有求生者处于倒地状态时，若场上其他3个求生者是处于健康或者受伤的状态，则随机锁定其中1位显示其轮廓，自身移动速度降低2%/1%/0%，当倒地求生者被治疗成功后，移速降低效果会立刻消失，而被锁定者的轮廓会在倒地后10秒/30秒/被治疗成功8秒后消失",
+                    "lianhe": "",
+                    "taluo": "当敌方国王被放上狂欢之椅时，若场上其他2个敌方侍从是处于健康或者受伤的状态，则随机锁定其中1位显示其轮廓，自身移动速度降低2%/1%/0%，当敌方国王被救下后，移速降低效果会立刻消失，而被锁定者的轮廓会在上椅10秒/30秒/下椅20秒后消失",
+                    "describe": "我已经盯上了你！",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "multiplicative",
+                            "values": [0.02, 0.01, 0.00],
+                            "condition": "当有求生者被放上狂欢之椅时生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "right_leaf_B1",
+                    "x": 230,
+                    "y": 75,
+                    "name": "成瘾症",
+                    "label": "0/1",
+                    "content": "当自身附近20米范围内有2/3/4名未被放上狂欢之椅的求生者时，受到的眩晕等强力控制后的恢复速率增加8%/24%/40%。眩晕效果触发时，对20米范围内的求生者造成减速效果，距离越远减速越多，至多减速16%（最少8%），持续3秒，冷却时间20秒",
+                    "boshi": "当自身附近20米范围内有2/3/4名未处于倒地状态的求生者时，受到的眩晕等强力控制后的恢复速率增加8%/24%/40%。眩晕效果触发时，对20米范围内的求生者造成减速效果，距离越远减速越多，至多减速16%（最少8%），持续3秒，冷却时间20秒",
+                    "lianhe": "",
+                    "taluo": "当自身附近20米范围内有2/3/4名未被放上狂欢之椅的敌方求生者时，受到的眩晕等强力控制后的恢复速率增加8%/24%/40%。眩晕效果触发时，对20米范围内的求生者造成减速效果，距离越远减速越多，至多减速16%（最少8%），持续3秒，冷却时间20秒",
+                    "describe": "越疼痛，越兴奋!",
+                    "effects": [
+                        {
+                            "statKey": "stunRecoverySpeed",
+                            "type": "additive",
+                            "values": [[0.08, 0.40]],
+                            "condition": "自身附近20米范围内有2/3/4名未被放上狂欢之椅的求生者时生效"
+                        },
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "multiplicative",
+                            "values": [[0.08, 0.16]],
+                            "scope": "opponent",
+                            "condition": "自身附近20米范围内有2/3/4名未被放上狂欢之椅的求生者时生效",
+                            "notes": ""
+                        }
+                    ]
+                },
+                {
+                    "id": "right_leaf_B2",
+                    "x": 190,
+                    "y": 145,
+                    "name": "念旧癖",
+                    "label": "0/1",
+                    "content": "自身32米范围内如果有求生者被从狂欢之椅上救下，该名求生者的位置将持续向你显示。且朝向这名求生移动时获得至多10%加速，距离越远加速效果越强。效果持续16秒，如果在期间内这名求生者受到倒地伤害，则效果会提前结束。当场上有求生者被淘汰后，本天赋效果失效。",
+                    "boshi": "自身32米范围内如果有倒地状态下求生者被治疗成功，该名求生者的位置将持续向你显示。且朝向这名求生移动时获得至多10%加速，距离越远加速效果越强。效果持续16秒，如果在期间内这名求生者受到倒地伤害，则效果会提前结束。当场上有求生者被淘汰后，本天赋效果失效。",
+                    "lianhe": "",
+                    "taluo": "自身32米范围内如果有敌方求生者被从狂欢之椅上救下，该名求生者的位置将持续向你显示。且朝向这名求生移动时获得至多10%加速，距离越远加速效果越强。效果持续16秒，如果在期间内这名求生者受到倒地伤害，则效果会提前结束。当场上有求生者被淘汰后，本天赋效果失效。",
+                    "describe": "熟悉的气味更让我着迷",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [[0, 0.10]],
+                            "condition": "自身32米范围内如果有敌方求生者被从狂欢之椅上救下且朝向这名求生移动时",
+                            "notes": "距离越远加速效果越强。效果持续16秒，如果在期间内这名求生者受到倒地伤害，则效果会提前结束。当场上有求生者被淘汰后，本天赋效果失效。"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_1",
+                    "x": 0,
+                    "y": 85,
+                    "name": "惯性",
+                    "label": "0/1",
+                    "content": "攻击恢复速度增加5%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "快些！再快些！撕裂与破坏的惯性！",
+                    "effects": [
+                        {
+                            "statKey": "attackRecoverySpeed",
+                            "type": "additive",
+                            "values": [0.05],
+                            "condition": "全局"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_2",
+                    "x": 0,
+                    "y": 170,
+                    "name": "嘲弄",
+                    "label": "0/3",
+                    "content": "当有求生者被放上狂欢之椅时，自身移动速度增加3%/4%/5%",
+                    "boshi": "当有求生者倒地时，自身移动速度增加1%/2%/3%",
+                    "lianhe": "【WIKI编辑组注：联合狩猎模式中，仅在放置求生者的狂欢之椅约25.3米范围内生效。】",
+                    "taluo": "当敌方国王被放上狂欢之椅时，自身移动速度增加3%/4%/5%",
+                    "describe": "嘲弄猎物不仅为了取乐，而是为了吸引更多飞蛾来扑火",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.03, 0.04, 0.05],
+                            "condition": "当有求生者被放上狂欢之椅时生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_3",
+                    "x": 0,
+                    "y": 255,
+                    "name": "狂欢",
+                    "page": "人格_狂欢",
+                    "label": "0/3",
+                    "content": "逃脱门通电后，攻击恢复速度增加5%/7%/10%，移速增加3%/4%/5%，效果持续120秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "己方阵营破译进度满300%时，攻击恢复速度增加5%/7%/10%，移速增加3%/4%/5%，效果持续60秒",
+                    "describe": "临别之际，怎能错过最后的狂欢？！",
+                    "effects": [
+                        {
+                            "statKey": "attackRecoverySpeed",
+                            "type": "additive",
+                            "values": [0.05, 0.07, 0.10],
+                            "condition": "逃脱门通电后生效",
+                            "notes": "持续120秒"
+                        },
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.03, 0.04, 0.05],
+                            "condition": "逃脱门通电后生效",
+                            "notes": "持续120秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_4",
+                    "x": 0,
+                    "y": 340,
+                    "name": "挽留",
+                    "label": "0/1",
+                    "content": "大门通电后，获得力量提升，普通攻击击中后将对求生者造成额外一次正常普通攻击伤害，状态持续120秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "己方阵营破译进度满300%时，获得力量提升，普通攻击命中后将对求生者造成双倍伤害，状态持续30秒",
+                    "describe": "为什么急着离开呢？留下吧，永远的留下"
+                },
+                {
+                    "id": "down_inter_L",
+                    "x": -60,
+                    "y": 145,
+                    "name": "摧枯拉朽",
+                    "label": "0/1",
+                    "content": "累计挂上2/3/4个不同的求生者，攻击恢复速度增加5%/10%/15%。",
+                    "boshi": "",
+                    "lianhe": "累计挂上2/4/6个不同的求生者，攻击速度恢复增加5%/10%/15%。",
+                    "taluo": "",
+                    "describe": "愈发强大的力量足以摧毁一切",
+                    "effects": [
+                        {
+                            "statKey": "attackRecoverySpeed",
+                            "type": "additive",
+                            "values": [[0.05, 0.15]],
+                            "condition": "累计挂上2/3/4个不同的求生者后生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_inter_R",
+                    "x": 60,
+                    "y": 145,
+                    "name": "临界点",
+                    "label": "0/1",
+                    "content": "大门通电后120秒内，监管者使用技能对求生者造成小于普通攻击的伤害时，该伤害会直接提升至一次普通攻击的伤害，冷却时间30秒。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "突破极限时，每一击皆为全力"
+                },
+                {
+                    "id": "down_leaf_L1",
+                    "x": -75,
+                    "y": 230,
+                    "name": "冲动",
+                    "label": "0/1",
+                    "content": "蓄力攻击的过程中移动速度增加8%。冷却时间5秒。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "跟随欲望的行为，往往有更高效率",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.08],
+                            "condition": "蓄力攻击过程中生效",
+                            "notes": "冷却时间5秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_leaf_L2",
+                    "x": -130,
+                    "y": 190,
+                    "name": "惊弓之鸟",
+                    "label": "0/1",
+                    "content": "普攻命中求生者时，若附近16米范围内有其他求生者，则透视其他求生者持续4秒，且此次攻击恢复速度增加10%，当场上有求生者被绑上狂欢之椅时效果消失。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "普攻命中敌方求生者时，若附近16米范围内有其他未被放上狂欢之椅的敌方求生者，则透视其他敌方求生者持续4秒，且此次攻击恢复速度增加10%，当场上有求生者被绑上狂欢之椅时效果消失。",
+                    "describe": "没有猎物不惧怕枪声",
+                    "effects": [
+                        {
+                            "statKey": "attackRecoverySpeed",
+                            "type": "additive",
+                            "values": [0.10],
+                            "condition": "普攻命中求生者时，若附近16米范围内有其他求生者生效"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_leaf_R1",
+                    "x": 75,
+                    "y": 230,
+                    "name": "巨钳",
+                    "label": "0/3",
+                    "content": "绑上气球上的求生者挣脱速度减少5%/10%/15%，监管者放下求生者增加的挣扎进度降低为18%/12%/6%，求生者从气球上挣扎掉落或者被队友救下时，所有求生者破译速度降低15%/20%/25%，持续8秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "绑上气球上的敌方国王挣脱速度减少5%/10%/15%，监管者放下求生者增加的挣扎进度降低为18%/12%/6%，敌方国王从气球上挣扎掉落或者被队友救下时，所有敌方求生者破译速度降低15%/20%/25%，持续8秒",
+                    "describe": "挣扎吧，扭曲吧，无力的反抗最值得享受",
+                    "effects": [
+                        {
+                            "statKey": "struggleSpeed",
+                            "type": "multiplicative",
+                            "values": [0.05, 0.10, 0.15],
+                            "scope": "opponent",
+                            "condition": "全局"
+                        },
+                        {
+                            "statKey": "decodingSpeed",
+                            "type": "multiplicative",
+                            "values": [0.15, 0.20, 0.25],
+                            "scope": "opponent",
+                            "condition": "求生者从气球上挣扎掉落或者被队友救下时生效",
+                            "notes": "持续8秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "down_leaf_R2",
+                    "x": 130,
+                    "y": 190,
+                    "name": "拘禁狂",
+                    "label": "0/3",
+                    "content": "加快狂欢之椅上3%/6%/9%起飞倒计时速度",
+                    "boshi": "加快倒地求生者3%/6%/9%淘汰速度",
+                    "lianhe": "",
+                    "taluo": "加快狂欢之椅上敌方国王3%/6%/9%起飞倒计时速度",
+                    "describe": "束缚之下的灵魂，枯萎只在须臾之间",
+                    "effects": [
+                        {
+                            "statKey": "chairFlySpeed",
+                            "type": "additive",
+                            "values": [0.03, 0.06, 0.09],
+                            "scope": "opponent",
+                            "condition": "全局"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_1",
+                    "x": -85,
+                    "y": 0,
+                    "name": "狩鹿",
+                    "label": "0/1",
+                    "content": "显示18米范围内倒地的求生者",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "显示18米范围内倒地的敌方求生者",
+                    "describe": "沦为猎物的时候，一切都回归了原始。"
+                },
+                {
+                    "id": "left_2",
+                    "x": -170,
+                    "y": 0,
+                    "name": "耐受力",
+                    "label": "0/3",
+                    "content": "强大的忍受力降低监管者受到的12%/22%/32%击退效果和12%/18%/24%的减速效果",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "无谓的抵抗如隔靴搔痒",
+                    "effects": [
+                        {
+                            "statKey": "knockbackResist",
+                            "type": "additive",
+                            "values": [0.12, 0.22, 0.32],
+                            "condition": "全局"
+                        },
+                        {
+                            "statKey": "slowResist",
+                            "type": "additive",
+                            "values": [0.12, 0.18, 0.24],
+                            "condition": "全局"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_3",
+                    "x": -255,
+                    "y": 0,
+                    "name": "后遗症",
+                    "label": "0/3",
+                    "content": "倒地的求生者自疗上限降低10%/20%/30%，倒地自愈速度降低8%/12%/16%",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "倒地的敌方求生者自疗上限降低10%/20%/30%，倒地自愈速度降低8%/12%/16%",
+                    "describe": "你永远都爬不起来…",
+                    "effects": [
+                        {
+                            "statKey": "downedSelfHealCap",
+                            "type": "multiplicative",
+                            "values": [0.10, 0.20, 0.30],
+                            "scope": "opponent",
+                            "condition": "全局"
+                        },
+                        {
+                            "statKey": "downedSelfHealingSpeed",
+                            "type": "multiplicative",
+                            "values": [0.08, 0.12, 0.16],
+                            "scope": "opponent",
+                            "condition": "全局"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_4",
+                    "x": -340,
+                    "y": 0,
+                    "name": "张狂",
+                    "label": "0/1",
+                    "content": "监管者在游戏开始后一段时间内将持续获得最多1000点存在感。存在感增长速度将在开启一阶技能后随存在感增加而降低。<br>【WIKI编辑组注：在未通过伤害获取存在感的情况下，会在游戏后开始第52.5秒获得500点存在感，第105秒获得1000点存在感并解锁一阶实体能力。1000~1500、1500~2000、2000~2500区间内，存在感提升速度为6.9/s、4.2/s、2.5/s。】",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "真是个奇葩！"
+                },
+                {
+                    "id": "left_inter_T",
+                    "x": -150,
+                    "y": -80,
+                    "name": "掌控欲",
+                    "label": "0/1",
+                    "content": "从高处自然垂直落下后，移动速度增加10%，持续3秒。冷却时间10秒",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "居高临下，时刻掌控你的动向",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.10],
+                            "condition": "从高处自然垂直落下后生效",
+                            "notes": "持续3秒，冷却时间10秒"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_inter_B",
+                    "x": -150,
+                    "y": 80,
+                    "name": "表现欲",
+                    "label": "0/1",
+                    "content": "自身攻击未命中时的攻击恢复动作加快10%。自身周围24米范围内，每有超过1个可自由行动的求生者时，该效果额外提升15%。最多叠加至40%。当场上有求生者被绑上狂欢之椅时效果消失。",
+                    "boshi": "自身攻击未命中时的攻击恢复动作加快10%。自身周围24米范围内，每有超过1个可自由行动的求生者时，该效果额外提升15%。最多叠加至40%。当场上有求生者处于倒地状态时效果消失。",
+                    "lianhe": "",
+                    "taluo": "自身攻击未命中时的攻击恢复动作加快10%。自身周围24米范围内，每有超过1个可自由行动的敌方求生者时，该效果额外提升15%。最多叠加至40%。当场上有敌方求生者被绑上狂欢之椅时效果消失。",
+                    "describe": "等着，我会拿出更好的一面!",
+                    "effects": [
+                        {
+                            "statKey": "attackRecoverySpeed",
+                            "type": "additive",
+                            "values": [[0.10,0.40]],
+                            "condition": "自身攻击未命中时生效",
+                            "notes": "周围有求生者额外提升15%，最多叠加至40%。有求生者被绑上狂欢之椅时效果消失"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_leaf_T1",
+                    "x": -230,
+                    "y": -75,
+                    "name": "幽闭恐惧",
+                    "page": "人格_幽闭恐惧",
+                    "label": "0/1",
+                    "content": "大门通电后16秒内，若场上存在4/3个可行动的求生者（处于倒地状态、气球、狂欢之椅上均属于不可行动状态），则大门开启速度降低65%/10%<br>【WIKI编辑组注：联合狩猎模式中，可行动求生者数量判定由4名调整为6名。】",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "在幽闭的空间中，每分每秒的时间都将被恐惧感无限延长",
+                    "effects": [
+                        {
+                            "statKey": "gateOpenSpeed",
+                            "type": "multiplicative",
+                            "values": [[0.1,0.65]],
+                            "scope": "opponent",
+                            "condition": "大门通电后16秒内生效",
+                            "notes": "若场上存在4个可行动求生者降低65%，3个时降低10%"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_leaf_T2",
+                    "x": -190,
+                    "y": -145,
+                    "name": "余威",
+                    "label": "0/1",
+                    "content": "淘汰第一名求生者后50秒内，当自身16米范围内没有求生者时，移动速度提升10%。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "",
+                    "describe": "猎物倒下后，恐惧仍在蔓延",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.1],
+                            "condition": "淘汰第一名求生者后50秒内当自身16米范围内没有求生者时",
+                            "notes": "移动速度提升"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_leaf_B1",
+                    "x": -230,
+                    "y": 75,
+                    "name": "清道夫",
+                    "label": "0/3",
+                    "content": "显示30/45/60米范围内治疗和被治疗的求生者，且治疗时间增加30%。治疗完成后仍会显示5秒。",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "显示30/45/60米范围内治疗和被治疗的敌方求生者，且治疗时间增加30%。治疗完成后仍会显示5秒。",
+                    "describe": "清道夫眼里，一切疫病都应该被彻底清除！",
+                    "effects": [
+                        {
+                            "statKey": "healingSpeed",
+                            "type": "multiplicative",
+                            "values": [0.23,0.23,0.23],
+                            "scope": "opponent",
+                            "condition": "求生者在30/45/60米范围内治疗和被治疗时"
+                        }
+                    ]
+                },
+                {
+                    "id": "left_leaf_B2",
+                    "x": -190,
+                    "y": 145,
+                    "name": "追猎",
+                    "label": "0/3",
+                    "content": "持续追击求生者11/9/7秒，会获得10%的移速和板窗交互速度加成，当追击失败或者在交互、攻击、使用技能、被控制后，加成效果消失",
+                    "boshi": "",
+                    "lianhe": "",
+                    "taluo": "持续追击敌方求生者11/9/7秒，会获得10%的移速和板窗交互速度加成，当追击失败或者在交互、攻击、使用技能、被控制后，加成效果消失",
+                    "describe": "永远不要停止前进…",
+                    "effects": [
+                        {
+                            "statKey": "movementSpeed",
+                            "type": "additive",
+                            "values": [0.10, 0.10, 0.10],
+                            "condition": "持续追击求生者11/9/7秒后生效",
+                            "notes": "当追击失败或者在交互、攻击、使用技能、被控制后，加成效果消失"
+                        },
+                        {
+                            "statKey": "vaultingSpeed",
+                            "type": "additive",
+                            "values": [0.10, 0.10, 0.10],
+                            "condition": "持续追击求生者11/9/7秒后生效",
+                            "notes": "当追击失败或者在交互、攻击、使用技能、被控制后，加成效果消失"
+                        }
+                    ]
+                }
+            ],
+            "edges": [
+                {
+                    "from": "center",
+                    "to": "up_1"
+                },
+                {
+                    "from": "up_1",
+                    "to": "up_2"
+                },
+                {
+                    "from": "up_2",
+                    "to": "up_3"
+                },
+                {
+                    "from": "up_3",
+                    "to": "up_4"
+                },
+                {
+                    "from": "up_1",
+                    "to": "up_inter_L"
+                },
+                {
+                    "from": "up_1",
+                    "to": "up_inter_R"
+                },
+                {
+                    "from": "up_inter_L",
+                    "to": "up_leaf_L1"
+                },
+                {
+                    "from": "up_inter_L",
+                    "to": "up_leaf_L2"
+                },
+                {
+                    "from": "up_inter_R",
+                    "to": "up_leaf_R1"
+                },
+                {
+                    "from": "up_inter_R",
+                    "to": "up_leaf_R2"
+                },
+                {
+                    "from": "center",
+                    "to": "right_1"
+                },
+                {
+                    "from": "right_1",
+                    "to": "right_2"
+                },
+                {
+                    "from": "right_2",
+                    "to": "right_3"
+                },
+                {
+                    "from": "right_3",
+                    "to": "right_4"
+                },
+                {
+                    "from": "right_1",
+                    "to": "right_inter_T"
+                },
+                {
+                    "from": "right_1",
+                    "to": "right_inter_B"
+                },
+                {
+                    "from": "right_inter_T",
+                    "to": "right_leaf_T1"
+                },
+                {
+                    "from": "right_inter_T",
+                    "to": "right_leaf_T2"
+                },
+                {
+                    "from": "right_inter_B",
+                    "to": "right_leaf_B1"
+                },
+                {
+                    "from": "right_inter_B",
+                    "to": "right_leaf_B2"
+                },
+                {
+                    "from": "center",
+                    "to": "down_1"
+                },
+                {
+                    "from": "down_1",
+                    "to": "down_2"
+                },
+                {
+                    "from": "down_2",
+                    "to": "down_3"
+                },
+                {
+                    "from": "down_3",
+                    "to": "down_4"
+                },
+                {
+                    "from": "down_1",
+                    "to": "down_inter_L"
+                },
+                {
+                    "from": "down_1",
+                    "to": "down_inter_R"
+                },
+                {
+                    "from": "down_inter_L",
+                    "to": "down_leaf_L1"
+                },
+                {
+                    "from": "down_inter_L",
+                    "to": "down_leaf_L2"
+                },
+                {
+                    "from": "down_inter_R",
+                    "to": "down_leaf_R1"
+                },
+                {
+                    "from": "down_inter_R",
+                    "to": "down_leaf_R2"
+                },
+                {
+                    "from": "center",
+                    "to": "left_1"
+                },
+                {
+                    "from": "left_1",
+                    "to": "left_2"
+                },
+                {
+                    "from": "left_2",
+                    "to": "left_3"
+                },
+                {
+                    "from": "left_3",
+                    "to": "left_4"
+                },
+                {
+                    "from": "left_1",
+                    "to": "left_inter_T"
+                },
+                {
+                    "from": "left_1",
+                    "to": "left_inter_B"
+                },
+                {
+                    "from": "left_inter_T",
+                    "to": "left_leaf_T1"
+                },
+                {
+                    "from": "left_inter_T",
+                    "to": "left_leaf_T2"
+                },
+                {
+                    "from": "left_inter_B",
+                    "to": "left_leaf_B1"
+                },
+                {
+                    "from": "left_inter_B",
+                    "to": "left_leaf_B2"
+                }
+            ]
+        }
+    },
+    "removedTalents": [
+        {
+            "id": "removed_survivor_1",
+            "name": "不安",
+            "content": "增加40%的蹲行速度。",
+            "description": "鲨鱼不游动就会窒息，而被其追逐的猎物只能永远躁动不安",
+            "boshi": "",
+            "taluo": "",
+            "lianhe": "",
+            "time": "2019-06-27"
+        },
+        {
+            "id": "removed_survivor_2",
+            "name": "低调",
+            "description": "孤僻的家伙做什么都不希望引人注目",
+            "content": "翻窗和翻板特效显示距离减少8/16/24米。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2018-05-24"
+        },
+        {
+            "id": "removed_survivor_3",
+            "name": "受难",
+            "description": "你的悲剧还有最后一点点的压榨价值",
+            "content": "当自身被放上狂欢之椅时，其他求生者相互可见。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2022-11-24"
+        },
+        {
+            "id": "removed_survivor_4",
+            "name": "吊桥效应",
+            "description": "同处一个危险的境地时，你总能感到另一人的心跳",
+            "content": "显示18米内求生者",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "显示18米内的己方求生者",
+            "time": "2025-07-03"
+        },
+        {
+            "id": "removed_survivor_5",
+            "name": "强迫症",
+            "description": "每个翻箱倒柜的机会都不要放过！",
+            "content": "显示16米范围内的箱子。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2022-12-22"
+        },
+        {
+            "id": "removed_survivor_6",
+            "name": "掩耳盗铃",
+            "description": "你听不到的，就没有别人能听到",
+            "content": "破译密码机触电有100%概率不会让监管者发现，2层天赋后触电不再损失破译进度，3层天赋下触电后无法破译时长减半。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2025-07-03"
+        },
+        {
+            "id": "removed_survivor_7",
+            "name": "旁观者",
+            "description": "不救任何人，最后也无人救你",
+            "content": "奔向25米范围内受伤或倒地的求生者时移速增加10%，治疗他人的速度提高20%，并显示受伤的求生者，但是当求生者被绑上气球上时不会显示。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2022-04-28"
+        },
+        {
+            "id": "removed_survivor_8",
+            "name": "机械专精",
+            "description": "这一刻，可以稍微放松一下",
+            "content": "破译时出现的校准范围提升10%。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2025-07-03"
+        },
+        {
+            "id": "removed_survivor_9",
+            "name": "破窗理论",
+            "description": "窗已经破了，你还在顾忌什么？",
+            "content": "跨越窗户后，冲刺时增加50%移动速度，持续3秒，冷却40秒。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2022-11-24"
+        },
+        {
+            "id": "removed_survivor_10",
+            "name": "硬汉",
+            "description": "沉默不是硬汉的标志",
+            "content": "减少100%受伤后的声音。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2018-05-24"
+        },
+        {
+            "id": "removed_survivor_11",
+            "name": "稻草人",
+            "page": "人格_稻草人",
+            "description": "乌鸦其实不喜欢稻草人，它们更喜欢吃荤的",
+            "content": "减少70%/85%/100%惊吓乌鸦的概率。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2018-05-24"
+        },
+        {
+            "id": "removed_survivor_12",
+            "name": "羊群效应",
+            "description": "在愚昧的羊群中，领头羊只有一个",
+            "content": "当其他求生者队友在5米范围内，增加范围内队友3%/5%/7%破译、治疗和破坏行动的速度。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2019-06-27"
+        },
+        {
+            "id": "removed_survivor_13",
+            "name": "霍桑效应",
+            "description": "在他人的目光注视下，人总有特别的表现",
+            "content": "当其他求生者队友在5米范围内，每个队友增加玩家自身3%/3.5%/4%破译、治疗和破坏行动的速度。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2019-06-27"
+        },
+        {
+            "id": "removed_survivor_14",
+            "name": "鲇鱼效应",
+            "description": "生存竞争促成物种延续",
+            "content": "当自身被放上狂欢之椅时,在以自身12/18/24米半径范围内，其他求生者移动速度增加4%/6%/8%。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2020-05-28"
+        },
+        {
+            "id": "removed_survivor_15",
+            "name": "囚徒困境",
+            "description": "救，还是不救？——其实你心里早有答案了，对吧",
+            "content": "当有其他玩家被绑上气球上时，额外显示监管者和该玩家时间5秒，放上狂欢之椅后显示效果消失",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "当有己方国王被绑上气球上时，额外显示敌方骑士和己方国王时间5秒，放上狂欢之椅后显示效果消失",
+            "time": "2026-07-02"
+        },
+        {
+            "id": "removed_survivor_16",
+            "name": "寒意",
+            "description": "被盯上的猎物总会感到一丝毛骨悚然的寒意",
+            "content": "36米范围内监管者在你身后看着你时，会持续提示监管者方向",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "36米范围内敌方骑士在你身后看着你时，会持续提示敌方骑士方向",
+            "time": "2026-07-02"
+        },
+        {
+            "id": "removed_survivor_17",
+            "name": "云中漫步",
+            "description": "踮起脚尖，因为脚印会出卖一切",
+            "content": "留下的脚印痕迹持续时间减少1秒，受伤状态不再触发额外的受伤碎片痕迹",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2026-07-02"
+        },
+        {
+            "id": "removed_hunter_1",
+            "name": "以牙还牙",
+            "description": "做了这样的事情，别想就这样离去！",
+            "content": "被求生者使用木板砸中后，会额外显示该求生者6秒。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2019-06-27"
+        },
+        {
+            "id": "removed_hunter_2",
+            "name": "占有欲",
+            "description": "被盯上的猎物，根本没有自由行动的权利",
+            "content": "在警戒半径内，降低求生者3%/5%/7%的破译、治疗和破坏速度。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2022-04-28"
+        },
+        {
+            "id": "removed_hunter_3",
+            "name": "厄运震慑",
+            "description": "厄运降临，所有人都不能幸免于难！",
+            "content": "当有求生者被挂上狂欢之椅时，且监管者距离狂欢之椅18米范围外时，监管者的攻击会有10%/15%/20%概率出现厄运震慑，会产生双倍恐惧值。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2019-06-27"
+        },
+        {
+            "id": "removed_hunter_4",
+            "name": "后知后觉",
+            "description": "后知后觉可不是迟钝，而是一种战术",
+            "content": "场上被拆掉2个狂欢之椅后，每额外被拆掉1个狂欢之椅，增加自身攻击恢复速度6%，可叠加，上限5次",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2019-06-27"
+        },
+        {
+            "id": "removed_hunter_5",
+            "name": "夜枭",
+            "description": "在夜枭的注视下，无人可以保持镇定",
+            "content": "在警戒半径内，降低求生者30%的破译、治疗和破坏校准的成功范围。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2022-04-28"
+        },
+        {
+            "id": "removed_hunter_6",
+            "name": "恋物癖",
+            "description": "不允许任何人触碰自己的杰作！",
+            "content": "求生者拆除狂欢之椅速度降低10%/20%/30%。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2018-10-18"
+        },
+        {
+            "id": "removed_hunter_7",
+            "name": "恶犬",
+            "description": "有人以为这是一个遛狗的休闲游戏——他会明白的",
+            "content": "延迟求生者的足迹1/1.5/2秒。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2019-06-27"
+        },
+        {
+            "id": "removed_hunter_8",
+            "name": "猫鼠游戏",
+            "description": "灵活的猎物，会引来更灵活的猎人",
+            "content": "持续追击求生者12秒，会获得20%的翻窗速度加成，当追击失败或者进行其他交互、攻击、被击晕后，加成消失。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2020-05-28"
+        },
+        {
+            "id": "removed_hunter_9",
+            "name": "窥伺",
+            "description": "任何偷偷摸摸的小动作都是不被允许的！",
+            "content": "在正在破译的密码机24米范围内，密码机会出现特殊轮廓。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2019-06-27"
+        },
+        {
+            "id": "removed_hunter_10",
+            "name": "约束",
+            "page": "人格_约束",
+            "description": "肆意彰显只会暴露自身的存在，学会内敛，学会约束自己",
+            "content": "减少15%警戒半径。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2022-11-24"
+        },
+        {
+            "id": "removed_hunter_11",
+            "name": "群鸦",
+            "description": "乌鸦是厄运的代言者，但总有家伙会喜欢它们的聒噪",
+            "content": "周围20/26/32米范围内，当求生者惊动乌鸦时，乌鸦会明确告诉你求生者的位置。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2019-06-27"
+        },
+        {
+            "id": "removed_hunter_12",
+            "name": "耳鸣",
+            "description": "耳鸣的声响会不会是某种征兆和暗示？",
+            "content": "当你距离一个求生者36米范围内，会获得一个提示。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2022-11-24"
+        },
+        {
+            "id": "removed_hunter_13",
+            "name": "记恨",
+            "description": "任何的动静都会被当作挑衅，而被牢牢记恨在心",
+            "content": "求生者跨越窗户和木板的特效显示距离增加8/16/24米。",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "",
+            "time": "2018-05-24"
+        },
+        {
+            "id": "removed_hunter_14",
+            "name": "无人生还",
+            "description": "再靠近，你就会是下一个",
+            "content": "倒地求生者附近25米范围内，每有一个可自由行动的求生者，监管者在此范围内攻击恢复速度提升10%，上限3层",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "倒地的敌方求生者附近25米范围内，每有一个可自由行动的敌方求生者，监管者在此范围内攻击恢复速度提升10%，上限3层",
+            "time": "2026-07-02"
+        },
+        {
+            "id": "removed_hunter_15",
+            "name": "淬火效应",
+            "description": "面对低谷和冷落，也许就正是上帝在对你进行的“淬火”处理",
+            "content": "开局50秒，若除张狂外未通过其他方式获得存在感，显示所有求生者的轮廓持续5秒",
+            "boshi": "",
+            "lianhe": "",
+            "taluo": "开局50秒，若除张狂外未通过其他方式获得存在感，显示敌方求生者的轮廓持续5秒",
+            "time": "2026-07-02"
+        },
+        {
+            "id": "removed_hunter_16",
+            "name": "警觉",
+            "description": "危险的信号激发更敏锐的嗅觉",
+            "content": "前3台密码机亮起时，每次会令自身在10秒内移动速度增加9%，摧毁木板速度增加15%，效果可以叠加，有求生者被放上狂欢之椅时永久失去该效果",
+            "boshi": "前3台密码机亮起时，每次会令自身在10秒内移动速度增加9%，摧毁木板速度增加15%，效果可以叠加，有求生者被击倒时永久失去该效果",
+            "lianhe": "",
+            "taluo": "前3台密码机亮起时，每次会令自身在10秒内移动速度增加9%，摧毁木板速度增加15%，效果可以叠加，有敌方求生者被放上狂欢之椅时永久失去该效果",
+            "time": "2026-07-02"
+        }
+    ]
+}
