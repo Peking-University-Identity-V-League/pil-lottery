@@ -1,6 +1,6 @@
 import { sfx } from './sound.js';
 import {
-  MAX_LAYERS, POINTS_PER_LAYER, createRng, pickOne, sample, prepareTree, rollBuild, validateBuild,
+  POINTS_PER_LAYER, createRng, pickOne, sample, prepareTree, rollBuild, validateBuild,
 } from './rules.js';
 
 /* ------------------------------------------------------------------ 基础 */
@@ -11,6 +11,7 @@ const STORE_KEY = 'pil-lottery:v1';
 const ORDINALS = ['第一位', '第二位', '第三位', '第四位'];
 const DESPAIR = '绝处逢生';
 const STEP = 140; // 人格树每一圈点亮的间隔（毫秒），同步到 CSS 变量 --step
+const SEP = '　'; // 复制结果里的分隔符（全角空格）
 const rng = createRng();
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const ASSET_BASE = new URL('../', import.meta.url);
@@ -37,6 +38,7 @@ const DEFAULTS = {
   survivorUlt: 'random',
   hunterUlt: 'random',
   despair: false,
+  drawTrait: true,
   sound: true,
   excluded: { survivor: [], hunter: [], trait: [] },
 };
@@ -62,6 +64,16 @@ async function getJSON(url) {
   return res.json();
 }
 
+/** 人格文案：换行标签转成换行，去掉“【WIKI编辑组注：…】”。 */
+function cleanDescription(text) {
+  return text
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/【\s*WIKI编辑组注[\s\S]*?】/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+}
+
 async function loadData() {
   const [chars, trees, traits, config] = await Promise.all([
     getJSON('characters.json'),
@@ -72,7 +84,7 @@ async function loadData() {
   const descriptions = (side) => {
     const out = {};
     for (const n of config?.[side]?.treeData?.nodes || []) {
-      if (n.content) out[n.id] = n.content.replace(/<br\s*\/?>/gi, '\n');
+      if (n.content) out[n.id] = cleanDescription(n.content);
     }
     return out;
   };
@@ -99,15 +111,15 @@ function pool(kind) {
 }
 
 function poolProblem() {
-  if (pool('survivor').length < POOL_MIN.survivor) return '角色池里至少要留 4 名求生者，才能凑齐一局。';
-  if (pool('hunter').length < POOL_MIN.hunter) return '角色池里至少要留 1 名监管者。';
-  if (pool('trait').length < POOL_MIN.trait) return '角色池里至少要留 1 个辅助特质。';
+  if (pool('survivor').length < POOL_MIN.survivor) return '卡池里至少要留 4 名求生者，才能凑齐一局。';
+  if (pool('hunter').length < POOL_MIN.hunter) return '卡池里至少要留 1 名监管者。';
+  if (settings.drawTrait && pool('trait').length < POOL_MIN.trait) return '卡池里至少要留 1 个辅助特质，或关闭“抽取辅助特质”。';
   return null;
 }
 
 /* ------------------------------------------------------------------ 抽取 */
 
-let match = null; // { slots: [{ side, char, build, trait? }] }，前 4 个求生者，最后 1 个监管者
+let match = null; // { slots: [{ side, char, build, trait? }], at: Date }，前 4 个求生者，最后 1 个监管者；trait 为 null 表示自选
 
 function rollFor(side) {
   const tree = data.trees[side];
@@ -175,10 +187,10 @@ function newMatch() {
   const hunter = pickOne(pool('hunter'), rng);
   const slots = [
     ...survivors.map((char) => ({ side: 'survivor', char, build: rollFor('survivor') })),
-    { side: 'hunter', char: hunter, build: rollFor('hunter'), trait: pickOne(pool('trait'), rng) },
+    { side: 'hunter', char: hunter, build: rollFor('hunter'), trait: settings.drawTrait ? pickOne(pool('trait'), rng) : null },
   ];
   slots.forEach((s) => preload(s.char.portrait));
-  return { slots };
+  return { slots, at: new Date() };
 }
 
 function splitBuild(tree, build) {
@@ -304,7 +316,6 @@ function createSlot(index) {
     <div class="panel">
       <div class="panel-head">
         <span class="panel-title">人格</span>
-        <span class="panel-count"></span>
       </div>
       ${hunter ? `
       <div class="trait">
@@ -333,7 +344,6 @@ function createSlot(index) {
     roles: $('.roles', root),
     name: $('.name', root),
     panel: $('.panel', root),
-    count: $('.panel-count', root),
     webBtn: $('.web-btn', root),
     web: $('.web', root),
     list: $('.talent-list', root),
@@ -367,7 +377,6 @@ function setPanelPending(slot) {
   slot.panel.classList.add('pending');
   slot.panel.classList.remove('lighting');
   renderWeb(slot.web, data.trees[slot.side], null);
-  slot.count.textContent = '';
   slot.list.replaceChildren();
 }
 
@@ -376,7 +385,6 @@ function fillPanel(slot, entry, animate) {
   slot.panel.classList.remove('pending');
   slot.panel.classList.toggle('lighting', animate);
   renderWeb(slot.web, tree, entry.build, { animate });
-  slot.count.textContent = `${entry.build.used} 层 / ${entry.build.used * POINTS_PER_LAYER} 点`;
   slot.list.replaceChildren(...talentItems(tree, entry.build));
 }
 
@@ -404,14 +412,24 @@ function talentItems(tree, build) {
 
 function resetTrait(slot) {
   if (!slot.traitBox) return;
-  slot.traitBox.classList.remove('rolling', 'locked');
+  if (!settings.drawTrait) { showTraitFree(slot); return; }
+  slot.traitBox.classList.remove('rolling', 'locked', 'is-free');
   slot.traitImg.removeAttribute('src');
   slot.traitName.textContent = '待揭晓';
 }
 
 function showTrait(slot, trait) {
+  slot.traitBox.classList.remove('is-free');
   slot.traitImg.src = asset(trait.icon.local_path);
   slot.traitName.textContent = trait.name;
+}
+
+/** 关闭“抽取辅助特质”时：由监管者自己选择。 */
+function showTraitFree(slot) {
+  slot.traitBox.classList.remove('rolling', 'locked');
+  slot.traitBox.classList.add('is-free');
+  slot.traitImg.removeAttribute('src');
+  slot.traitName.textContent = '自选';
 }
 
 /* ------------------------------------------------------------------ 人格树 SVG */
@@ -442,8 +460,13 @@ function renderWeb(svg, tree, build, { animate = false, detailed = false } = {})
     const cls = ['node'];
     if (level) cls.push('lit');
     if (n.is_ultimate) cls.push('ult');
-    const g = svgEl('g', { class: cls.join(' '), transform: `translate(${n.x} ${n.y})` });
+    const g = svgEl('g', { class: cls.join(' '), transform: `translate(${n.x} ${n.y})`, 'data-id': n.id });
     g.style.setProperty('--d', n.depth);
+    if (detailed) {
+      g.setAttribute('tabindex', '0');
+      g.setAttribute('role', 'button');
+      g.setAttribute('aria-label', `${n.name}，${talentStatus(n, level)}`);
+    }
     const body = svgEl('g', { class: 'node-body' });
     if (n.is_ultimate) body.append(svgEl('circle', { class: 'burst', r: r + 4 }));
     body.append(svgEl('circle', { class: 'disc', r }));
@@ -458,12 +481,20 @@ function renderWeb(svg, tree, build, { animate = false, detailed = false } = {})
       t.textContent = String(level);
       body.append(t);
     }
-    const title = svgEl('title');
-    title.textContent = `${n.name}　${level}/${n.max_level}${n.is_ultimate ? '（终极人格）' : ''}${n.desc ? `\n${n.desc}` : ''}`;
-    g.append(body, title);
+    g.append(body);
+    if (!detailed) {
+      const title = svgEl('title');
+      title.textContent = `${n.name}　${level}/${n.max_level}${n.is_ultimate ? '（终极人格）' : ''}${n.desc ? `\n${n.desc}` : ''}`;
+      g.append(title);
+    }
     nodes.append(g);
   }
   svg.append(edges, nodes);
+}
+
+function talentStatus(node, level) {
+  if (node.is_ultimate) return level ? '终极人格' : '终极人格（未点亮）';
+  return level ? `${level}/${node.max_level} 层` : `未点亮（最高 ${node.max_level} 层）`;
 }
 
 /** 揭晓后点亮人格面板，返回动画结束的 Promise。 */
@@ -650,8 +681,12 @@ function draw() {
     const hunter = slots[4];
     await revealHunter(hunter);
     lights.push(lightPanel(hunter, match.slots[4], 60));
-    await wait(520);
-    await rollTrait(hunter, match.slots[4].trait);
+    if (match.slots[4].trait) {
+      await wait(520);
+      await rollTrait(hunter, match.slots[4].trait);
+    } else {
+      showTraitFree(hunter);
+    }
     await Promise.all(lights);
   });
 }
@@ -665,7 +700,7 @@ function rerollCharacter(slot) {
   } else {
     candidates = pool('hunter').filter((c) => c.id !== entry.char.id);
   }
-  if (!candidates.length) { toast('角色池里没有其他可换的角色了。'); return; }
+  if (!candidates.length) { toast('卡池里没有其他可换的角色了。'); return; }
   const next = pickOne(candidates, rng);
   preload(next.portrait);
   sfx.unlock();
@@ -675,6 +710,7 @@ function rerollCharacter(slot) {
     say('flip');
     await wait(680);
     entry.char = next;
+    match.at = new Date();
     fillLetter(slot, entry);
     say('shuffle');
     await play(slot.card, [
@@ -691,6 +727,7 @@ function rerollCharacter(slot) {
 function rerollBuild(slot) {
   const entry = match.slots[slot.index];
   entry.build = rollFor(slot.side);
+  match.at = new Date();
   sfx.unlock();
   sequence(async () => {
     setPanelPending(slot);
@@ -702,39 +739,67 @@ function rerollBuild(slot) {
 function rerollTrait(slot) {
   const entry = match.slots[slot.index];
   const candidates = pool('trait');
-  const others = candidates.filter((t) => t.name !== entry.trait.name);
+  if (!candidates.length) { toast('卡池里至少要留 1 个辅助特质。'); return; }
+  const others = candidates.filter((t) => t.name !== entry.trait?.name);
   entry.trait = pickOne(others.length ? others : candidates, rng);
+  match.at = new Date();
   sfx.unlock();
   sequence(() => rollTrait(slot, entry.trait));
 }
 
-/* ------------------------------------------------------------------ 复制结果 */
-
-function buildLines(entry) {
-  const tree = data.trees[entry.side];
-  const { ultimates, others } = splitBuild(tree, entry.build);
-  const other = others.map(({ node, level }) => (node.max_level > 1 ? `${node.name}${level}/${node.max_level}` : node.name));
-  return [
-    `   终极人格：${ultimates.length ? ultimates.map((t) => t.node.name).join('、') : '无'}`,
-    `   其他人格：${other.join('、') || '无'}`,
-    `   共 ${entry.build.used} 层，${entry.build.used * POINTS_PER_LAYER} 点`,
-  ];
+/** 切换“抽取辅助特质”后，立即更新当前结果。 */
+function applyTraitSetting() {
+  if (!match || busy) return;
+  const slot = slots[4];
+  const entry = match.slots[4];
+  if (!settings.drawTrait) {
+    if (!entry.trait) return;
+    entry.trait = null;
+    match.at = new Date();
+    showTraitFree(slot);
+  } else if (!entry.trait) {
+    rerollTrait(slot);
+  }
 }
 
-function resultText() {
-  const lines = ['第五人格 4v1 抽取结果', '', '【求生者】'];
+/* ------------------------------------------------------------------ 复制结果 */
+
+function formatTime(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function ultimateText(entry) {
+  const { ultimates } = splitBuild(data.trees[entry.side], entry.build);
+  return `终极人格：${ultimates.length ? ultimates.map((t) => t.node.name).join('、') : '无'}`;
+}
+
+function othersLine(entry) {
+  const { others } = splitBuild(data.trees[entry.side], entry.build);
+  const names = others.map(({ node, level }) => (node.max_level > 1 ? `${node.name}${level}/${node.max_level}` : node.name));
+  return `   其他人格：${names.join('、') || '无'}`;
+}
+
+/**
+ * 完整版包含其他人格和监管者辅助特质；简略版只保留角色和终极人格。
+ */
+function resultText({ brief = false } = {}) {
+  const lines = [`第五人格随机抽取工具-抽取结果 (${formatTime(match.at)})`, '', '【求生者】'];
   match.slots.forEach((entry, i) => {
     if (entry.side !== 'survivor') return;
-    lines.push(`${i + 1}. ${entry.char.name}（${(entry.char.roles || []).join('、')}）`, ...buildLines(entry));
+    lines.push(`${i + 1}. ${entry.char.name}${SEP}${ultimateText(entry)}`);
+    if (!brief) lines.push(othersLine(entry));
   });
   const hunter = match.slots[4];
-  lines.push('', '【监管者】', `${hunter.char.name}　辅助特质：${hunter.trait.name}`, ...buildLines(hunter));
+  const trait = brief ? '' : `辅助特质：${hunter.trait ? hunter.trait.name : '自选'}${SEP}`;
+  lines.push('', `【监管者】${hunter.char.name}${SEP}${trait}${ultimateText(hunter)}`);
+  if (!brief) lines.push(othersLine(hunter));
   return lines.join('\n');
 }
 
-async function copyResult() {
+async function copyResult({ brief = false } = {}) {
   if (!match || busy) return;
-  const text = resultText();
+  const text = resultText({ brief });
   let copied = false;
   try {
     await navigator.clipboard.writeText(text);
@@ -750,8 +815,11 @@ async function copyResult() {
     try { copied = document.execCommand('copy'); } catch { copied = false; }
     area.remove();
   }
-  toast(copied ? '已复制本局结果' : '浏览器不允许自动复制，请在控制台查看结果文本');
-  if (!copied) console.log(text);
+  if (copied) toast(brief ? '已复制简略结果' : '已复制本局结果');
+  else {
+    toast('浏览器不允许自动复制，请在控制台查看结果文本');
+    console.log(text);
+  }
 }
 
 /* ------------------------------------------------------------------ 人格树详情 */
@@ -768,23 +836,74 @@ function openTree(slot) {
   $('#tree-sub').textContent = `${entry.build.used} 层，${entry.build.used * POINTS_PER_LAYER} 点。`
     + (ultimates.length ? `终极人格：${ultimates.map((t) => t.node.name).join('、')}` : '这套人格没有终极人格');
 
-  const svg = svgEl('svg', { class: 'web', viewBox: '-372 -372 744 744', role: 'img', 'aria-label': '人格树' });
+  const svg = svgEl('svg', { class: 'web', viewBox: '-372 -372 744 744', role: 'group', 'aria-label': '人格树，点击人格图标查看详情' });
   renderWeb(svg, tree, entry.build, { detailed: true });
   $('#tree-web').replaceChildren(svg);
 
-  $('#tree-list').replaceChildren(...[...ultimates, ...others].map(({ node, level }) => {
+  const list = $('#tree-list');
+  list.replaceChildren(...[...ultimates, ...others].map(({ node, level }) => {
     const li = el('li', node.is_ultimate ? 'is-ult' : '');
+    li.dataset.id = node.id;
     const img = new Image();
     img.src = asset(node.icon.local_path);
     img.alt = '';
     const body = el('div');
     const head = el('p', 'tree-item-head');
-    head.append(el('b', '', node.name), el('span', '', node.is_ultimate ? '终极人格' : `${level}/${node.max_level} 层`));
+    head.append(el('b', '', node.name), el('span', '', talentStatus(node, level)));
     body.append(head);
     if (node.desc) body.append(el('p', 'tree-item-desc', node.desc));
     li.append(img, body);
     return li;
   }));
+
+  const focus = $('#tree-focus');
+  focus.className = 'tree-focus is-empty';
+  focus.textContent = '点击人格树上的图标，查看对应人格的说明。';
+
+  const select = (id) => {
+    const node = tree.byId.get(id);
+    if (!node || node.is_center) return;
+    const level = entry.build.levels[id] || 0;
+    svg.querySelectorAll('.node.is-selected').forEach((g) => g.classList.remove('is-selected'));
+    svg.querySelector(`.node[data-id="${id}"]`)?.classList.add('is-selected');
+    let selectedItem = null;
+    list.querySelectorAll('li').forEach((li) => {
+      const on = li.dataset.id === id;
+      li.classList.toggle('is-selected', on);
+      if (on) selectedItem = li;
+    });
+
+    const cls = ['tree-focus'];
+    if (node.is_ultimate) cls.push('is-ult');
+    if (!level) cls.push('is-off');
+    focus.className = cls.join(' ');
+    const img = new Image();
+    img.src = asset(node.icon.local_path);
+    img.alt = '';
+    const body = el('div');
+    const head = el('p', 'tree-focus-head');
+    head.append(el('b', '', node.name), el('span', '', talentStatus(node, level)));
+    body.append(head, el('p', 'tree-focus-desc', node.desc || '暂无说明。'));
+    focus.replaceChildren(img, body);
+    selectedItem?.scrollIntoView({ block: 'nearest' });
+  };
+
+  svg.addEventListener('click', (e) => {
+    const g = e.target.closest('.node[data-id]');
+    if (g) select(g.dataset.id);
+  });
+  svg.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const g = e.target.closest('.node[data-id]');
+    if (!g) return;
+    e.preventDefault();
+    select(g.dataset.id);
+  });
+  list.onclick = (e) => {
+    const li = e.target.closest('li[data-id]');
+    if (li) select(li.dataset.id);
+  };
+
   dlg.showModal();
 }
 
@@ -872,8 +991,11 @@ function syncButtons() {
   draw.textContent = busy ? '跳过动画' : (match ? '再抽一局' : '抽取结果');
   draw.classList.toggle('is-skip', busy);
   $('#btn-copy').disabled = !match || busy;
+  $('#btn-copy-brief').disabled = !match || busy;
   $('#btn-pool').disabled = busy;
+  $('#opt-trait').disabled = busy;
   document.querySelectorAll('.slot-actions .btn, .web-btn').forEach((b) => { b.disabled = !match || busy; });
+  document.querySelectorAll('[data-act="trait"]').forEach((b) => { b.hidden = !settings.drawTrait; });
   document.body.classList.toggle('is-busy', busy);
 }
 
@@ -887,6 +1009,7 @@ function syncSettingsUI() {
     });
   });
   $('#opt-despair').checked = settings.despair;
+  $('#opt-trait').checked = settings.drawTrait;
   const sound = $('#btn-sound');
   sound.textContent = settings.sound ? '音效：开' : '音效：关';
   sound.setAttribute('aria-pressed', String(settings.sound));
@@ -921,13 +1044,25 @@ function bindControls() {
     settings.despair = e.target.checked;
     saveSettings();
   });
+  $('#opt-trait').addEventListener('change', (e) => {
+    if (e.target.checked && !pool('trait').length) {
+      e.target.checked = false;
+      toast('卡池里至少要留 1 个辅助特质，才能抽取。');
+      return;
+    }
+    settings.drawTrait = e.target.checked;
+    saveSettings();
+    syncButtons();
+    applyTraitSetting();
+  });
   $('#btn-sound').addEventListener('click', () => {
     settings.sound = !settings.sound;
     saveSettings();
     syncSettingsUI();
   });
   $('#btn-draw').addEventListener('click', draw);
-  $('#btn-copy').addEventListener('click', copyResult);
+  $('#btn-copy').addEventListener('click', () => copyResult());
+  $('#btn-copy-brief').addEventListener('click', () => copyResult({ brief: true }));
   $('#table').addEventListener('click', (e) => { if (busy && !e.target.closest('button')) skip(); });
 
   document.addEventListener('keydown', (e) => {

@@ -1,0 +1,92 @@
+/* 放大的人格树：点击人格图标查看详情（在 style.css 之后加载） */
+
+.tree-detail-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tree-focus {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(179, 145, 88, .35);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, .22);
+}
+
+.tree-focus.is-empty {
+  display: block;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.tree-focus img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--node-fill);
+}
+
+.tree-focus.is-off img { opacity: .45; }
+
+.tree-focus-head {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.tree-focus-head b {
+  font-size: 17px;
+  letter-spacing: .06em;
+  color: var(--parchment);
+}
+
+.tree-focus-head span {
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--accent);
+}
+
+.tree-focus.is-ult .tree-focus-head span { color: var(--brass); }
+.tree-focus.is-off .tree-focus-head span { color: var(--muted); }
+
+.tree-focus-desc {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--text);
+  white-space: pre-line;
+}
+
+/* 可点击的节点 */
+.tree-detail-web .web .node { cursor: pointer; outline: none; }
+
+.tree-detail-web .web .node:hover .disc,
+.tree-detail-web .web .node:focus-visible .disc {
+  stroke: var(--parchment);
+}
+
+.tree-detail-web .web .node:focus-visible .node-body,
+.tree-detail-web .web .node.is-selected .node-body {
+  filter: drop-shadow(0 0 10px rgba(221, 208, 177, .75));
+}
+
+.tree-detail-web .web .node.is-selected .disc {
+  stroke: var(--parchment);
+  stroke-width: 5;
+}
+
+.tree-detail-web .web .node:not(.lit):hover image,
+.tree-detail-web .web .node:not(.lit).is-selected image { opacity: .55; }
+
+.tree-detail-list li { cursor: pointer; }
+
+.tree-detail-list li.is-selected {
+  background: rgba(255, 255, 255, .08);
+  box-shadow: inset 0 0 0 1px rgba(221, 208, 177, .3);
+}

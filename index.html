@@ -8,6 +8,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml" sizes="any">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/tree-detail.css">
 </head>
 <body>
   <nav class="site-nav" aria-label="PIL 站点导航">
@@ -29,7 +30,7 @@
       <p>抽取 4 名求生者和 1 名监管者、各自的人格、监管者辅助特质</p>
     </div>
     <div class="masthead-tools">
-      <button type="button" class="btn btn-quiet" id="btn-pool">角色池</button>
+      <button type="button" class="btn btn-quiet" id="btn-pool">卡池</button>
       <button type="button" class="btn btn-quiet" id="btn-sound" aria-pressed="true">音效：开</button>
     </div>
   </header>
@@ -64,12 +65,17 @@
           <button type="button" role="radio" data-value="2">2 个</button>
         </div>
       </div>
-      <p class="rule-note">默认用满 130 点人格点数</p>
+      <label class="switch">
+        <input type="checkbox" id="opt-trait">
+        <span class="switch-track" aria-hidden="true"></span>
+        <span>抽取辅助特质</span>
+      </label>
     </fieldset>
 
     <div class="actions">
       <button type="button" class="btn btn-wax" id="btn-draw" disabled>抽取结果</button>
       <button type="button" class="btn btn-quiet" id="btn-copy" disabled>复制结果</button>
+      <button type="button" class="btn btn-quiet" id="btn-copy-brief" disabled>复制简略结果</button>
     </div>
   </section>
 
@@ -83,8 +89,8 @@
   <dialog class="sheet" id="dlg-pool" aria-labelledby="pool-title">
     <form method="dialog" class="sheet-inner">
       <header class="sheet-head">
-        <h2 id="pool-title">角色池</h2>
-        <p>点一下把角色移出或放回抽取范围，设置会保存在这个浏览器里。</p>
+        <h2 id="pool-title">卡池</h2>
+        <p>点一下把角色或辅助特质移出或放回卡池，设置会保存在这个浏览器里。</p>
       </header>
       <div class="pool-tabs" role="tablist">
         <button type="button" role="tab" data-tab="survivor" aria-selected="true">求生者</button>
@@ -109,7 +115,10 @@
       </header>
       <div class="tree-detail">
         <div class="tree-detail-web" id="tree-web"></div>
-        <ol class="tree-detail-list" id="tree-list"></ol>
+        <div class="tree-detail-side">
+          <div class="tree-focus is-empty" id="tree-focus" aria-live="polite"></div>
+          <ol class="tree-detail-list" id="tree-list"></ol>
+        </div>
       </div>
       <footer class="sheet-foot">
         <button class="btn btn-wax" value="close">关闭</button>
