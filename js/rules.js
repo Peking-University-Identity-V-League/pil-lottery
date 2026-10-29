@@ -62,6 +62,12 @@ export function prepareTree(raw, descs = {}) {
  */
 export const RANDOM_ULTIMATE_WEIGHTS = [20, 35, 45];
 
+/**
+ * 抽中一个多层人格作为目标时，目标层数的权重：[1 层, 2 层, 3 层]。
+ * 默认等概率；如果已经点了一部分，只在更高的层数里按对应权重抽。
+ */
+export const TARGET_LEVEL_WEIGHTS = [1, 1, 1];
+
 function weightedIndex(weights, rng) {
   const total = weights.reduce((a, b) => a + b, 0);
   let r = rng() * total;
@@ -72,19 +78,27 @@ function weightedIndex(weights, rng) {
   return weights.length - 1;
 }
 
+/** 在 (当前层数, 最高层数] 中按 TARGET_LEVEL_WEIGHTS 抽一个目标层数。 */
+function rollTargetLevel(node, current, rng) {
+  if (node.max_level - current <= 1) return node.max_level;
+  const levels = [];
+  for (let lv = current + 1; lv <= node.max_level; lv++) levels.push(lv);
+  const weights = levels.map((lv) => TARGET_LEVEL_WEIGHTS[lv - 1] ?? 1);
+  return levels[weightedIndex(weights, rng)];
+}
+
 /**
  * 随机生成一套人格。
  *
- * 分配思路（“按分支点到底”）：
+ * 分配思路（“按分支生长”）：
  *   1. 先抽出 k 个终极人格，把从中心到它们的整条路径点满；
  *   2. 再把“必带”人格（如绝处逢生）的路径点满；
  *   3. 剩余层数按轮分配：每轮从所有“非终极、未点满”的人格里等概率抽一个目标，
- *      沿中心到目标的路径依次点满。于是每轮都会长出一条完整的小分支，
- *      而不是一层一层均匀往外扩散。
- *      树的每个方向上，第 1 圈 1 个、第 2 圈 3 个、第 3 圈 5 个人格，
- *      等概率抽目标天然更常把分支点到末梢。
- *   4. 最后一轮如果剩余层数不够点完整条路径，就沿路径能点多少点多少，
- *      可能留下一个未满级的人格（游戏里同样合法），不做“优先挑放得下的”这种偏置。
+ *      再为目标抽一个层数（多层人格按 TARGET_LEVEL_WEIGHTS 抽 1～3 层），
+ *      然后沿中心到目标的路径点：路径上的前置人格按规则必须点满，目标点到抽中的层数。
+ *      于是每轮长出一条小分支；分支末端可能停在任意层数，
+ *      未满级的人格可以出现在多个位置，之后若有目标经过它，会先把它补满。
+ *   4. 剩余层数不够时，沿路径能点多少点多少，同样合法。
  *
  * @param tree             prepareTree 的结果
  * @param ultimateSetting  'random' | 0 | 1 | 2
@@ -115,16 +129,18 @@ export function rollBuild(tree, { ultimateSetting = 'random', requiredIds = [] }
     }
   };
 
-  // 随机部分：沿路径依次点，预算用完就停；前一个没点满时不会继续往后点
-  const investPath = (id) => {
-    for (const n of pathTo(id)) {
-      const add = Math.min(n.max_level - cur(n.id), MAX_LAYERS - used);
+  // 随机部分：前置人格点满，目标点到 targetLevel；预算用完就停，前一个没点满时不会继续往后点
+  const investPath = (id, targetLevel) => {
+    const chain = pathTo(id);
+    chain.forEach((n, i) => {
+      if (i > 0 && cur(chain[i - 1].id) < chain[i - 1].max_level) return;
+      const goal = i === chain.length - 1 ? targetLevel : n.max_level;
+      const add = Math.min(goal - cur(n.id), MAX_LAYERS - used);
       if (add > 0) {
         levels.set(n.id, cur(n.id) + add);
         used += add;
       }
-      if (cur(n.id) < n.max_level) return;
-    }
+    });
   };
 
   const ultimates = sample(tree.ultimateIds, k, rng);
@@ -136,7 +152,9 @@ export function rollBuild(tree, { ultimateSetting = 'random', requiredIds = [] }
   while (used < MAX_LAYERS) {
     const targets = tree.talents.filter((n) => !n.is_ultimate && cur(n.id) < n.max_level);
     if (!targets.length) break;
-    investPath(pickOne(targets, rng).id); // 每轮至少点 1 层，循环必然结束
+    const target = pickOne(targets, rng);
+    // 目标未满级，目标层数 > 当前层数；路径上第一个未满的节点至少会点 1 层，循环必然结束
+    investPath(target.id, rollTargetLevel(target, cur(target.id), rng));
   }
 
   return { levels: Object.fromEntries(levels), used, ultimates };
