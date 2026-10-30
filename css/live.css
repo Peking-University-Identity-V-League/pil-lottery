@@ -1,0 +1,398 @@
+/* 选手同步：裁判端弹窗和选手页（在 style.css 之后加载） */
+
+.live-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.live-group h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--parchment);
+}
+
+.live-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.live-presets .btn.live-toggle {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 0;
+  padding: 4px 9px;
+  font-size: 12px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.live-presets .btn.live-toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: rgba(97, 213, 221, .14);
+  color: var(--accent);
+}
+
+.live-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px 14px;
+}
+
+.live-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.live-opt .segmented button[hidden] { display: none; }
+.live-opt .segmented [aria-checked="true"] {
+  background: rgba(179, 145, 88, .32);
+  color: var(--parchment);
+}
+
+#live-on:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.live-opt .segmented button:disabled { cursor: not-allowed; opacity: .6; }
+
+.live-link input {
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, .25);
+  color: var(--parchment);
+  font: inherit;
+  font-size: 14px;
+}
+
+.live-online-label { margin-right: 12px; }
+.live-online-item { margin-right: 12px; }
+.live-online-item b {
+  margin-left: 5px;
+  font-weight: 700;
+  color: #6fc48c;
+}
+
+.live-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.live-link {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--parchment);
+}
+
+.live-link small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 开关按钮：亮色边框表示开启 */
+.masthead-tools .btn[aria-pressed="true"],
+.masthead-tools .btn[aria-pressed="true"]:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 选手页 */
+
+.sheet.sheet-alert {
+  width: min(440px, calc(100vw - 32px));
+  height: fit-content;
+  min-height: 0;
+  max-height: fit-content;
+  inset: 0;
+  margin: auto;
+}
+
+.sheet-alert .sheet-foot .btn { flex: 0 1 auto; }
+
+.conn-body {
+  padding: 4px 24px 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.conn-body p { margin: 0; }
+
+.conn-waiting {
+  margin-bottom: 14px !important;
+  text-align: center;
+  color: var(--brass);
+}
+
+.conn-checklist ol { margin: 4px 0 10px; padding-left: 1.5em; }
+.conn-checklist[hidden], #conn-body[hidden] { display: none; }
+
+.is-retry #conn-title { color: #e0676a; }
+.is-retry .sheet-head { text-align: center; }
+
+.conn-waiting[hidden] { display: none; }
+
+#conn-foot[hidden] { display: none; }
+
+.sheet-alert { transition: opacity .22s ease; }
+.sheet-alert:focus-visible { outline: none; }
+.sheet-alert.is-closing { opacity: 0; }
+
+.is-success #conn-title { color: #6fc48c; }
+.is-success .sheet-head,
+.is-success .conn-body { text-align: center; }
+.is-success .conn-body { padding-bottom: 24px; }
+
+.conn-check {
+  display: none;
+  width: 56px;
+  height: 56px;
+  margin: 2px auto 12px;
+  fill: none;
+  stroke: #6fc48c;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: conn-pop .4s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+
+.conn-check circle {
+  stroke-dasharray: 145;
+  animation: conn-draw .45s ease-out both;
+}
+
+.conn-check path {
+  --len: 40;
+  stroke-dasharray: 40;
+  animation: conn-draw .3s ease-out .32s both;
+}
+
+.conn-fail { stroke: #e0676a; }
+.conn-fail path { --len: 46; stroke-dasharray: 46; }
+
+@keyframes conn-draw {
+  from { stroke-dashoffset: var(--len, 145); }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes conn-pop {
+  from { transform: scale(.7); }
+  to { transform: scale(1); }
+}
+
+
+
+.live-view {
+  margin-left: 12px;
+  font-size: .6em;
+  font-weight: 400;
+  color: var(--brass);
+}
+
+.live-conn {
+  align-self: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.live-conn::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.live-conn[data-state="on"] { color: #6fc48c; }
+.live-conn[data-state="lost"] { color: #e0676a; }
+
+.live-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.live-note[hidden] { display: none; }
+
+/* 看不到全部人格时的摘要：终极人格同一行，绝处逢生单独一行，格式相同 */
+.t-ult { min-height: 32px; }
+
+/* 绝处逢生：样式和终极人格相同，有时用绿色，无时用暗灰 */
+.t-despair.is-on {
+  color: #bff0cf;
+  background: rgba(73, 186, 116, .22);
+  border-left-color: #6fc48c;
+}
+
+.t-despair.is-off {
+  color: rgba(155, 149, 138, .55);
+  background: rgba(255, 255, 255, .025);
+  border-left-color: rgba(255, 255, 255, .14);
+}
+
+.t-despair.is-off img { opacity: .25; filter: grayscale(1); }
+
+/* 按面板实际宽度收紧并排的终极人格，保证放得下 */
+.panel { container-type: inline-size; }
+
+@container (max-width: 260px) {
+  .t-ult:not(.is-wide) { gap: 4px; padding: 3px; font-size: 13px; letter-spacing: 0; }
+  .t-ult:not(.is-wide) img { width: 20px; height: 20px; }
+}
+
+@container (max-width: 200px) {
+  .t-ult:not(.is-wide) { gap: 2px; padding: 3px 2px; font-size: 12px; }
+  .t-ult:not(.is-wide) img { width: 16px; height: 16px; }
+}
+
+@container (max-width: 160px) {
+  .t-ult:not(.is-wide) { font-size: 11px; }
+  .t-ult:not(.is-wide) img { width: 14px; height: 14px; }
+}
+
+@container (max-width: 130px) {
+  .t-ult:not(.is-wide) img { display: none; }
+}
+
+.live-page .web-btn[hidden] { display: none; }
+
+@media (max-width: 560px) {
+  .live-link { grid-template-columns: minmax(0, 1fr) auto; }
+  .live-link > span { grid-column: 1 / -1; }
+}
+
+.live-vis-box {
+  margin-top: 10px;
+  padding: 10px 14px 12px;
+  border: 1px solid rgba(179, 145, 88, .28);
+  border-radius: 3px;
+}
+
+.live-group h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--brass);
+}
+
+/* 随机终极人格权重 */
+
+.ult-weights {
+  display: flex;
+  align-items: center;
+  gap: 6px 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ult-weights[hidden] { display: none; }
+
+.ult-weights .rule-label { white-space: nowrap; }
+
+.ult-weights label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.ult-pct {
+  min-width: 2.2em;
+  font-weight: 400;
+  text-align: right;
+  color: var(--parchment);
+}
+
+.ult-weights input {
+  width: 40px;
+  padding: 2px 4px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, .25);
+  color: var(--parchment);
+  font: inherit;
+  text-align: center;
+  appearance: textfield;
+}
+
+.ult-weights input::-webkit-inner-spin-button,
+.ult-weights input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+
+.ult-weights .ult-reset {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 2px 8px;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+/* 列变窄时：标题和“默认”一行，三个权重一行 */
+@media (max-width: 1500px) {
+  .ult-weights {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ult-weights .rule-label { grid-column: 1 / 3; }
+  .ult-weights .ult-reset { order: 1; justify-self: end; }
+  .ult-weights label { order: 2; }
+}
+
+/* 手机：标题保持一行，放不下时随屏幕缩小 */
+@media (max-width: 760px) {
+  .masthead { padding-top: 18px; padding-bottom: 12px; gap: 10px; }
+  .masthead-title { min-width: 0; max-width: 100%; }
+  .masthead h1 {
+    font-size: min(30px, calc((100vw - 2 * var(--pad)) / 10.9));
+    letter-spacing: .08em;
+    white-space: nowrap;
+  }
+  .masthead p { margin-top: 6px; font-size: 13px; letter-spacing: 0; }
+  .masthead-tools { width: 100%; align-items: center; }
+  .masthead-tools .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 2px;
+    font-size: 13px;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .live-page .masthead-tools { justify-content: space-between; }
+  .live-page .masthead-tools .btn { flex: 0 0 auto; padding: 6px 12px; }
+  .live-view { margin-left: 8px; }
+}
+
+@media (max-width: 520px) {
+  /* 抽取按钮独占一行，两个复制按钮并排 */
+  .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .actions .btn { min-width: 0; padding: 8px 4px; font-size: 14px; letter-spacing: .04em; white-space: nowrap; }
+  .actions .btn-wax { grid-column: 1 / -1; padding: 10px 4px; font-size: 16px; letter-spacing: .2em; }
+}
+
+@media (max-width: 380px) {
+  .ult-weights { gap: 6px 4px; font-size: 12px; }
+  .ult-weights label { gap: 2px; }
+  .ult-pct { min-width: 0; }
+  .ult-weights input { width: 26px; padding: 2px 1px; }
+}

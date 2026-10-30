@@ -1,12 +1,21 @@
 import { sfx } from './sound.js';
 import {
-  POINTS_PER_LAYER, createRng, pickOne, sample, prepareTree, rollBuild, validateBuild,
+  RANDOM_ULTIMATE_WEIGHTS, createRng, normalizeUltimateWeights, pickOne, sample, prepareTree, rollBuild, validateBuild,
 } from './rules.js';
+import {
+  FIT_RULES, buildViolatesFit, describeRule, fitFor, isListedBlocked, isRuleEnabled, isRuleModified, setRuleEnabled, toggleCharacter,
+} from './fit-rules.js';
+import { createLiveHost, liveLink } from './live-host.js';
+import {
+  DEFAULT_VISIBILITY, LIVE_VIEWS, VISIBILITY_OPTIONS, VISIBILITY_TOGGLES, activeToggles, toggleVisibility,
+} from './live-visibility.js';
+import {
+  applyPortraitView, asset, cleanDescription, el, renderWeb, showTreeDialog, splitBuild, talentItems,
+} from './shared-ui.js';
 
 /* ------------------------------------------------------------------ 基础 */
 
 const $ = (sel, root = document) => root.querySelector(sel);
-const SVG_NS = 'http://www.w3.org/2000/svg';
 const STORE_KEY = 'pil-lottery:v1';
 const ORDINALS = ['第一位', '第二位', '第三位', '第四位'];
 const DESPAIR = '绝处逢生';
@@ -15,21 +24,6 @@ const SEP = '　'; // 复制结果里的分隔符（全角空格）
 const rng = createRng();
 const track = (...args) => window.pilLotteryTrack?.(...args);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-const ASSET_BASE = new URL('../', import.meta.url);
-const asset = (path) => new URL(encodeURI(path), ASSET_BASE).href;
-
-function el(tag, className = '', text = '') {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text) node.textContent = text;
-  return node;
-}
-
-function svgEl(tag, attrs = {}) {
-  const node = document.createElementNS(SVG_NS, tag);
-  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
-  return node;
-}
 
 document.documentElement.style.setProperty('--step', `${STEP}ms`);
 
@@ -42,12 +36,23 @@ const DEFAULTS = {
   drawTrait: true,
   sound: true,
   excluded: { survivor: [], hunter: [], trait: [] },
+  fit: {},
+  ultWeights: { survivor: RANDOM_ULTIMATE_WEIGHTS, hunter: RANDOM_ULTIMATE_WEIGHTS },
 };
 
 function loadSettings() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { /* 隐私模式等 */ }
-  return { ...DEFAULTS, ...saved, excluded: { ...DEFAULTS.excluded, ...(saved.excluded || {}) } };
+  return {
+    ...DEFAULTS,
+    ...saved,
+    excluded: { ...DEFAULTS.excluded, ...(saved.excluded || {}) },
+    fit: saved.fit || {},
+    ultWeights: {
+      survivor: normalizeUltimateWeights(saved.ultWeights?.survivor) || RANDOM_ULTIMATE_WEIGHTS,
+      hunter: normalizeUltimateWeights(saved.ultWeights?.hunter) || RANDOM_ULTIMATE_WEIGHTS,
+    },
+  };
 }
 
 const settings = loadSettings();
@@ -63,16 +68,6 @@ async function getJSON(url) {
   const res = await fetch(asset(url));
   if (!res.ok) throw new Error(`${url} 返回 HTTP ${res.status}`);
   return res.json();
-}
-
-/** 人格文案：换行标签转成换行，去掉“【WIKI编辑组注：…】”。 */
-function cleanDescription(text) {
-  return text
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/【\s*WIKI编辑组注[\s\S]*?】/g, '')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{2,}/g, '\n')
-    .trim();
 }
 
 async function loadData() {
@@ -122,7 +117,24 @@ function poolProblem() {
 
 let match = null; // { slots: [{ side, char, build, trait? }], at: Date }，前 4 个求生者，最后 1 个监管者；trait 为 null 表示自选
 
-function rollFor(side) {
+const charFit = (char, side) => fitFor(char, side, data.trees[side], settings.fit);
+
+/** 这名监管者可以抽到的辅助特质。 */
+function traitsFor(char) {
+  const { bannedTraits } = charFit(char, 'hunter');
+  return pool('trait').filter((t) => !bannedTraits.has(t.name));
+}
+
+/** 抽一个辅助特质；关闭抽取或没有可选特质时返回 null（自选）。 */
+function pickTrait(char, exclude = null) {
+  if (!settings.drawTrait) return null;
+  const candidates = traitsFor(char);
+  if (!candidates.length) return null;
+  const others = candidates.filter((t) => t.name !== exclude);
+  return pickOne(others.length ? others : candidates, rng);
+}
+
+function rollFor(side, char) {
   const tree = data.trees[side];
   const requiredIds = [];
   if (side === 'survivor' && settings.despair) {
@@ -130,7 +142,8 @@ function rollFor(side) {
     if (node) requiredIds.push(node.id);
   }
   const ultimateSetting = side === 'survivor' ? settings.survivorUlt : settings.hunterUlt;
-  const build = rollBuild(tree, { ultimateSetting, requiredIds }, rng);
+  const { bannedIds, softBannedIds } = charFit(char, side);
+  const build = rollBuild(tree, { ultimateSetting, ultimateWeights: settings.ultWeights[side], requiredIds, bannedIds, softBannedIds }, rng);
   const problems = validateBuild(tree, build);
   if (problems.length) console.warn('人格校验未通过', problems, build);
   return build;
@@ -186,20 +199,14 @@ async function warmAllImages() {
 function newMatch() {
   const survivors = sample(pool('survivor'), 4, rng);
   const hunter = pickOne(pool('hunter'), rng);
+  const trait = pickTrait(hunter);
+  if (settings.drawTrait && !trait) toast(`${hunter.name}没有可抽的辅助特质，改为自选。`);
   const slots = [
-    ...survivors.map((char) => ({ side: 'survivor', char, build: rollFor('survivor') })),
-    { side: 'hunter', char: hunter, build: rollFor('hunter'), trait: settings.drawTrait ? pickOne(pool('trait'), rng) : null },
+    ...survivors.map((char) => ({ side: 'survivor', char, build: rollFor('survivor', char) })),
+    { side: 'hunter', char: hunter, build: rollFor('hunter', hunter), trait },
   ];
   slots.forEach((s) => preload(s.char.portrait));
   return { slots, at: new Date() };
-}
-
-function splitBuild(tree, build) {
-  const lit = tree.talents.filter((n) => build.levels[n.id]).map((n) => ({ node: n, level: build.levels[n.id] }));
-  return {
-    ultimates: lit.filter((t) => t.node.is_ultimate),
-    others: lit.filter((t) => !t.node.is_ultimate),
-  };
 }
 
 /* ------------------------------------------------------------------ 动画调度 */
@@ -294,6 +301,8 @@ async function sequence(task) {
     resetCardMotion();
     // 动画类只在播放期间存在，避免移除 .instant 后重播
     document.querySelectorAll('.lighting').forEach((n) => n.classList.remove('lighting'));
+    liveShown = null;
+    syncLive('done');
     busy = false;
     skipping = false;
     instantFrame = requestAnimationFrame(() => {
@@ -402,6 +411,7 @@ function createSlot(index) {
 
 function fillLetter(slot, entry) {
   const { char } = entry;
+  applyPortraitView(slot.portrait, char);
   slot.portrait.src = asset(char.portrait);
   slot.portrait.alt = `${char.name}立绘`;
   slot.name.textContent = char.name;
@@ -423,28 +433,6 @@ function fillPanel(slot, entry, animate) {
   slot.panel.classList.toggle('lighting', animate);
   renderWeb(slot.web, tree, entry.build, { animate });
   slot.list.replaceChildren(...talentItems(tree, entry.build));
-}
-
-function talentItems(tree, build) {
-  const { ultimates, others } = splitBuild(tree, build);
-  const items = [];
-  for (const { node } of ultimates) {
-    const li = el('li', 't t-ult');
-    const img = new Image();
-    img.src = asset(node.icon.local_path);
-    img.alt = '';
-    li.append(img, el('span', '', node.name));
-    li.title = node.desc;
-    items.push(li);
-  }
-  for (const { node, level } of others) {
-    const li = el('li', 't', node.name);
-    if (node.max_level > 1) li.append(el('small', '', level < node.max_level ? `${level}/${node.max_level}` : `${level}`));
-    li.title = node.desc;
-    items.push(li);
-  }
-  items.forEach((li, i) => li.style.setProperty('--i', i));
-  return items;
 }
 
 function resetTrait(slot) {
@@ -470,69 +458,6 @@ function showTraitFree(slot) {
 }
 
 /* ------------------------------------------------------------------ 人格树 SVG */
-
-function renderWeb(svg, tree, build, { animate = false, detailed = false } = {}) {
-  const levels = build?.levels || {};
-  svg.replaceChildren();
-  svg.classList.toggle('lighting', animate);
-
-  const edges = svgEl('g', { class: 'edges' });
-  for (const e of tree.edges) {
-    const a = tree.byId.get(e.from);
-    const b = tree.byId.get(e.to);
-    const line = svgEl('line', {
-      x1: a.x, y1: a.y, x2: b.x, y2: b.y,
-      class: levels[b.id] ? 'edge lit' : 'edge',
-    });
-    line.style.setProperty('--d', b.depth - 1);
-    line.style.setProperty('--len', Math.hypot(b.x - a.x, b.y - a.y).toFixed(1));
-    edges.append(line);
-  }
-
-  const nodes = svgEl('g', { class: 'nodes' });
-  nodes.append(svgEl('circle', { class: 'hub', r: 13 }));
-  for (const n of tree.talents) {
-    const level = levels[n.id] || 0;
-    const r = n.is_ultimate ? 31 : 25;
-    const cls = ['node'];
-    if (level) cls.push('lit');
-    if (n.is_ultimate) cls.push('ult');
-    const g = svgEl('g', { class: cls.join(' '), transform: `translate(${n.x} ${n.y})`, 'data-id': n.id });
-    g.style.setProperty('--d', n.depth);
-    if (detailed) {
-      g.setAttribute('tabindex', '0');
-      g.setAttribute('role', 'button');
-      g.setAttribute('aria-label', `${n.name}，${talentStatus(n, level)}`);
-    }
-    const body = svgEl('g', { class: 'node-body' });
-    if (n.is_ultimate) body.append(svgEl('circle', { class: 'burst', r: r + 4 }));
-    body.append(svgEl('circle', { class: 'disc', r }));
-    if (n.icon?.local_path) {
-      body.append(svgEl('image', {
-        href: asset(n.icon.local_path), x: -r * 0.8, y: -r * 0.8, width: r * 1.6, height: r * 1.6,
-      }));
-    }
-    if (detailed && level && n.max_level > 1) {
-      body.append(svgEl('circle', { class: 'badge', cx: r * 0.78, cy: -r * 0.78, r: 13 }));
-      const t = svgEl('text', { class: 'badge-text', x: r * 0.78, y: -r * 0.78 });
-      t.textContent = String(level);
-      body.append(t);
-    }
-    g.append(body);
-    if (!detailed) {
-      const title = svgEl('title');
-      title.textContent = `${n.name}　${level}/${n.max_level}${n.is_ultimate ? '（终极人格）' : ''}${n.desc ? `\n${n.desc}` : ''}`;
-      g.append(title);
-    }
-    nodes.append(g);
-  }
-  svg.append(edges, nodes);
-}
-
-function talentStatus(node, level) {
-  if (node.is_ultimate) return level ? '终极人格' : '终极人格（未点亮）';
-  return level ? `${level}/${node.max_level} 层` : `未点亮（最高 ${node.max_level} 层）`;
-}
 
 /** 揭晓后点亮人格面板，返回动画结束的 Promise。 */
 function lightPanel(slot, entry, delay = 160) {
@@ -667,7 +592,7 @@ async function shuffleAndDeal() {
 
 async function rollTrait(slot, final) {
   const box = slot.traitBox;
-  const candidates = pool('trait');
+  const candidates = traitsFor(match.slots[slot.index].char);
   if (!candidates.length) candidates.push(final);
   box.classList.remove('locked');
   box.classList.add('rolling');
@@ -711,21 +636,27 @@ function draw() {
     if (wasOpen) { say('flip'); await wait(680); }
 
     match = next;
+    startLiveRound();
     slots.forEach((s, i) => fillLetter(s, match.slots[i]));
     await shuffleAndDeal();
 
     const lights = [];
     for (let i = 0; i < 4; i++) {
+      liveReveal(i, 'char');
       await openCard(slots[i]);
+      liveReveal(i, 'build');
       lights.push(lightPanel(slots[i], match.slots[i]));
       await wait(240);
     }
     await wait(300);
     const hunter = slots[4];
+    syncLive('hunter');
     await revealHunter(hunter);
+    liveReveal(4, 'char', 'build');
     lights.push(lightPanel(hunter, match.slots[4], 60));
     if (match.slots[4].trait) {
       await wait(520);
+      syncLive('trait');
       await rollTrait(hunter, match.slots[4].trait);
     } else {
       showTraitFree(hunter);
@@ -749,7 +680,15 @@ function rerollCharacter(slot) {
   preload(next.portrait);
   sfx.unlock();
 
+  // 原人格或特质不适配新角色时，只重抽不适配的部分
+  const nextFit = charFit(next, slot.side);
+  const rebuild = buildViolatesFit(data.trees[slot.side], entry.build, nextFit);
+  const traitBad = Boolean(entry.trait && nextFit.bannedTraits.has(entry.trait.name));
+  const retrait = slot.side === 'hunter' && settings.drawTrait
+    && (traitBad || (!entry.trait && traitsFor(next).length > 0));
+
   sequence(async () => {
+    if (rebuild) setPanelPending(slot);
     closeCard(slot);
     say('flip');
     await wait(680);
@@ -765,28 +704,49 @@ function rerollCharacter(slot) {
     ], { duration: 460, easing: 'ease-in-out', fill: 'none' });
     if (slot.side === 'hunter') await revealHunter(slot);
     else await openCard(slot);
+    syncLive('done');
+    if (rebuild) {
+      entry.build = rollFor(slot.side, next);
+      syncLive('done');
+      await lightPanel(slot, entry, 60);
+    }
+    if (retrait) {
+      entry.trait = pickTrait(next);
+      if (entry.trait) await rollTrait(slot, entry.trait);
+      else showTraitFree(slot);
+    }
+    if (rebuild && traitBad) toast('原人格和辅助特质不适配，已一并重抽');
+    else if (rebuild) toast('原人格不适配，已一并重抽');
+    else if (traitBad) toast('原辅助特质不适配，已一并重抽');
   });
 }
 
 function rerollBuild(slot) {
   const entry = match.slots[slot.index];
-  entry.build = rollFor(slot.side);
+  entry.build = rollFor(slot.side, entry.char);
   track('lottery_reroll', { side: slot.side, target: 'build' });
   match.at = new Date();
   sfx.unlock();
   sequence(async () => {
     setPanelPending(slot);
     say('flip');
+    syncLive('done');
     await lightPanel(slot, entry, 220);
   });
 }
 
 function rerollTrait(slot) {
   const entry = match.slots[slot.index];
-  const candidates = pool('trait');
-  if (!candidates.length) { toast('卡池里至少要留 1 个辅助特质。'); return; }
-  const others = candidates.filter((t) => t.name !== entry.trait?.name);
-  entry.trait = pickOne(others.length ? others : candidates, rng);
+  const next = pickTrait(entry.char, entry.trait?.name);
+  if (!next) {
+    toast(`${entry.char.name}没有可抽的辅助特质，改为自选。`);
+    entry.trait = null;
+    match.at = new Date();
+    showTraitFree(slot);
+    syncLive('done');
+    return;
+  }
+  entry.trait = next;
   track('lottery_reroll', { side: slot.side, target: 'trait' });
   match.at = new Date();
   sfx.unlock();
@@ -803,6 +763,7 @@ function applyTraitSetting() {
     entry.trait = null;
     match.at = new Date();
     showTraitFree(slot);
+    syncLive('done');
   } else if (!entry.trait) {
     rerollTrait(slot);
   }
@@ -1067,84 +1028,7 @@ function openTree(slot) {
   const entry = match?.slots[slot.index];
   if (!entry || busy) return;
   track('lottery_tree_open', { side: slot.side });
-  const tree = data.trees[slot.side];
-  const { ultimates, others } = splitBuild(tree, entry.build);
-  const dlg = $('#dlg-tree');
-  dlg.classList.remove('side-survivor', 'side-hunter');
-  dlg.classList.add(`side-${slot.side}`);
-  $('#tree-title').textContent = `${entry.char.name}的人格`;
-  $('#tree-sub').textContent = `${entry.build.used} 层，${entry.build.used * POINTS_PER_LAYER} 点。`
-    + (ultimates.length ? `终极人格：${ultimates.map((t) => t.node.name).join('、')}` : '这套人格没有终极人格');
-
-  const svg = svgEl('svg', { class: 'web', viewBox: '-372 -372 744 744', role: 'group', 'aria-label': '人格树，点击人格图标查看详情' });
-  renderWeb(svg, tree, entry.build, { detailed: true });
-  $('#tree-web').replaceChildren(svg);
-
-  const list = $('#tree-list');
-  list.replaceChildren(...[...ultimates, ...others].map(({ node, level }) => {
-    const li = el('li', node.is_ultimate ? 'is-ult' : '');
-    li.dataset.id = node.id;
-    const img = new Image();
-    img.src = asset(node.icon.local_path);
-    img.alt = '';
-    const body = el('div');
-    const head = el('p', 'tree-item-head');
-    head.append(el('b', '', node.name), el('span', '', talentStatus(node, level)));
-    body.append(head);
-    if (node.desc) body.append(el('p', 'tree-item-desc', node.desc));
-    li.append(img, body);
-    return li;
-  }));
-
-  const focus = $('#tree-focus');
-  focus.className = 'tree-focus is-empty';
-  focus.textContent = '点击人格树上的图标，查看对应人格的说明。';
-
-  const select = (id) => {
-    const node = tree.byId.get(id);
-    if (!node || node.is_center) return;
-    const level = entry.build.levels[id] || 0;
-    svg.querySelectorAll('.node.is-selected').forEach((g) => g.classList.remove('is-selected'));
-    svg.querySelector(`.node[data-id="${id}"]`)?.classList.add('is-selected');
-    let selectedItem = null;
-    list.querySelectorAll('li').forEach((li) => {
-      const on = li.dataset.id === id;
-      li.classList.toggle('is-selected', on);
-      if (on) selectedItem = li;
-    });
-
-    const cls = ['tree-focus'];
-    if (node.is_ultimate) cls.push('is-ult');
-    if (!level) cls.push('is-off');
-    focus.className = cls.join(' ');
-    const img = new Image();
-    img.src = asset(node.icon.local_path);
-    img.alt = '';
-    const body = el('div');
-    const head = el('p', 'tree-focus-head');
-    head.append(el('b', '', node.name), el('span', '', talentStatus(node, level)));
-    body.append(head, el('p', 'tree-focus-desc', node.desc || '暂无说明。'));
-    focus.replaceChildren(img, body);
-    selectedItem?.scrollIntoView({ block: 'nearest' });
-  };
-
-  svg.addEventListener('click', (e) => {
-    const g = e.target.closest('.node[data-id]');
-    if (g) select(g.dataset.id);
-  });
-  svg.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const g = e.target.closest('.node[data-id]');
-    if (!g) return;
-    e.preventDefault();
-    select(g.dataset.id);
-  });
-  list.onclick = (e) => {
-    const li = e.target.closest('li[data-id]');
-    if (li) select(li.dataset.id);
-  };
-
-  dlg.showModal();
+  showTreeDialog({ tree: data.trees[slot.side], build: entry.build, side: slot.side, name: entry.char.name });
 }
 
 /* ------------------------------------------------------------------ 角色池弹窗 */
@@ -1163,6 +1047,7 @@ function renderPool() {
     tile.setAttribute('aria-pressed', String(!excluded.has(key)));
     const img = new Image();
     img.src = asset(poolTab === 'trait' ? item.icon.local_path : item.portrait);
+    if (poolTab !== 'trait') applyPortraitView(img, item, true);
     img.alt = '';
     img.loading = 'lazy';
     const photo = el('span', 'tile-photo');
@@ -1217,6 +1102,411 @@ function bindPool() {
   });
 }
 
+/* ------------------------------------------------------------------ 适配设置弹窗 */
+
+let fitTab = 'hunter';
+let fitResetTimer = 0;
+const FIT_SOURCE = { survivor: () => data.survivors, hunter: () => data.hunters };
+
+function fitIcon(rule) {
+  if (rule.kind === 'trait') return data.traits.find((t) => t.name === rule.target)?.icon?.local_path;
+  return data.trees[rule.side].findByName(rule.target)?.icon?.local_path;
+}
+
+function fitTileLabel(char, blocked) {
+  return `${char.name}：${blocked ? '不会抽到' : '可以抽到'}`;
+}
+
+function syncFitCard(card, rule) {
+  const roster = FIT_SOURCE[rule.side]();
+  const allowed = roster.filter((c) => !isListedBlocked(rule, c, settings.fit)).length;
+  const enabled = isRuleEnabled(rule, settings.fit);
+  $('.fit-count', card).textContent = enabled ? `${allowed}/${roster.length} 名可以抽到` : '规则已关闭，所有角色都可以抽到';
+  $('.fit-desc', card).textContent = describeRule(rule, roster, settings.fit);
+  $('.fit-reset', card).disabled = !isRuleModified(rule, settings.fit);
+  $('.switch input', card).checked = enabled;
+  card.classList.toggle('is-off', !enabled);
+}
+
+function createFitCard(rule) {
+  const card = el('article', `fit-card side-${rule.side}`);
+  card.dataset.rule = rule.id;
+  const head = el('header', 'fit-head');
+  const icon = el('span', `fit-icon fit-icon-${rule.kind}`);
+  const path = fitIcon(rule);
+  if (path) {
+    const img = new Image();
+    img.src = asset(path);
+    img.alt = '';
+    icon.append(img);
+  }
+  const text = el('div', 'fit-text');
+  const title = el('h3', '', rule.target);
+  if (rule.kind === 'trait') title.append(el('small', '', '辅助特质'));
+  text.append(title, el('p', 'fit-desc'), el('p', 'fit-count'));
+  const tools = el('div', 'fit-tools');
+  const reset = el('button', 'btn btn-mini fit-reset', '重置');
+  reset.type = 'button';
+  reset.setAttribute('aria-label', `重置${rule.target}规则`);
+  const sw = el('label', 'switch');
+  const input = el('input');
+  input.type = 'checkbox';
+  input.setAttribute('aria-label', `启用${rule.target}规则`);
+  const track = el('span', 'switch-track');
+  track.setAttribute('aria-hidden', 'true');
+  sw.append(input, track);
+  tools.append(reset, sw);
+  head.append(icon, text, tools);
+
+  const grid = el('div', 'fit-grid');
+  grid.append(...FIT_SOURCE[rule.side]().map((char) => {
+    const blocked = isListedBlocked(rule, char, settings.fit);
+    const tile = el('button', 'fit-tile');
+    tile.type = 'button';
+    tile.dataset.id = char.id;
+    tile.title = char.name;
+    tile.setAttribute('aria-pressed', String(!blocked));
+    tile.setAttribute('aria-label', fitTileLabel(char, blocked));
+    const photo = el('span', 'fit-photo');
+    const img = new Image();
+    img.src = asset(char.portrait);
+    applyPortraitView(img, char, true);
+    img.alt = '';
+    img.loading = 'lazy';
+    photo.append(img);
+    tile.append(photo, el('span', 'fit-name', char.name));
+    return tile;
+  }));
+  card.append(head, grid);
+  syncFitCard(card, rule);
+  return card;
+}
+
+function syncFitSummary() {
+  const on = FIT_RULES.filter((rule) => isRuleEnabled(rule, settings.fit)).length;
+  $('#fit-count').textContent = `已启用 ${on}/${FIT_RULES.length}`;
+  $('#fit-reset-all').disabled = !FIT_RULES.some((rule) => isRuleModified(rule, settings.fit));
+}
+
+function renderFit() {
+  $('#fit-list').replaceChildren(...FIT_RULES.filter((rule) => rule.side === fitTab).map(createFitCard));
+  syncFitSummary();
+}
+
+function disarmFitReset() {
+  clearTimeout(fitResetTimer);
+  fitResetTimer = 0;
+  const button = $('#fit-reset-all');
+  button.textContent = '全部重置';
+  button.classList.remove('is-armed');
+}
+
+function bindFit() {
+  const dlg = $('#dlg-fit');
+  const list = $('#fit-list');
+  const ruleOf = (node) => FIT_RULES.find((rule) => rule.id === node.closest('.fit-card')?.dataset.rule);
+
+  $('#btn-fit').addEventListener('click', () => {
+    disarmFitReset();
+    renderFit();
+    dlg.showModal();
+  });
+  $('.pool-tabs', dlg).addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-tab]');
+    if (!tab) return;
+    fitTab = tab.dataset.tab;
+    dlg.querySelectorAll('[data-tab]').forEach((t) => t.setAttribute('aria-selected', String(t === tab)));
+    renderFit();
+  });
+  list.addEventListener('click', (e) => {
+    const rule = ruleOf(e.target);
+    if (!rule) return;
+    const card = e.target.closest('.fit-card');
+    const tile = e.target.closest('.fit-tile');
+    if (tile) {
+      const char = FIT_SOURCE[rule.side]().find((c) => c.id === tile.dataset.id);
+      settings.fit = toggleCharacter(rule, char.id, settings.fit);
+      saveSettings();
+      const blocked = isListedBlocked(rule, char, settings.fit);
+      tile.setAttribute('aria-pressed', String(!blocked));
+      tile.setAttribute('aria-label', fitTileLabel(char, blocked));
+      syncFitCard(card, rule);
+      syncFitSummary();
+    } else if (e.target.closest('.fit-reset')) {
+      const next = { ...settings.fit };
+      delete next[rule.id];
+      settings.fit = next;
+      saveSettings();
+      const fresh = createFitCard(rule);
+      card.replaceWith(fresh);
+      $('.switch input', fresh).focus();
+      syncFitSummary();
+      toast(`已重置${rule.target}规则`);
+    }
+  });
+  list.addEventListener('change', (e) => {
+    if (!e.target.matches('.switch input')) return;
+    const rule = ruleOf(e.target);
+    settings.fit = setRuleEnabled(rule, e.target.checked, settings.fit);
+    saveSettings();
+    syncFitCard(e.target.closest('.fit-card'), rule);
+    syncFitSummary();
+  });
+  $('#fit-reset-all').addEventListener('click', (e) => {
+    const button = e.currentTarget;
+    if (!fitResetTimer) {
+      button.textContent = '再点一次确认';
+      button.classList.add('is-armed');
+      fitResetTimer = setTimeout(disarmFitReset, 3000);
+      return;
+    }
+    disarmFitReset();
+    settings.fit = {};
+    saveSettings();
+    renderFit();
+    $('#fit-done').focus();
+    toast('已重置全部适配规则');
+  });
+  dlg.addEventListener('close', disarmFitReset);
+}
+
+/* ------------------------------------------------------------------ 随机终极人格概率 */
+
+function syncUltWeights() {
+  document.querySelectorAll('.ult-weights').forEach((box) => {
+    const { side } = box.dataset;
+    const weights = settings.ultWeights[side];
+    const total = weights.reduce((a, b) => a + b, 0);
+    const setting = side === 'survivor' ? settings.survivorUlt : settings.hunterUlt;
+    box.hidden = setting !== 'random';
+    box.querySelectorAll('label').forEach((label, i) => {
+      $('input', label).value = String(weights[i]);
+      $('.ult-pct', label).textContent = `${Math.round((weights[i] / total) * 100)}%`;
+    });
+  });
+}
+
+function bindUltWeights() {
+  document.querySelectorAll('.ult-weights').forEach((box) => {
+    const { side } = box.dataset;
+    box.addEventListener('change', () => {
+      const raw = [...box.querySelectorAll('input')].map((input) => (input.value.trim() === '' ? NaN : Number(input.value)));
+      const next = normalizeUltimateWeights(raw);
+      if (next) {
+        settings.ultWeights[side] = next;
+        saveSettings();
+      } else {
+        toast('权重要填非负数，且不能全部为 0。');
+      }
+      syncUltWeights();
+    });
+    $('.ult-reset', box).addEventListener('click', () => {
+      settings.ultWeights[side] = RANDOM_ULTIMATE_WEIGHTS;
+      saveSettings();
+      syncUltWeights();
+    });
+  });
+}
+
+/* ------------------------------------------------------------------ 选手同步 */
+
+const live = createLiveHost({
+  onFail: () => toast('同步暂时失败，正在重试，抽取不受影响。'),
+  onRecover: () => toast('同步已恢复'),
+  onLost: () => {
+    syncLiveUI();
+    $('#dlg-live').close();
+    $('#dlg-live-lost').showModal();
+  },
+});
+let liveShown = null; // 抽取动画期间记录每个位置已揭晓的部分；null 表示全部已揭晓
+let liveRound = 0;
+let livePoll = 0;
+
+function startLiveRound() {
+  liveRound = Date.now();
+  liveShown = match.slots.map(() => ({ char: false, build: false, trait: false }));
+  syncLive('drawing');
+}
+
+function liveReveal(index, ...parts) {
+  for (const part of parts) liveShown[index][part] = true;
+  syncLive('drawing');
+}
+
+/** 只发送已揭晓的内容，还没揭晓的结果不会离开裁判的浏览器。 */
+function liveSnapshot(phase) {
+  if (!match) return { round: 0, phase: 'idle', slots: [] };
+  const despairId = data.trees.survivor.findByName(DESPAIR)?.id;
+  return {
+    round: liveRound,
+    phase,
+    slots: match.slots.map((entry, i) => {
+      const shown = liveShown?.[i];
+      const showChar = !shown || shown.char;
+      const showBuild = !shown || shown.build;
+      const out = {
+        char: showChar ? entry.char.id : null,
+        build: showBuild ? { levels: entry.build.levels, ultimates: entry.build.ultimates, used: entry.build.used } : null,
+      };
+      if (entry.side === 'survivor') {
+        out.despair = showBuild && Boolean(entry.build.levels[despairId]);
+      } else if (!shown || shown.trait) {
+        out.trait = entry.trait ? { name: entry.trait.name } : 'free';
+      } else {
+        out.trait = null;
+      }
+      return out;
+    }),
+  };
+}
+
+function syncLive(phase) {
+  if (live.room) live.push(liveSnapshot(phase));
+}
+
+function syncLiveUI() {
+  const { room } = live;
+  const button = $('#btn-live');
+  button.setAttribute('aria-pressed', String(Boolean(room)));
+  $('#live-off').hidden = Boolean(room);
+  $('#live-on').hidden = !room;
+  $('#live-rotate').hidden = !room;
+  $('#live-end').hidden = !room;
+  if (!room) { $('#live-count').textContent = ''; return; }
+  const visibility = room.visibility || DEFAULT_VISIBILITY;
+  // 监管者能看到全部人格时已经包含绝处逢生；不抽取辅助特质时所有人都看到“自选”。这两项不可修改，房间里的设置保留
+  const despairLocked = visibility.hunterSeesTalents === 'all';
+  const traitLocked = !settings.drawTrait;
+  for (const key of Object.keys(VISIBILITY_OPTIONS)) {
+    let value = visibility[key];
+    if (key === 'hunterSeesDespair' && despairLocked) value = 'show';
+    if (key === 'survivorSeesTrait' && traitLocked) value = 'free';
+    $(`[data-vis="${key}"]`).querySelectorAll('[role="radio"]').forEach((b) => {
+      const on = b.dataset.value === value;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+      b.disabled = key === 'hunterSeesDespair' && despairLocked;
+      if (key === 'survivorSeesTrait') b.hidden = traitLocked !== (b.dataset.value === 'free');
+    });
+  }
+  const active = activeToggles(visibility, { traitLocked: !settings.drawTrait });
+  document.querySelectorAll('#live-presets [data-toggle]').forEach((b) => {
+    const isTrait = b.dataset.toggle === 'trait';
+    b.disabled = isTrait && !settings.drawTrait;
+    b.setAttribute('aria-pressed', String(active.has(b.dataset.toggle)));
+  });
+  for (const view of LIVE_VIEWS) $(`#link-${view}`).value = liveLink(room, view);
+}
+
+async function refreshLiveViewers() {
+  if (!live.room) return;
+  try {
+    const { viewers } = await live.status();
+    const counts = [['监管者', viewers.hunter], ['求生者', viewers.survivor], ['观众', viewers.spectator]];
+    $('#live-count').replaceChildren(el('span', 'live-online-label', '在线'), ...counts.map(([name, count]) => {
+      const item = el('span', 'live-online-item', name);
+      item.append(el('b', '', String(count)));
+      return item;
+    }));
+  } catch { /* 下一轮再试 */ }
+}
+
+async function applyVisibility(visibility) {
+  try {
+    await live.setVisibility(visibility);
+  } catch {
+    toast('可见范围没有保存，请重试。');
+  }
+  syncLiveUI();
+}
+
+async function copyLink(input) {
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(input.value);
+    copied = true;
+  } catch {
+    input.select();
+    try { copied = document.execCommand('copy'); } catch { copied = false; }
+  }
+  toast(copied ? '链接已复制' : '浏览器不允许自动复制，请手动复制');
+}
+
+function bindLive() {
+  const dlg = $('#dlg-live');
+  $('#live-presets').replaceChildren(...VISIBILITY_TOGGLES.map((toggle) => {
+    const button = el('button', 'btn btn-mini live-toggle', toggle.name);
+    button.type = 'button';
+    button.dataset.toggle = toggle.id;
+    return button;
+  }));
+  $('#live-lost-open').addEventListener('click', () => {
+    $('#dlg-live-lost').close();
+    $('#btn-live').click();
+  });
+  $('#btn-live').addEventListener('click', () => {
+    syncLiveUI();
+    dlg.showModal();
+    refreshLiveViewers();
+    livePoll = setInterval(refreshLiveViewers, 5000);
+  });
+  dlg.addEventListener('close', () => clearInterval(livePoll));
+  $('#live-create').addEventListener('click', async () => {
+    try {
+      await live.create();
+    } catch {
+      toast('暂时无法创建同步房间，请稍后再试。');
+      return;
+    }
+    syncLive(busy ? 'drawing' : 'done');
+    syncLiveUI();
+    refreshLiveViewers();
+  });
+  $('#live-presets').addEventListener('click', (e) => {
+    const button = e.target.closest('[data-toggle]');
+    if (button) applyVisibility(toggleVisibility(live.room.visibility, button.dataset.toggle, { traitLocked: !settings.drawTrait }));
+  });
+  const chooseVisibility = (button) => {
+    const { vis } = button.closest('[data-vis]').dataset;
+    applyVisibility({ ...live.room.visibility, [vis]: button.dataset.value });
+  };
+  $('#live-options').addEventListener('click', (e) => {
+    const button = e.target.closest('[data-vis] [role="radio"]');
+    if (button) chooseVisibility(button);
+  });
+  $('#live-options').addEventListener('keydown', (e) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    const group = e.target.closest('[data-vis]');
+    if (!group) return;
+    e.preventDefault();
+    const radios = [...group.querySelectorAll('[role="radio"]')].filter((b) => !b.hidden && !b.disabled);
+    if (!radios.length) return;
+    const dir = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
+    const next = radios[(radios.indexOf(e.target) + dir + radios.length) % radios.length];
+    chooseVisibility(next);
+    next.focus();
+  });
+  $('#live-links').addEventListener('click', (e) => {
+    const view = e.target.closest('[data-copy]')?.dataset.copy;
+    if (view) copyLink($(`#link-${view}`));
+  });
+  $('#live-rotate').addEventListener('click', async () => {
+    try {
+      await live.rotate();
+      toast('已生成新链接，旧链接立即失效');
+    } catch {
+      toast('没有生成新链接，请重试。');
+    }
+    syncLiveUI();
+  });
+  $('#live-end').addEventListener('click', async () => {
+    await live.close();
+    syncLiveUI();
+    toast('已结束同步');
+  });
+}
+
 /* ------------------------------------------------------------------ 控件 */
 
 let toastTimer = 0;
@@ -1236,6 +1526,7 @@ function syncButtons() {
   $('#btn-copy').disabled = !match || busy;
   $('#btn-copy-brief').disabled = !match || busy;
   $('#btn-pool').disabled = busy;
+  $('#btn-fit').disabled = busy || !data.trees.survivor;
   $('#opt-trait').disabled = busy;
   document.querySelectorAll('.slot-actions .btn, .web-btn, .panel-copy').forEach((b) => { b.disabled = !match || busy; });
   document.querySelectorAll('[data-act="trait"]').forEach((b) => { b.hidden = !settings.drawTrait; });
@@ -1243,7 +1534,7 @@ function syncButtons() {
 }
 
 function syncSettingsUI() {
-  document.querySelectorAll('.segmented').forEach((group) => {
+  document.querySelectorAll('.rule .segmented').forEach((group) => {
     const value = String(group.dataset.setting === 'survivor' ? settings.survivorUlt : settings.hunterUlt);
     group.querySelectorAll('[role="radio"]').forEach((b) => {
       const on = b.dataset.value === value;
@@ -1254,13 +1545,13 @@ function syncSettingsUI() {
   $('#opt-despair').checked = settings.despair;
   $('#opt-trait').checked = settings.drawTrait;
   const sound = $('#btn-sound');
-  sound.textContent = settings.sound ? '音效：开' : '音效：关';
   sound.setAttribute('aria-pressed', String(settings.sound));
   sfx.setEnabled(settings.sound);
+  syncUltWeights();
 }
 
 function bindControls() {
-  document.querySelectorAll('.segmented').forEach((group) => {
+  document.querySelectorAll('.rule .segmented').forEach((group) => {
     const choose = (button) => {
       const value = button.dataset.value === 'random' ? 'random' : Number(button.dataset.value);
       if (group.dataset.setting === 'survivor') settings.survivorUlt = value; else settings.hunterUlt = value;
@@ -1329,6 +1620,10 @@ async function main() {
   syncSettingsUI();
   bindControls();
   bindPool();
+  bindFit();
+  bindUltWeights();
+  bindLive();
+  syncLiveUI();
   try {
     await loadData();
   } catch (err) {
@@ -1338,6 +1633,7 @@ async function main() {
   }
   buildTable();
   syncButtons();
+  refreshLiveViewers(); // 刷新页面后确认之前的同步房间还有效
   requestAnimationFrame(() => { void warmAllImages(); });
 }
 

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <title>房间同步｜第五人格随机抽取工具</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml" sizes="any">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/tree-detail.css">
+  <link rel="stylesheet" href="../css/live.css">
+</head>
+<body class="live-page">
+  <header class="masthead">
+    <div class="masthead-title">
+      <h1>房间同步<span class="live-view" id="live-view"></span></h1>
+      <p id="live-phase" role="status" aria-live="polite">正在连接…</p>
+    </div>
+    <div class="masthead-tools">
+      <span class="live-conn" id="live-conn" data-state="wait">连接中…</span>
+      <button type="button" class="btn btn-quiet" id="btn-sound" aria-pressed="false">音效</button>
+    </div>
+  </header>
+
+  <main class="table" id="table">
+    <p class="notice" id="notice">正在整理庄园的信件…</p>
+  </main>
+
+  <dialog class="sheet sheet-wide" id="dlg-tree" aria-labelledby="tree-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="tree-title"></h2>
+        <p id="tree-sub"></p>
+      </header>
+      <div class="tree-detail">
+        <div class="tree-detail-web" id="tree-web"></div>
+        <div class="tree-detail-side">
+          <div class="tree-focus is-empty" id="tree-focus" aria-live="polite"></div>
+          <ol class="tree-detail-list" id="tree-list"></ol>
+        </div>
+      </div>
+      <footer class="sheet-foot">
+        <button class="btn btn-wax" value="close">关闭</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="sheet sheet-alert" id="dlg-conn" closedby="none" aria-labelledby="conn-title" aria-describedby="conn-body">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="conn-title"></h2>
+      </header>
+      <div class="conn-body">
+        <svg class="conn-check conn-fail" id="conn-fail" viewBox="0 0 52 52" aria-hidden="true">
+          <circle cx="26" cy="26" r="23"></circle>
+          <path d="M18 18 L34 34 M34 18 L18 34"></path>
+        </svg>
+        <p class="conn-waiting" id="conn-waiting"></p>
+        <svg class="conn-check" id="conn-check" viewBox="0 0 52 52" aria-hidden="true">
+          <circle cx="26" cy="26" r="23"></circle>
+          <path d="M15 27 l8 8 l15 -17"></path>
+        </svg>
+        <p id="conn-body"></p>
+        <div class="conn-checklist" id="conn-checklist">
+          <p>请确认：</p>
+          <ol>
+            <li>网络连接是否正常；</li>
+            <li>房间链接是否有效。</li>
+          </ol>
+          <p>也可能是服务器状态异常，请联系开发者。</p>
+        </div>
+      </div>
+      <footer class="sheet-foot" id="conn-foot">
+        <button type="button" class="btn btn-quiet" id="conn-reload">重新检查</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script type="module" src="../js/live.js"></script>
+</body>
+</html>

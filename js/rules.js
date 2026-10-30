@@ -56,11 +56,15 @@ export function prepareTree(raw, descs = {}) {
   };
 }
 
-/**
- * 终极人格数量设为“随机”时的权重：[0 个, 1 个, 2 个]。
- * 实战中带 2 个终极人格最常见，所以略微偏向 2 个。
- */
-export const RANDOM_ULTIMATE_WEIGHTS = [20, 35, 45];
+/** 终极人格数量设为“随机”时的默认权重：[0 个, 1 个, 2 个]，主办方可以自定义。 */
+export const RANDOM_ULTIMATE_WEIGHTS = [1, 1, 1];
+
+/** 权重必须是 3 个非负数且不能全为 0；否则返回 null。 */
+export function normalizeUltimateWeights(weights) {
+  if (!Array.isArray(weights) || weights.length !== RANDOM_ULTIMATE_WEIGHTS.length) return null;
+  if (!weights.every((w) => Number.isFinite(w) && w >= 0)) return null;
+  return weights.some((w) => w > 0) ? [...weights] : null;
+}
 
 /**
  * 抽中一个多层人格作为目标时，目标层数的权重：[1 层, 2 层, 3 层]。
@@ -102,12 +106,15 @@ function rollTargetLevel(node, current, rng) {
  *
  * @param tree             prepareTree 的结果
  * @param ultimateSetting  'random' | 0 | 1 | 2
+ * @param ultimateWeights  “随机”时 0、1、2 个终极人格的权重
  * @param requiredIds      必须点亮的人格（会连同前置路径一起点满）
+ * @param bannedIds        不会抽到的人格，路径经过它们的目标也不会被选中
+ * @param softBannedIds    不会被主动抽中，但作为后续人格的前置时仍会点亮
  * @returns {{ levels: Record<string, number>, used: number, ultimates: string[] }}
  */
-export function rollBuild(tree, { ultimateSetting = 'random', requiredIds = [] } = {}, rng = createRng()) {
+export function rollBuild(tree, { ultimateSetting = 'random', ultimateWeights = RANDOM_ULTIMATE_WEIGHTS, requiredIds = [], bannedIds = [], softBannedIds = [] } = {}, rng = createRng()) {
   const k = ultimateSetting === 'random'
-    ? weightedIndex(RANDOM_ULTIMATE_WEIGHTS, rng)
+    ? weightedIndex(ultimateWeights, rng)
     : Math.max(0, Math.min(MAX_ULTIMATES, Number(ultimateSetting) || 0));
 
   const levels = new Map();
@@ -143,14 +150,29 @@ export function rollBuild(tree, { ultimateSetting = 'random', requiredIds = [] }
     });
   };
 
-  const ultimates = sample(tree.ultimateIds, k, rng);
+  const banned = new Set(bannedIds);
+  const softBanned = new Set(softBannedIds);
+
+  // 目标是否可选：路径不经过被禁的人格；若要经过尚未解锁的软限制人格，
+  // 剩余层数必须够点到目标本身，否则会留下一个孤立的软限制人格。
+  const canTarget = (target) => {
+    if (target.is_ultimate || cur(target.id) >= target.max_level) return false;
+    if (banned.has(target.id) || softBanned.has(target.id)) return false;
+    const before = pathTo(target.id).slice(0, -1);
+    if (before.some((n) => banned.has(n.id))) return false;
+    if (!before.some((n) => softBanned.has(n.id) && !cur(n.id))) return true;
+    const cost = before.reduce((sum, n) => sum + n.max_level - cur(n.id), 0);
+    return MAX_LAYERS - used > cost;
+  };
+
+  const ultimates = sample(tree.ultimateIds.filter((id) => !banned.has(id)), k, rng);
   ultimates.forEach(unlockPath);
   requiredIds.filter((id) => tree.byId.has(id)).forEach(unlockPath);
 
   if (used > MAX_LAYERS) throw new Error(`固定人格需要 ${used} 层，超过上限 ${MAX_LAYERS} 层`);
 
   while (used < MAX_LAYERS) {
-    const targets = tree.talents.filter((n) => !n.is_ultimate && cur(n.id) < n.max_level);
+    const targets = tree.talents.filter(canTarget);
     if (!targets.length) break;
     const target = pickOne(targets, rng);
     // 目标未满级，目标层数 > 当前层数；路径上第一个未满的节点至少会点 1 层，循环必然结束

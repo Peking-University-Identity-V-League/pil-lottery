@@ -130,6 +130,13 @@ jobs:
             throw new Error('HTML asset entry points could not be versioned.');
           }
           files.set('index.html', Buffer.from(html));
+          let liveHtml = await readFile(join(root, 'live/index.html'), 'utf8');
+          liveHtml = liveHtml.replace(/\b(href|src)="\.\.\/([^"]+)"/g, (full, attribute, path) =>
+            contents.has(path) ? `${attribute}="../${prefix}${path}"` : full);
+          if (!liveHtml.includes(`src="../${prefix}js/live.js"`) || !liveHtml.includes(`href="../${prefix}css/live.css"`)) {
+            throw new Error('Live page asset entry points could not be versioned.');
+          }
+          files.set('live/index.html', Buffer.from(liveHtml));
           files.set('favicon.svg', favicon);
           const commit = process.env.SOURCE_COMMIT;
           if (!/^[a-f0-9]{40}$/.test(commit || '')) throw new Error('Invalid source commit.');
@@ -234,7 +241,9 @@ jobs:
           const html = (await download('index.html')).toString();
           if (!html.includes(prefix + 'css/site-nav.css') || !html.includes('PIL 站点导航')) throw new Error('Navigation assets were not published.');
           if (!html.includes(prefix + 'js/telemetry.js')) throw new Error('Lottery analytics were not published.');
-          await Promise.all(['js/app.js', 'js/telemetry.js', 'css/style.css', 'css/site-nav.css', 'favicon.svg', 'characters.json', 'talent-trees.json', 'auxiliary-traits.json'].map(path => download(prefix + path)));
+          const liveHtml = (await download('live/index.html')).toString();
+          if (!liveHtml.includes(prefix + 'js/live.js')) throw new Error('Live page was not published.');
+          await Promise.all(['js/app.js', 'js/live.js', 'js/telemetry.js', 'css/style.css', 'css/site-nav.css', 'favicon.svg', 'characters.json', 'talent-trees.json', 'auxiliary-traits.json'].map(path => download(prefix + path)));
           const summary = 'Published and verified ' + commit + ' at ' + base;
           console.log(summary);
           if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, summary + '\n');

@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/tree-detail.css">
+  <link rel="stylesheet" href="css/fit-settings.css">
+  <link rel="stylesheet" href="css/live.css">
   <script defer src="js/telemetry.js"></script>
 </head>
 <body>
@@ -31,8 +33,10 @@
       <p>抽取 4 名求生者和 1 名监管者、各自的人格、监管者辅助特质</p>
     </div>
     <div class="masthead-tools">
-      <button type="button" class="btn btn-quiet" id="btn-pool">卡池</button>
-      <button type="button" class="btn btn-quiet" id="btn-sound" aria-pressed="true">音效：开</button>
+      <button type="button" class="btn btn-quiet" id="btn-pool">卡池设置</button>
+      <button type="button" class="btn btn-quiet" id="btn-fit" disabled>适配设置</button>
+      <button type="button" class="btn btn-quiet" id="btn-live" aria-pressed="false">房间设置</button>
+      <button type="button" class="btn btn-quiet" id="btn-sound" aria-pressed="true">音效</button>
     </div>
   </header>
 
@@ -47,6 +51,13 @@
           <button type="button" role="radio" data-value="1">1 个</button>
           <button type="button" role="radio" data-value="2">2 个</button>
         </div>
+      </div>
+      <div class="ult-weights" data-side="survivor">
+        <span class="rule-label">随机权重</span>
+        <label><span>0 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="0 个终极人格的权重"></label>
+        <label><span>1 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="1 个终极人格的权重"></label>
+        <label><span>2 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="2 个终极人格的权重"></label>
+        <button type="button" class="btn btn-mini ult-reset" aria-label="恢复默认权重">默认</button>
       </div>
       <label class="switch">
         <input type="checkbox" id="opt-despair">
@@ -65,6 +76,13 @@
           <button type="button" role="radio" data-value="1">1 个</button>
           <button type="button" role="radio" data-value="2">2 个</button>
         </div>
+      </div>
+      <div class="ult-weights" data-side="hunter">
+        <span class="rule-label">随机权重</span>
+        <label><span>0 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="0 个终极人格的权重"></label>
+        <label><span>1 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="1 个终极人格的权重"></label>
+        <label><span>2 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="2 个终极人格的权重"></label>
+        <button type="button" class="btn btn-mini ult-reset" aria-label="恢复默认权重">默认</button>
       </div>
       <label class="switch">
         <input type="checkbox" id="opt-trait">
@@ -90,7 +108,7 @@
   <dialog class="sheet" id="dlg-pool" aria-labelledby="pool-title">
     <form method="dialog" class="sheet-inner">
       <header class="sheet-head">
-        <h2 id="pool-title">卡池</h2>
+        <h2 id="pool-title">卡池设置</h2>
         <p>点一下把角色或辅助特质移出或放回卡池，设置会保存在这个浏览器里。</p>
       </header>
       <div class="pool-tabs" role="tablist">
@@ -104,6 +122,89 @@
         <button type="button" class="btn btn-quiet" id="pool-all">全部放回</button>
         <button type="button" class="btn btn-quiet" id="pool-none">全部移出</button>
         <button class="btn btn-wax" value="close">完成</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="sheet sheet-wide" id="dlg-fit" aria-labelledby="fit-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="fit-title">适配设置</h2>
+        <p>决定哪些角色会抽到这些人格和辅助特质。头像亮着表示可以抽到，点一下切换。设置会保存在这个浏览器里，从下一次抽取或重抽开始生效。</p>
+      </header>
+      <div class="pool-tabs" role="tablist">
+        <button type="button" role="tab" data-tab="hunter" aria-selected="true">监管者</button>
+        <button type="button" role="tab" data-tab="survivor" aria-selected="false">求生者</button>
+      </div>
+      <div class="fit-list" id="fit-list"></div>
+      <footer class="sheet-foot">
+        <span class="pool-count" id="fit-count"></span>
+        <button type="button" class="btn btn-quiet" id="fit-reset-all">全部重置</button>
+        <button class="btn btn-wax" id="fit-done" value="close">完成</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="sheet sheet-wide" id="dlg-live" aria-labelledby="live-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="live-title">房间设置</h2>
+      </header>
+      <div class="live-body">
+        <div id="live-off">
+          <button type="button" class="btn btn-wax" id="live-create">创建同步房间</button>
+        </div>
+        <div id="live-on" hidden>
+          <section class="live-group">
+            <h3>可见范围</h3>
+            <div class="live-presets" id="live-presets"></div>
+            <div id="live-options">
+              <div class="live-vis-box">
+                <h4>监管者能看到求生者的</h4>
+                <div class="live-options">
+                  <div class="live-opt"><span id="lbl-hunterSeesChar">角色</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-hunterSeesChar" data-vis="hunterSeesChar"><button type="button" role="radio" data-value="show">公开</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
+                  <div class="live-opt"><span id="lbl-hunterSeesTalents">人格</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-hunterSeesTalents" data-vis="hunterSeesTalents"><button type="button" role="radio" data-value="all">全部</button><button type="button" role="radio" data-value="ultimates">仅终极</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
+                  <div class="live-opt"><span id="lbl-hunterSeesDespair">是否带绝处逢生</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-hunterSeesDespair" data-vis="hunterSeesDespair"><button type="button" role="radio" data-value="show">公开</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
+                </div>
+              </div>
+              <div class="live-vis-box">
+                <h4>求生者能看到监管者的</h4>
+                <div class="live-options">
+                  <div class="live-opt"><span id="lbl-survivorSeesChar">角色</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-survivorSeesChar" data-vis="survivorSeesChar"><button type="button" role="radio" data-value="show">公开</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
+                  <div class="live-opt"><span id="lbl-survivorSeesTalents">人格</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-survivorSeesTalents" data-vis="survivorSeesTalents"><button type="button" role="radio" data-value="all">全部</button><button type="button" role="radio" data-value="ultimates">仅终极</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
+                  <div class="live-opt"><span id="lbl-survivorSeesTrait">辅助特质</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-survivorSeesTrait" data-vis="survivorSeesTrait"><button type="button" role="radio" data-value="show">公开</button><button type="button" role="radio" data-value="hide">隐藏</button><button type="button" role="radio" data-value="free" hidden>自选</button></div></div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="live-group" id="live-links">
+            <h3>选手链接</h3>
+            <div class="live-link"><span>监管者</span><input id="link-hunter" readonly aria-label="监管者链接"><button type="button" class="btn btn-mini" data-copy="hunter">复制</button></div>
+            <div class="live-link"><span>求生者</span><input id="link-survivor" readonly aria-label="求生者链接"><button type="button" class="btn btn-mini" data-copy="survivor">复制</button></div>
+            <div class="live-link"><span>观众</span><input id="link-spectator" readonly aria-label="观众链接"><button type="button" class="btn btn-mini" data-copy="spectator">复制</button></div>
+          </section>
+        </div>
+      </div>
+      <footer class="sheet-foot">
+        <span class="pool-count" id="live-count"></span>
+        <button type="button" class="btn btn-quiet" id="live-rotate" hidden>重新生成链接</button>
+        <button type="button" class="btn btn-quiet" id="live-end" hidden>结束同步</button>
+        <button class="btn btn-wax" value="close">完成</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="sheet sheet-alert" id="dlg-live-lost" aria-labelledby="live-lost-title" aria-describedby="live-lost-body">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="live-lost-title">同步房间已失效</h2>
+      </header>
+      <div class="conn-body">
+        <p id="live-lost-body">房间可能已过期，或同步服务重启过。之前发出的链接都不能再用了，选手也收不到新的抽取结果。请创建新房间，并把新链接重新发给选手。</p>
+      </div>
+      <footer class="sheet-foot">
+        <button class="btn btn-quiet" value="close">稍后再说</button>
+        <button type="button" class="btn btn-wax" id="live-lost-open">打开房间设置</button>
       </footer>
     </form>
   </dialog>

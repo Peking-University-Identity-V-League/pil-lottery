@@ -506,7 +506,7 @@ body.is-busy .table { cursor: pointer; }
   height: 100%;
   object-fit: cover;
   object-position: 50% 40%;
-  transform: scale(1.16);
+  transform: translate(var(--portrait-x, 0%), var(--portrait-y, 0%)) scale(1.16);
   transform-origin: 50% 40%;
   mix-blend-mode: multiply;
   filter: sepia(.2) contrast(1.06) saturate(.9);
@@ -565,6 +565,7 @@ body.is-busy .table { cursor: pointer; }
 /* ------------------------------------------------------------ 人格面板 */
 
 .panel {
+  flex: 1 1 auto; /* 并排的面板等高，操作按钮才能对齐 */
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -697,8 +698,10 @@ body.is-busy .table { cursor: pointer; }
 .t small { font-size: 11px; color: var(--accent); }
 
 .t-ult {
-  flex-basis: 100%;
+  flex: 1 1 calc(50% - 3px); /* 2 个终极人格并排一行 */
+  min-width: 0;
   gap: 8px;
+  white-space: nowrap;
   padding: 3px 8px 3px 4px;
   font-size: 14px;
   letter-spacing: .08em;
@@ -707,7 +710,14 @@ body.is-busy .table { cursor: pointer; }
   border-left: 2px solid var(--brass);
 }
 
+.t-ult.is-wide { flex-basis: 100%; }
+/* 只有 1 个或没有终极人格时：宽度和并排时一样，居中独占一行 */
+.t-ult.is-single { flex: 0 0 calc(50% - 3px); margin-inline: calc(25% + 1px); }
+.t-ult.is-single.is-none { justify-content: center; }
+.t-ult.is-none { min-height: 32px; color: var(--muted); }
+
 .t-ult img {
+  flex: none;
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -907,8 +917,8 @@ body.is-busy .table { cursor: pointer; }
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 50% 18%;
-  transform: scale(1.7);
+  object-position: 50% var(--tile-y, 18%);
+  transform: translateX(var(--tile-x, 0%)) scale(var(--tile-scale, 1.7));
   transform-origin: 50% 12%;
   mix-blend-mode: multiply;
 }
@@ -936,7 +946,7 @@ body.is-busy .table { cursor: pointer; }
 }
 
 .tile[aria-pressed="false"] img { opacity: .3; filter: grayscale(1); }
-.tile[aria-pressed="false"] .tile-name { color: var(--muted); text-decoration: line-through; }
+.tile[aria-pressed="false"] .tile-name { color: var(--muted); }
 
 .tile[aria-pressed="false"]::after {
   content: "已移出";
@@ -1056,3 +1066,6 @@ body.instant *::after {
   .segmented button { padding: 5px 9px; }
   .btn-wax { flex: 1; }
 }
+
+/* 人格多少不一时，操作按钮仍然贴着面板底部对齐 */
+.slot-actions { margin-top: auto; }
