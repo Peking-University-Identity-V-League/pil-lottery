@@ -28,6 +28,8 @@ jobs:
           node-version: '24.22.1'
       - name: Install pinned image tooling
         run: npm install --prefix "$RUNNER_TEMP/lottery-tools" --ignore-scripts --no-audit --no-fund sharp@0.35.5
+      - name: Validate analytics privacy and configuration
+        run: node --test tests/*.test.mjs
       - name: Build static assets
         env:
           SOURCE_COMMIT: ${{ github.sha }}
@@ -231,7 +233,8 @@ jobs:
           const prefix = 'assets/' + metadata.asset_version + '/';
           const html = (await download('index.html')).toString();
           if (!html.includes(prefix + 'css/site-nav.css') || !html.includes('PIL 站点导航')) throw new Error('Navigation assets were not published.');
-          await Promise.all(['js/app.js', 'css/style.css', 'css/site-nav.css', 'favicon.svg', 'characters.json', 'talent-trees.json', 'auxiliary-traits.json'].map(path => download(prefix + path)));
+          if (!html.includes(prefix + 'js/telemetry.js')) throw new Error('Lottery analytics were not published.');
+          await Promise.all(['js/app.js', 'js/telemetry.js', 'css/style.css', 'css/site-nav.css', 'favicon.svg', 'characters.json', 'talent-trees.json', 'auxiliary-traits.json'].map(path => download(prefix + path)));
           const summary = 'Published and verified ' + commit + ' at ' + base;
           console.log(summary);
           if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, summary + '\n');

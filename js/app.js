@@ -13,6 +13,7 @@ const DESPAIR = '绝处逢生';
 const STEP = 140; // 人格树每一圈点亮的间隔（毫秒），同步到 CSS 变量 --step
 const SEP = '　'; // 复制结果里的分隔符（全角空格）
 const rng = createRng();
+const track = (...args) => window.pilLotteryTrack?.(...args);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const ASSET_BASE = new URL('../', import.meta.url);
 const asset = (path) => new URL(encodeURI(path), ASSET_BASE).href;
@@ -239,6 +240,7 @@ function later(ms, fn) {
 function skip() {
   if (!busy || skipping) return;
   skipping = true;
+  track('lottery_skip_animation');
   document.body.classList.add('instant');
   for (const anim of [...running]) { try { anim.finish(); } catch { /* 已结束 */ } }
   for (const hook of [...skipHooks]) hook();
@@ -663,6 +665,11 @@ function draw() {
   if (problem) { toast(problem); return; }
   sfx.unlock();
   const next = newMatch();
+  track('lottery_draw', {
+    survivor_ult: settings.survivorUlt, hunter_ult: settings.hunterUlt,
+    despair: settings.despair, draw_trait: settings.drawTrait,
+    survivor_pool: pool('survivor').length, hunter_pool: pool('hunter').length, trait_pool: pool('trait').length,
+  });
 
   sequence(async () => {
     const wasOpen = slots.some((s) => s.card.classList.contains('is-open'));
@@ -704,6 +711,7 @@ function rerollCharacter(slot) {
   }
   if (!candidates.length) { toast('卡池里没有其他可换的角色了。'); return; }
   const next = pickOne(candidates, rng);
+  track('lottery_reroll', { side: slot.side, target: 'character' });
   preload(next.portrait);
   sfx.unlock();
 
@@ -729,6 +737,7 @@ function rerollCharacter(slot) {
 function rerollBuild(slot) {
   const entry = match.slots[slot.index];
   entry.build = rollFor(slot.side);
+  track('lottery_reroll', { side: slot.side, target: 'build' });
   match.at = new Date();
   sfx.unlock();
   sequence(async () => {
@@ -744,6 +753,7 @@ function rerollTrait(slot) {
   if (!candidates.length) { toast('卡池里至少要留 1 个辅助特质。'); return; }
   const others = candidates.filter((t) => t.name !== entry.trait?.name);
   entry.trait = pickOne(others.length ? others : candidates, rng);
+  track('lottery_reroll', { side: slot.side, target: 'trait' });
   match.at = new Date();
   sfx.unlock();
   sequence(() => rollTrait(slot, entry.trait));
@@ -817,6 +827,7 @@ async function copyResult({ brief = false } = {}) {
     try { copied = document.execCommand('copy'); } catch { copied = false; }
     area.remove();
   }
+  track('lottery_copy', { format: brief ? 'brief' : 'full', outcome: copied ? 'copied' : 'failed' });
   if (copied) toast(brief ? '已复制简略结果' : '已复制本局结果');
   else {
     toast('浏览器不允许自动复制，请在控制台查看结果文本');
@@ -1001,13 +1012,16 @@ async function copyTreeImage(slot) {
   try {
     if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') throw new Error('不支持复制图片');
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
+    track('lottery_copy', { side: slot.side, format: 'tree_image', outcome: 'copied' });
     toast(`已复制${name}的人格树图片`);
   } catch {
     try {
       downloadBlob(await blobPromise, `${name}-人格树.png`);
+      track('lottery_copy', { side: slot.side, format: 'tree_image', outcome: 'downloaded' });
       toast('浏览器不允许复制图片，已下载为 PNG');
     } catch (err) {
       console.error(err);
+      track('lottery_copy', { side: slot.side, format: 'tree_image', outcome: 'failed' });
       toast('人格树图片生成失败，请重试');
     }
   }
@@ -1018,6 +1032,7 @@ async function copyTreeImage(slot) {
 function openTree(slot) {
   const entry = match?.slots[slot.index];
   if (!entry || busy) return;
+  track('lottery_tree_open', { side: slot.side });
   const tree = data.trees[slot.side];
   const { ultimates, others } = splitBuild(tree, entry.build);
   const dlg = $('#dlg-tree');
@@ -1136,11 +1151,14 @@ function updatePoolCount() {
 function setExcluded(kind, keys) {
   settings.excluded[kind] = [...keys];
   saveSettings();
+  track('lottery_pool_change', { side: kind, kept: pool(kind).length, total: POOL_SOURCE[kind]().length });
 }
 
 function bindPool() {
   const dlg = $('#dlg-pool');
-  $('#btn-pool').addEventListener('click', () => { renderPool(); dlg.showModal(); });
+  $('#btn-pool').addEventListener('click', () => {
+    renderPool(); dlg.showModal(); track('lottery_pool_open');
+  });
   $('.pool-tabs', dlg).addEventListener('click', (e) => {
     const tab = e.target.closest('[data-tab]');
     if (!tab) return;
@@ -1212,6 +1230,7 @@ function bindControls() {
     const choose = (button) => {
       const value = button.dataset.value === 'random' ? 'random' : Number(button.dataset.value);
       if (group.dataset.setting === 'survivor') settings.survivorUlt = value; else settings.hunterUlt = value;
+      track('lottery_settings_change', { setting: group.dataset.setting === 'survivor' ? 'survivor_ultimate' : 'hunter_ultimate', value });
       saveSettings();
       syncSettingsUI();
     };
@@ -1233,6 +1252,7 @@ function bindControls() {
 
   $('#opt-despair').addEventListener('change', (e) => {
     settings.despair = e.target.checked;
+    track('lottery_settings_change', { setting: 'despair', value: settings.despair });
     saveSettings();
   });
   $('#opt-trait').addEventListener('change', (e) => {
@@ -1242,12 +1262,14 @@ function bindControls() {
       return;
     }
     settings.drawTrait = e.target.checked;
+    track('lottery_settings_change', { setting: 'draw_trait', value: settings.drawTrait });
     saveSettings();
     syncButtons();
     applyTraitSetting();
   });
   $('#btn-sound').addEventListener('click', () => {
     settings.sound = !settings.sound;
+    track('lottery_settings_change', { setting: 'sound', value: settings.sound });
     saveSettings();
     syncSettingsUI();
   });
