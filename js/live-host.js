@@ -16,6 +16,10 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
   let sending = false;
   let failing = false;
   let retryTimer = 0;
+  let visibilityQueue = Promise.resolve();
+  let visibilityVersion = 0;
+  let visibilityPending = 0;
+  let confirmedVisibility = room?.visibility;
 
   function persist() {
     try {
@@ -43,7 +47,7 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
 
   /** 同一时间只发一个请求；排队期间只保留最新状态，失败后自动重试。 */
   async function flush() {
-    if (sending || !pending || !room) return;
+    if (sending || !pending || !room || visibilityPending) return;
     sending = true;
     const body = pending;
     pending = null;
@@ -69,6 +73,7 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
       const res = await fetch(API, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       room = await res.json();
+      confirmedVisibility = room.visibility;
       persist();
       return room;
     },
@@ -78,11 +83,36 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
       pending = { seq, state };
       flush();
     },
-    async setVisibility(visibility) {
-      const res = await call('PUT', '/visibility', { visibility });
-      room.visibility = res.visibility;
+    setVisibility(visibility) {
+      const target = room;
+      if (!target) return Promise.reject(new Error('room-lost'));
+      const revision = ++visibilityVersion;
+      const snapshot = { ...visibility };
+      target.visibility = snapshot;
+      visibilityPending++;
       persist();
-      return res;
+      const saving = visibilityQueue.catch(() => {}).then(async () => {
+        try {
+          if (room !== target) throw new Error('room-lost');
+          const res = await call('PUT', '/visibility', { visibility: snapshot });
+          if (room === target) {
+            confirmedVisibility = res.visibility;
+            if (revision === visibilityVersion) { room.visibility = res.visibility; persist(); }
+          }
+          return res;
+        } catch (error) {
+          if (room === target && revision === visibilityVersion) {
+            room.visibility = confirmedVisibility;
+            persist();
+          }
+          throw error;
+        } finally {
+          visibilityPending--;
+          if (!visibilityPending && pending) flush();
+        }
+      });
+      visibilityQueue = saving;
+      return saving;
     },
     async rotate() {
       const res = await call('POST', '/rotate');
@@ -91,8 +121,15 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
       return room;
     },
     async status() {
+      const target = room;
+      const revision = visibilityVersion;
+      const wasPending = visibilityPending > 0;
       const res = await call('GET', '/status');
-      room.visibility = res.visibility;
+      if (room !== target) return res;
+      if (!wasPending && !visibilityPending && revision === visibilityVersion) {
+        room.visibility = res.visibility;
+        confirmedVisibility = res.visibility;
+      }
       room.tokens = res.tokens;
       persist();
       return res;

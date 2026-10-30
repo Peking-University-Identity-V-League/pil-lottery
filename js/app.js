@@ -1414,7 +1414,9 @@ async function refreshLiveViewers() {
 
 async function applyVisibility(visibility) {
   try {
-    await live.setVisibility(visibility);
+    const saving = live.setVisibility(visibility);
+    syncLiveUI();
+    await saving;
   } catch {
     toast('可见范围没有保存，请重试。');
   }
