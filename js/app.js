@@ -209,6 +209,7 @@ let skipping = false;
 let instantFrame = 0;
 const running = new Set();
 const skipHooks = new Set();
+const cardMotions = new Set();
 
 /** 可被“跳过”打断的等待。 */
 function wait(ms) {
@@ -226,6 +227,37 @@ function play(node, keyframes, options) {
   running.add(anim);
   if (skipping) anim.finish();
   return anim.finished.then(() => {}, () => {}).finally(() => running.delete(anim));
+}
+
+/** 卡片位移只保留显式终态，不留下叠加的 forwards 动画。 */
+function moveCard(card, keyframes, options) {
+  const anim = card.animate(keyframes, { fill: 'forwards', ...options });
+  cardMotions.add(anim);
+  running.add(anim);
+  if (skipping) anim.finish();
+  return anim.finished.then(() => {
+    // 统一复位后，即使完成回调才抵达，也不能把旧位置写回来。
+    if (cardMotions.has(anim)) card.style.transform = keyframes[keyframes.length - 1].transform;
+  }, () => {}).finally(() => {
+    anim.cancel();
+    cardMotions.delete(anim);
+    running.delete(anim);
+  });
+}
+
+/** 只清理本流程持有的卡片动画；火漆等后代动画保留各自的终态。 */
+function resetCardMotion() {
+  const motions = [...cardMotions];
+  cardMotions.clear();
+  for (const anim of motions) {
+    running.delete(anim);
+    anim.cancel();
+  }
+  for (const { card } of slots) {
+    card.style.removeProperty('transform');
+    card.style.removeProperty('z-index');
+    card.classList.remove('is-charging');
+  }
 }
 
 /** 只在未跳过时播放音效。 */
@@ -259,6 +291,7 @@ async function sequence(task) {
     console.error(err);
     toast(`抽取时出错：${err.message}`);
   } finally {
+    resetCardMotion();
     // 动画类只在播放期间存在，避免移除 .instant 后重播
     document.querySelectorAll('.lighting').forEach((n) => n.classList.remove('lighting'));
     busy = false;
@@ -555,7 +588,7 @@ async function revealHunter(slot) {
   card.classList.add('is-charging');
   say('heartbeat');
   later(520, () => sfx.heartbeat());
-  play(card, [
+  moveCard(card, [
     { transform: 'none' },
     { transform: 'translate(-2px, 1px) rotate(-.7deg)' },
     { transform: 'translate(2px, -1px) rotate(.7deg)' },
@@ -583,6 +616,8 @@ async function revealHunter(slot) {
 }
 
 async function shuffleAndDeal() {
+  // 测量布局前先归位，避免上一局的临时位移影响本局轨迹。
+  resetCardMotion();
   const cards = slots.map((s) => s.card);
   const rects = cards.map((c) => c.getBoundingClientRect());
   const left = Math.min(...rects.map((r) => r.left));
@@ -600,35 +635,34 @@ async function shuffleAndDeal() {
 
   cards.forEach((c, i) => { c.style.zIndex = String(10 + i); });
 
-  // 收拢到桌面中央
-  say('shuffle');
-  await Promise.all(cards.map((c, i) => play(c,
-    [{ transform: 'none' }, { transform: at(to[i]) }],
-    { duration: 460, delay: i * 55, easing: 'cubic-bezier(.55,0,.25,1)' })));
-
-  // 两轮洗牌：信封左右错开再合拢
-  for (let round = 0; round < 2; round++) {
+  try {
+    // 收拢到桌面中央
     say('shuffle');
+    await Promise.all(cards.map((c, i) => moveCard(c,
+      [{ transform: 'none' }, { transform: at(to[i]) }],
+      { duration: 460, delay: i * 55, easing: 'cubic-bezier(.55,0,.25,1)' })));
+
+    // 两轮洗牌：信封左右错开再合拢
+    for (let round = 0; round < 2; round++) {
+      say('shuffle');
+      await Promise.all(cards.map((c, i) => {
+        const shift = ((i + round) % 2 ? 1 : -1) * (48 + rng() * 26);
+        return moveCard(c,
+          [{ transform: at(to[i]) }, { transform: at(to[i], shift) }, { transform: at(to[i]) }],
+          { duration: 300, easing: 'ease-in-out' });
+      }));
+    }
+
+    // 依次发回各自的位置
     await Promise.all(cards.map((c, i) => {
-      const shift = ((i + round) % 2 ? 1 : -1) * (48 + rng() * 26);
-      return play(c,
-        [{ transform: at(to[i]) }, { transform: at(to[i], shift) }, { transform: at(to[i]) }],
-        { duration: 300, easing: 'ease-in-out' });
+      later(i * 95 + 330, () => sfx.deal());
+      return moveCard(c,
+        [{ transform: at(to[i]) }, { transform: 'none' }],
+        { duration: 480, delay: i * 95, easing: 'cubic-bezier(.2,.85,.25,1)' });
     }));
+  } finally {
+    resetCardMotion();
   }
-
-  // 依次发回各自的位置
-  await Promise.all(cards.map((c, i) => {
-    later(i * 95 + 330, () => sfx.deal());
-    return play(c,
-      [{ transform: at(to[i]) }, { transform: 'none' }],
-      { duration: 480, delay: i * 95, easing: 'cubic-bezier(.2,.85,.25,1)' });
-  }));
-
-  cards.forEach((c) => {
-    c.getAnimations().forEach((a) => a.cancel());
-    c.style.zIndex = '';
-  });
 }
 
 async function rollTrait(slot, final) {
@@ -723,7 +757,7 @@ function rerollCharacter(slot) {
     match.at = new Date();
     fillLetter(slot, entry);
     say('shuffle');
-    await play(slot.card, [
+    await moveCard(slot.card, [
       { transform: 'none' },
       { transform: 'translateY(-12px) rotate(-2.5deg)' },
       { transform: 'translateY(2px) rotate(1.5deg)' },
