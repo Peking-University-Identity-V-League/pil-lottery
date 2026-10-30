@@ -335,6 +335,7 @@ body.is-busy .table { cursor: pointer; }
   perspective: 1400px;
   container-type: inline-size;
   --seal: clamp(48px, 26cqi, 72px);
+  --flip-duration: .72s;
 }
 
 .slot-hunter .card { --seal: clamp(60px, 26cqi, 92px); }
@@ -343,7 +344,7 @@ body.is-busy .table { cursor: pointer; }
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
-  transition: transform .72s cubic-bezier(.3, .7, .2, 1);
+  transition: transform var(--flip-duration) cubic-bezier(.3, .7, .2, 1);
 }
 
 .card.is-open .card-inner { transform: rotateY(180deg); }
@@ -358,13 +359,21 @@ body.is-busy .table { cursor: pointer; }
 }
 
 .face-envelope {
+  visibility: visible;
   background: radial-gradient(ellipse at 50% 42%, #e9dfc5 0%, var(--parchment) 45%, var(--parchment-deep) 100%);
   box-shadow:
     inset 0 0 0 1px rgba(90, 70, 40, .5),
     inset 0 0 0 7px rgba(255, 250, 235, .2),
     inset 0 0 0 8px rgba(90, 70, 40, .28),
     0 12px 28px rgba(0, 0, 0, .5);
-  transition: box-shadow .4s;
+  transition: box-shadow .4s, visibility 0s;
+}
+
+/* WebKit may paint filtered folds through the back face. Hide the outgoing
+   face after the flip, while keeping it visible during the animation. */
+.card.is-open .face-envelope {
+  visibility: hidden;
+  transition-delay: 0s, var(--flip-duration);
 }
 
 .env-flap, .env-fold {
@@ -468,9 +477,16 @@ body.is-busy .table { cursor: pointer; }
 
 /* 信纸正面：旧照片 */
 .face-letter {
+  visibility: hidden;
   transform: rotateY(180deg);
+  transition: visibility 0s var(--flip-duration);
   background: radial-gradient(ellipse at 50% 38%, #ebe2cb 0%, var(--parchment) 50%, #b39c73 100%);
   box-shadow: 0 12px 28px rgba(0, 0, 0, .5);
+}
+
+.card.is-open .face-letter {
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .face-letter::after {
@@ -1005,6 +1021,7 @@ body.instant *::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .card { --flip-duration: 0s; }
   .card-inner, .toast, .panel { transition-duration: .01ms; }
 }
 
