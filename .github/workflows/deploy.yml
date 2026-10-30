@@ -138,11 +138,22 @@ jobs:
           }
           files.set('live/index.html', Buffer.from(liveHtml));
           files.set('favicon.svg', favicon);
+          const runtime = new Map([
+            ['runtime/server/live-server.mjs', await readFile(join(root, 'server/live-server.mjs'))],
+            ['runtime/js/live-visibility.js', await readFile(join(root, 'js/live-visibility.js'))],
+            ['runtime/package.json', Buffer.from('{"type":"module"}\n')],
+          ]);
+          const runtimeFingerprint = createHash('sha256');
+          for (const [path, buffer] of [...runtime].sort(([a], [b]) => a.localeCompare(b, 'en'))) {
+            runtimeFingerprint.update(path).update('\0').update(sha256(buffer)).update('\n');
+          }
+          const runtimeVersion = runtimeFingerprint.digest('hex');
+          for (const [path, buffer] of runtime) files.set(path, buffer);
           const commit = process.env.SOURCE_COMMIT;
           if (!/^[a-f0-9]{40}$/.test(commit || '')) throw new Error('Invalid source commit.');
           const release = 'lottery-' + commit;
           const metadata = {
-            component: 'lottery', source_commit: commit, release, asset_version: assetVersion,
+            component: 'lottery', source_commit: commit, release, asset_version: assetVersion, runtime_version: runtimeVersion,
             released_at: execFileSync('git', ['show', '-s', '--format=%cI', commit], { encoding: 'utf8' }).trim(), image_count: images.length,
             original_image_bytes: originalImageBytes, optimized_image_bytes: optimizedImageBytes,
           };
@@ -152,7 +163,7 @@ jobs:
           let gzipBytes = 0;
           let brotliBytes = 0;
           for (const [path, data] of [...files]) {
-            if (!/\.(html|css|js|json|svg)$/.test(path)) continue;
+            if (path.startsWith('runtime/') || !/\.(html|css|js|json|svg)$/.test(path)) continue;
             const gzip = gzipSync(data, { level: 9 });
             const brotli = brotliCompressSync(data, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } });
             if (gzip.length < data.length) files.set(path + '.gz', gzip);
@@ -244,6 +255,16 @@ jobs:
           const liveHtml = (await download('live/index.html')).toString();
           if (!liveHtml.includes(prefix + 'js/live.js')) throw new Error('Live page was not published.');
           await Promise.all(['js/app.js', 'js/live.js', 'js/telemetry.js', 'css/style.css', 'css/site-nav.css', 'favicon.svg', 'characters.json', 'talent-trees.json', 'auxiliary-traits.json'].map(path => download(prefix + path)));
+          let health;
+          for (let attempt = 0; attempt < 30; attempt++) {
+            try {
+              const response = await fetch(base + 'live-api/health', { cache: 'no-store', signal: AbortSignal.timeout(3000) });
+              health = response.ok ? await response.json() : null;
+              if (health?.ok && health.runtime_version === metadata.runtime_version) break;
+            } catch {}
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          if (!health?.ok || health.runtime_version !== metadata.runtime_version) throw new Error('Live runtime version did not activate.');
           const summary = 'Published and verified ' + commit + ' at ' + base;
           console.log(summary);
           if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, summary + '\n');

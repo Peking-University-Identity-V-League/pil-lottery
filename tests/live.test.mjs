@@ -316,3 +316,11 @@ test('过大的请求被拒绝', async () => {
   const res = await hostCall(room, 'PUT', '/state', { seq: 1, padding: 'x'.repeat(70 * 1024) }).catch(() => null);
   if (res) assert.equal(res.status, 413);
 });
+
+test('健康端点不创建房间，跨站建房请求被拒绝', async () => {
+  const health = await fetch(base.replace(/\/rooms$/, '/health'));
+  assert.equal(health.status, 200);
+  assert.equal((await health.json()).ok, true);
+  const crossSite = await fetch(base, { method: 'POST', headers: { Origin: 'https://other.invalid' } });
+  assert.equal(crossSite.status, 403);
+});

@@ -1,5 +1,6 @@
 // 选手同步服务：裁判提交已揭晓的状态，服务器按视角过滤后用 SSE 推送。数据只放内存。
 import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { readFileSync, realpathSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import {
@@ -49,6 +50,7 @@ function readJson(req) {
 
 export function createLiveServer({
   now = Date.now,
+  runtimeVersion = 'development',
   ttlMs = 12 * 60 * 60 * 1000,
   maxRooms = 200,
   maxClients = 1000,
@@ -179,6 +181,12 @@ export function createLiveServer({
 
   async function handle(req, res) {
     const url = new URL(req.url, 'http://live.invalid');
+    if (req.headers.origin && ![`https://${req.headers.host}`, `http://${req.headers.host}`].includes(req.headers.origin)) {
+      return reply(res, 403, { error: 'invalid-origin' });
+    }
+    if (req.method === 'GET' && url.pathname === `${API_PREFIX}/health`) {
+      return reply(res, 200, { ok: true, runtime_version: runtimeVersion });
+    }
     if (!url.pathname.startsWith(`${API_PREFIX}/`)) return reply(res, 404, { error: 'not-found' });
     const parts = url.pathname.slice(API_PREFIX.length + 1).split('/');
     if (parts[0] !== 'rooms') return reply(res, 404, { error: 'not-found' });
@@ -243,7 +251,9 @@ export function createLiveServer({
   return server;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const port = Number(process.env.LIVE_PORT || 18304);
-  createLiveServer().listen(port, '127.0.0.1', () => console.log(`live server on 127.0.0.1:${port}`));
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
+  const port = Number(process.env.LIVE_PORT || 18306);
+  const metadata = process.env.LIVE_METADATA ? JSON.parse(readFileSync(process.env.LIVE_METADATA, 'utf8')) : {};
+  if (process.env.LIVE_METADATA && !/^[a-f0-9]{64}$/.test(metadata.runtime_version || '')) throw new Error('Invalid runtime metadata');
+  createLiveServer({ runtimeVersion: metadata.runtime_version }).listen(port, '127.0.0.1', () => console.log(`live server on 127.0.0.1:${port}`));
 }
