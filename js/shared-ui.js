@@ -131,9 +131,10 @@ export function renderWeb(svg, tree, build, { animate = false, detailed = false 
         href: asset(n.icon.local_path), x: -r * 0.8, y: -r * 0.8, width: r * 1.6, height: r * 1.6,
       }));
     }
-    if (detailed && level && n.max_level > 1) {
-      body.append(svgEl('circle', { class: 'badge', cx: r * 0.78, cy: -r * 0.78, r: 13 }));
-      const t = svgEl('text', { class: 'badge-text', x: r * 0.78, y: -r * 0.78 });
+    if (level && n.max_level > 1) {
+      // 缩略图缩小显示，角标画大一些才看得清
+      body.append(svgEl('circle', { class: 'badge', cx: r * 0.78, cy: -r * 0.78, r: detailed ? 13 : 19 }));
+      const t = svgEl('text', { class: detailed ? 'badge-text' : 'badge-text badge-text-mini', x: r * 0.78, y: -r * 0.78 });
       t.textContent = String(level);
       body.append(t);
     }

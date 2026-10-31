@@ -647,6 +647,8 @@ body.is-busy .table { cursor: pointer; }
   dominant-baseline: central;
 }
 
+.web .badge-text-mini { font-size: 27px; }
+
 .web.lighting .edge.lit {
   animation: web-draw var(--step) linear calc(var(--d) * var(--step)) both;
 }
