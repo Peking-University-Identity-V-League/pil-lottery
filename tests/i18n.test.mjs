@@ -27,13 +27,13 @@ test('every character, trait and talent has a sourced name in both languages', a
   }
 });
 
-test('English descriptions keep the same numbers as the Chinese text', async () => {
+test('every description is translated and keeps the numbers of the Chinese text', async () => {
   const config = await json('tree-config-source.json');
   const numbers = (text) => [...new Set(text.replace(/（[^）]*）|【[^】]*】/g, '').match(/\d+(?:\.\d+)?/g) || [])].sort().join();
   for (const side of ['survivor', 'hunter']) {
     for (const node of config[side].treeData.nodes) {
-      const english = TERMS.en.desc[node.name];
-      if (english) assert.equal(numbers(english), numbers(node.content), node.name);
+      if (!node.name) continue;
+      for (const lang of ['en', 'ja']) assert.equal(numbers(TERMS[lang].desc[node.name] ?? ''), numbers(node.content), `${lang} ${node.name}`);
     }
   }
 });

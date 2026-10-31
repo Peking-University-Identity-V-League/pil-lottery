@@ -10,20 +10,8 @@ export const LANGUAGES = [
 ];
 const TRANSLATED_ATTRS = ['aria-label', 'placeholder', 'title', 'alt'];
 
-function detectLanguage() {
-  if (typeof document === 'undefined') return 'zh'; // 服务端和测试里固定中文
-  try {
-    const saved = localStorage.getItem(STORE_KEY);
-    if (LANGUAGES.some((l) => l.id === saved)) return saved;
-  } catch { /* 隐私模式等 */ }
-  for (const tag of navigator.languages || [navigator.language]) {
-    const id = String(tag).toLowerCase().split('-')[0];
-    if (LANGUAGES.some((l) => l.id === id)) return id;
-  }
-  return 'en';
-}
-
-let lang = detectLanguage();
+// 语言由 i18n-boot.js 在页面显示前选定；服务端和测试里固定中文
+let lang = globalThis.document?.documentElement.dataset.lang || 'zh';
 export const currentLanguage = () => lang;
 
 export function t(text, params = {}) {
@@ -87,6 +75,7 @@ export function applyI18n(root = document) {
     description.dataset.source ??= description.content;
     description.content = t(description.dataset.source);
   }
+  document.documentElement.classList.remove('i18n-pending');
 }
 
 export function bindLanguageSelect(onChange) {

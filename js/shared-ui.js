@@ -170,7 +170,6 @@ export function showTreeDialog({ tree, build, side, name }) {
   $('#tree-title').textContent = t('{name}的人格', { name });
   $('#tree-sub').textContent = t('{layers} 层，{points} 点。', { layers: build.used, points: build.used * POINTS_PER_LAYER })
     + (ultimates.length ? t('最终天赋：{names}', { names: joinList(ultimates.map((u) => talentName(u.node.name))) }) : t('这套人格没有最终天赋'));
-  $('#tree-credit').textContent = t('人格说明来源');
 
   const svg = svgEl('svg', { class: 'web', viewBox: '-372 -372 744 744', role: 'group', 'aria-label': t('人格树，点击人格图标查看详情') });
   renderWeb(svg, tree, build, { detailed: true });

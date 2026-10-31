@@ -92,6 +92,9 @@ button { font: inherit; }
   gap: 8px;
 }
 
+/* 翻译完成前不显示页面，见 i18n-boot.js */
+.i18n-pending { visibility: hidden; }
+
 .lang-select {
   min-height: 36px;
   padding: 0 6px;
@@ -105,8 +108,6 @@ button { font: inherit; }
 }
 
 .lang-select option { color: #1b1611; background: #ddd0b1; }
-
-.tree-credit { flex: 1; font-size: 12px; }
 
 :root:lang(ja) {
   --font: "Source Han Serif JP", "Noto Serif CJK JP", "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;

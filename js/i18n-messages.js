@@ -213,7 +213,6 @@ const en = {
   '人格树，点击人格图标查看详情': 'Persona Web. Select a Persona icon for details',
   '点击人格树上的图标，查看对应人格的说明。': 'Select an icon on the Persona Web to see its description.',
   '暂无说明。': 'No description yet.',
-  '人格说明来源': 'Descriptions: Identity V Wiki (Fandom, CC BY-SA). Entries whose numbers differ from the Chinese server stay in Chinese.',
   // 选手页
   '房间同步｜第五人格随机抽取工具': 'Room Sync | Identity V Random Draw Tool',
   '房间同步': 'Room Sync',
@@ -482,7 +481,6 @@ const ja = {
   '人格树，点击人格图标查看详情': '内在人格の配置図。アイコンを選ぶと詳細を表示します',
   '点击人格树上的图标，查看对应人格的说明。': 'アイコンを選ぶと内在人格の説明を表示します。',
   '暂无说明。': '説明はまだありません。',
-  '人格说明来源': '内在人格の説明は中国語版の原文を表示しています。',
   '房间同步｜第五人格随机抽取工具': 'ルーム同期｜第五人格ランダム抽選ツール',
   '房间同步': 'ルーム同期',
   '输入房间号进入': 'ルームIDを入力して参加',

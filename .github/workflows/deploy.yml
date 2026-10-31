@@ -124,7 +124,7 @@ jobs:
           let html = await readFile(join(root, 'index.html'), 'utf8');
           html = html.replace(/\b(href|src)="([^"]+)"/g, (full, attribute, path) =>
             contents.has(path) ? `${attribute}="${prefix}${path}"` : full)
-            .replace('</head>', `  <link rel="modulepreload" href="${prefix}js/rules.js">\n  <link rel="modulepreload" href="${prefix}js/sound.js">\n</head>`);
+            .replace('</head>', `  <link rel="modulepreload" href="${prefix}js/rules.js">\n  <link rel="modulepreload" href="${prefix}js/sound.js">\n  <link rel="modulepreload" href="${prefix}js/i18n.js">\n  <link rel="modulepreload" href="${prefix}js/i18n-messages.js">\n  <link rel="modulepreload" href="${prefix}js/i18n-terms.js">\n</head>`);
           if (!html.includes(`src="${prefix}js/app.js"`) || !html.includes(`href="${prefix}css/style.css"`)
               || !html.includes(`href="${prefix}favicon.svg"`)) {
             throw new Error('HTML asset entry points could not be versioned.');
@@ -132,7 +132,8 @@ jobs:
           files.set('index.html', Buffer.from(html));
           let liveHtml = await readFile(join(root, 'live/index.html'), 'utf8');
           liveHtml = liveHtml.replace(/\b(href|src)="\.\.\/([^"]+)"/g, (full, attribute, path) =>
-            contents.has(path) ? `${attribute}="../${prefix}${path}"` : full);
+            contents.has(path) ? `${attribute}="../${prefix}${path}"` : full)
+            .replace('</head>', `  <link rel="modulepreload" href="../${prefix}js/i18n.js">\n  <link rel="modulepreload" href="../${prefix}js/i18n-messages.js">\n  <link rel="modulepreload" href="../${prefix}js/i18n-terms.js">\n</head>`);
           if (!liveHtml.includes(`src="../${prefix}js/live.js"`) || !liveHtml.includes(`href="../${prefix}css/live.css"`)
               || !liveHtml.includes(`src="../${prefix}js/telemetry.js"`)) {
             throw new Error('Live page asset entry points could not be versioned.');
