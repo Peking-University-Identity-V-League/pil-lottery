@@ -24,3 +24,6 @@ Thumbs.db
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+
+# Internal operations notes
+/docs/
