@@ -15,6 +15,7 @@ const API = '/lottery/live-api/rooms';
 const WATCHDOG_MS = 35_000; // 服务器每 25 秒发一次 ping，超时视为断线
 const FLIP_MS = 460;
 const ENTRY_POLL_MS = 5000;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 const data = { survivors: new Map(), hunters: new Map(), traits: new Map(), trees: {} };
 const slots = [];
@@ -30,6 +31,10 @@ let closed = true; // 还没进入房间，或已被退回进入页
 let connection = null; // { url, checkUrl }
 let tableBuilt = false;
 let everConnected = false;
+let latestState = null;
+let instantFrame = 0;
+let shuffleRun = 0;
+const shuffleAnimations = new Set();
 
 async function getJSON(path) {
   const res = await fetch(asset(path));
@@ -109,6 +114,11 @@ function createSlot(index) {
     traitName: $('.trait-name', root),
     seen: { char: '', build: '', trait: '' },
     charRun: 0,
+    rerolling: false,
+    charReady: Promise.resolve(),
+    buildRun: 0,
+    wantedBuild: '',
+    traitTimer: 0,
     charName: '',
     fullBuild: null,
   };
@@ -162,11 +172,20 @@ function buildTable() {
 
 function resetSlot(slot) {
   slot.charRun++;
+  slot.rerolling = false;
+  slot.charReady = Promise.resolve();
+  slot.buildRun++;
+  slot.wantedBuild = '';
+  stopTraitRoll(slot);
   slot.charName = '';
   slot.seen = { char: '', build: '', trait: '' };
-  slot.card.classList.remove('is-open', 'is-charging');
+  slot.card.classList.remove('is-open', 'is-charging', 'live-rerolling');
   slot.sealHalves.forEach((half) => half.getAnimations().forEach((a) => a.cancel()));
   slot.address.textContent = slot.defaultAddress;
+  slot.name.textContent = '';
+  slot.portrait.removeAttribute('src');
+  slot.portrait.alt = '';
+  slot.roles.replaceChildren();
   applyBuild(slot, { status: 'pending' }, false);
   if (slot.traitBox) applyTrait(slot, { status: 'pending' }, false);
 }
@@ -178,23 +197,31 @@ function crackSeal(slot) {
   r.animate([{ transform: 'none', opacity: 1 }, { transform: 'translate(20px, 18px) rotate(26deg)', opacity: 0 }], opts);
 }
 
-/** 揭晓或更换角色；隐藏的角色保持信封状态。 */
-async function applyChar(slot, char, animate) {
+/** 揭晓或更换角色；重复快照不会重启动画，新快照可取消旧的揭晓。 */
+function applyChar(slot, char, animate) {
   const key = JSON.stringify(char);
   if (key === slot.seen.char) return;
-  const wasOpen = slot.card.classList.contains('is-open');
+  const previous = slot.seen.char ? JSON.parse(slot.seen.char) : null;
+  slot.rerolling = char.status === 'pending' && Boolean(previous && previous.status !== 'pending');
   slot.seen.char = key;
-  slot.charName = '';
+  if ($('#dlg-tree').open) $('#dlg-tree').close();
   const run = ++slot.charRun;
+  slot.charName = '';
+  slot.charReady = revealChar(slot, char, animate, run);
+}
+
+async function revealChar(slot, char, animate, run) {
+  const wasOpen = slot.card.classList.contains('is-open');
   if (char.status !== 'shown') {
     slot.card.classList.remove('is-open');
     slot.address.textContent = char.status === 'hidden' ? '角色未公开' : slot.defaultAddress;
+    slot.sealHalves.forEach(half => half.getAnimations().forEach(a => a.cancel()));
     return;
   }
   if (wasOpen && animate) {
     slot.card.classList.remove('is-open');
     sfx.flip();
-    await new Promise((resolve) => { setTimeout(resolve, FLIP_MS); });
+    await new Promise(resolve => setTimeout(resolve, FLIP_MS));
     if (run !== slot.charRun) return;
   }
   const info = (slot.side === 'survivor' ? data.survivors : data.hunters).get(char.id);
@@ -204,13 +231,39 @@ async function applyChar(slot, char, animate) {
   slot.portrait.alt = `${info.name}立绘`;
   slot.name.textContent = info.name;
   slot.charName = info.name;
-  slot.roles.replaceChildren(...(slot.side === 'survivor' ? (info.roles || []).map((r) => el('li', '', r)) : []));
+  slot.roles.replaceChildren(...(slot.side === 'survivor' ? (info.roles || []).map(r => el('li', '', r)) : []));
   if (animate) {
     crackSeal(slot);
-    if (slot.side === 'hunter') sfx.boom(); else sfx.crack();
+    sfx.crack();
+    await new Promise(resolve => setTimeout(resolve, 200));
+    if (run !== slot.charRun) return;
   }
-  slot.card.classList.remove('is-charging');
+  slot.card.classList.remove('is-charging', 'live-rerolling');
   slot.card.classList.add('is-open');
+  if (animate) {
+    sfx.flip();
+    await new Promise(resolve => setTimeout(resolve, 420));
+    if (run !== slot.charRun) return;
+    if (slot.side === 'hunter') sfx.boom();
+  }
+}
+
+/** 人格必须等本页的角色翻牌，避免名单和详情按钮抢先揭晓。 */
+function queueBuild(slot, build, animate) {
+  const key = JSON.stringify(build);
+  if (key === slot.wantedBuild) return;
+  slot.wantedBuild = key;
+  const run = ++slot.buildRun;
+  if ($('#dlg-tree').open) $('#dlg-tree').close();
+  slot.fullBuild = null;
+  slot.webBox.disabled = true;
+  if (!animate || build.status === 'pending') {
+    applyBuild(slot, build, animate);
+    return;
+  }
+  slot.charReady.then(() => {
+    if (run === slot.buildRun) applyBuild(slot, build, true);
+  });
 }
 
 function applyBuild(slot, build, animate) {
@@ -219,6 +272,7 @@ function applyBuild(slot, build, animate) {
   if (key === slot.seen.build) return;
   slot.seen.build = key;
   slot.note.hidden = true;
+  slot.panel.classList.remove('lighting');
   slot.list.replaceChildren();
   // 只有能看到全部人格时才显示人格树
   slot.webBox.hidden = build.status === 'pending' ? Boolean(build.limited) : build.status !== 'full';
@@ -231,13 +285,13 @@ function applyBuild(slot, build, animate) {
     return;
   }
   slot.panel.classList.remove('pending');
+  slot.panel.classList.toggle('lighting', animate);
   if (build.status !== 'full') {
     slot.note.textContent = '人格未公开';
     slot.note.hidden = build.status !== 'hidden';
     slot.list.replaceChildren(...limitedItems(tree, build));
     return;
   }
-  slot.panel.classList.toggle('lighting', animate);
   renderWeb(slot.web, tree, build, { animate });
   slot.list.replaceChildren(...talentItems(tree, build));
   if (animate) sfx.light(0);
@@ -247,6 +301,7 @@ function applyTrait(slot, trait, animate) {
   const key = JSON.stringify(trait);
   if (key === slot.seen.trait) return;
   slot.seen.trait = key;
+  stopTraitRoll(slot);
   const box = slot.traitBox;
   box.classList.remove('rolling', 'locked', 'is-free');
   slot.traitImg.removeAttribute('src');
@@ -272,36 +327,126 @@ const PHASE_TEXT = {
   done: '抽取完成',
 };
 
+/** 洗牌只移动信封；收到揭晓、跳过、重连或退出时立即归位。 */
+function stopShuffle() {
+  shuffleRun++;
+  for (const animation of shuffleAnimations) animation.cancel();
+  shuffleAnimations.clear();
+  for (const { card } of slots) {
+    card.style.removeProperty('transform');
+    card.style.removeProperty('z-index');
+  }
+}
+
+async function shuffleAndDeal() {
+  stopShuffle();
+  const run = shuffleRun;
+  const rects = slots.map(slot => slot.card.getBoundingClientRect());
+  const cx = (Math.min(...rects.map(r => r.left)) + Math.max(...rects.map(r => r.right))) / 2;
+  const cy = (Math.max(0, Math.min(...rects.map(r => r.top))) + Math.min(innerHeight, Math.max(...rects.map(r => r.bottom)))) / 2;
+  const poses = rects.map((r, i) => ({ x: cx - r.left - r.width / 2, y: cy - r.top - r.height / 2, angle: (i - 2) * 3.5 }));
+  const at = (i, shift = 0) => `translate(${poses[i].x + shift}px, ${poses[i].y}px) rotate(${poses[i].angle + shift / 9}deg)`;
+  const move = async (i, transforms, options) => {
+    const card = slots[i].card;
+    const animation = card.animate(transforms.map(transform => ({ transform })), { fill: 'forwards', ...options });
+    shuffleAnimations.add(animation);
+    try {
+      await animation.finished;
+      if (run === shuffleRun) card.style.transform = transforms[transforms.length - 1];
+    } catch { /* A newer state cancelled this motion. */ }
+    finally { animation.cancel(); shuffleAnimations.delete(animation); }
+  };
+  slots.forEach((slot, i) => { slot.card.style.zIndex = String(10 + i); });
+  try {
+    sfx.shuffle();
+    await Promise.all(slots.map((_, i) => move(i, ['none', at(i)], { duration: 460, delay: i * 55, easing: 'cubic-bezier(.55,0,.25,1)' })));
+    for (let round = 0; round < 2; round++) {
+      if (run !== shuffleRun) return;
+      sfx.shuffle();
+      await Promise.all(slots.map((_, i) => move(i, [at(i), at(i, (i + round) % 2 ? 60 : -60), at(i)], { duration: 300, easing: 'ease-in-out' })));
+    }
+    if (run !== shuffleRun) return;
+    await Promise.all(slots.map((_, i) => move(i, [at(i), 'none'], { duration: 480, delay: i * 95, easing: 'cubic-bezier(.2,.85,.25,1)' })));
+  } finally { if (run === shuffleRun) stopShuffle(); }
+}
+
+function stopTraitRoll(slot) {
+  clearTimeout(slot.traitTimer);
+  slot.traitTimer = 0;
+  slot.traitBox?.classList.remove('rolling');
+}
+
+function startTraitRoll(slot) {
+  if (slot.traitTimer) return;
+  // 只用公开图标作滚动装饰，不依赖未揭晓的结果或主控私有卡池。
+  const icons = [...data.traits.values()];
+  let index = 0;
+  slot.traitBox.classList.remove('locked', 'is-free');
+  slot.traitBox.classList.add('rolling');
+  slot.traitName.textContent = '抽取中';
+  const tick = () => {
+    if (icons.length) slot.traitImg.src = asset(icons[index++ % icons.length].icon.local_path);
+    sfx.tick();
+    slot.traitTimer = setTimeout(tick, 100);
+  };
+  tick();
+}
+
+function stopLiveMotion() {
+  stopShuffle();
+  for (const slot of slots) {
+    slot.charRun++;
+    slot.buildRun++;
+    stopTraitRoll(slot);
+    slot.card.classList.remove('is-charging', 'live-rerolling');
+    slot.sealHalves.forEach(half => half.getAnimations().forEach(a => a.cancel()));
+  }
+}
+
 function applyState(state) {
-  const animate = !firstState && !document.hidden;
+  latestState = state;
+  const animate = !firstState && !document.hidden && !reduceMotion.matches;
+  const activeMotion = !document.hidden && !reduceMotion.matches;
+  const newRound = state.round !== shownRound;
+  const restart = firstState || newRound;
+  cancelAnimationFrame(instantFrame);
   document.body.classList.toggle('instant', !animate);
-  if (state.round !== shownRound) {
+  if (restart) {
+    stopLiveMotion();
     shownRound = state.round;
     slots.forEach(resetSlot);
     if ($('#dlg-tree').open) $('#dlg-tree').close();
-    if (animate && state.slots.length) sfx.shuffle();
   }
+  const allPending = state.slots.length === 5 && state.slots.every(entry => entry.char.status === 'pending');
+  if (state.phase !== 'drawing' || !allPending || !activeMotion) stopShuffle();
+  else if (restart) void shuffleAndDeal();
+
   $('#live-view').textContent = `${LIVE_VIEW_NAMES[state.view]}视角`;
   $('#live-phase').textContent = PHASE_TEXT[state.phase];
   if (!state.slots.length) {
-    slots.forEach((slot) => applyBuild(slot, state.limited[slot.side] ? { status: 'pending', limited: true } : { status: 'pending' }, false));
+    slots.forEach(slot => queueBuild(slot, state.limited[slot.side] ? { status: 'pending', limited: true } : { status: 'pending' }, false));
   }
   state.slots.forEach((entry, i) => {
     const slot = slots[i];
     applyChar(slot, entry.char, animate);
-    applyBuild(slot, entry.build, animate);
+    queueBuild(slot, entry.build, animate);
+    // 单项重抽保持其他四张牌不动。
+    slot.card.classList.toggle('live-rerolling', activeMotion && slot.rerolling && state.phase === 'drawing' && entry.char.status === 'pending');
     if (slot.traitBox) applyTrait(slot, entry.trait, animate);
   });
   const hunter = slots[4];
-  hunter.card.classList.toggle('is-charging', state.phase === 'hunter' && !hunter.card.classList.contains('is-open'));
-  if (hunter.traitBox && state.phase === 'trait' && state.slots[4]?.trait.status === 'pending') {
-    hunter.traitBox.classList.add('rolling');
-    hunter.traitName.textContent = '抽取中';
-    hunter.seen.trait = '';
-  }
+  hunter.card.classList.toggle('is-charging', activeMotion && state.phase === 'hunter' && state.slots[4]?.char.status === 'pending');
+  if (state.phase === 'trait' && state.slots[4]?.trait.status === 'pending') {
+    if (activeMotion) startTraitRoll(hunter);
+    else { stopTraitRoll(hunter); hunter.traitName.textContent = '抽取中'; }
+  } else stopTraitRoll(hunter);
   firstState = false;
   if (!animate) {
-    requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('instant')));
+    // 强制提交无动画的快照，再恢复之后的新事件动画。
+    void document.body.offsetHeight;
+    instantFrame = requestAnimationFrame(() => {
+      instantFrame = requestAnimationFrame(() => document.body.classList.remove('instant'));
+    });
   }
 }
 
@@ -443,6 +588,8 @@ function leaveRoom(message, { kept = false } = {}) {
   if (dlg.open) dlg.close();
   if ($('#dlg-tree').open) $('#dlg-tree').close();
   if (!kept) playerSessions.forget(entry.room, leavingSession);
+  stopLiveMotion();
+  latestState = null;
   shownRound = null;
   firstState = true;
   everConnected = false;
@@ -677,7 +824,7 @@ function connect(url, checkUrl) {
   lastEvent = Date.now();
   source.onopen = () => {
     if (!isCurrent()) return;
-    firstState = true; // 重连后直接显示最新状态，不补播动画
+    firstState = true; // 重连直接恢复快照，只继续尚未结束的阶段
     everConnected = true;
     setConnection('on', '已连接');
   };
@@ -760,7 +907,16 @@ async function main() {
     }
   };
   // 手机切后台时连接可能被静默断开
-  document.addEventListener('visibilitychange', reconnectIfStale);
+  document.addEventListener('visibilitychange', () => {
+    if (!closed && latestState) {
+      firstState = true;
+      applyState(latestState);
+    }
+    reconnectIfStale();
+  });
+  reduceMotion.addEventListener('change', () => {
+    if (!closed && latestState) { firstState = true; applyState(latestState); }
+  });
   window.addEventListener('online', reconnectIfStale);
   window.addEventListener('offline', () => { if (!closed) connectionLost(); });
   setInterval(reconnectIfStale, 15_000);

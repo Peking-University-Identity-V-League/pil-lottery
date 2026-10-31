@@ -464,6 +464,7 @@ function lightPanel(slot, entry, delay = 160) {
   return wait(delay).then(() => {
     const animate = !skipping;
     fillPanel(slot, entry, animate);
+    liveReveal(slot.index, 'build');
     if (!animate) return undefined;
     const tree = data.trees[slot.side];
     const depths = [...new Set(Object.keys(entry.build.levels).map((id) => tree.byId.get(id).depth))].sort();
@@ -501,6 +502,7 @@ async function openCard(slot) {
   say('flip');
   slot.card.classList.add('is-open');
   await wait(420);
+  liveReveal(slot.index, 'char');
 }
 
 async function closeCard(slot) {
@@ -526,6 +528,7 @@ async function revealHunter(slot) {
   say('flip');
   card.classList.add('is-open');
   await wait(260);
+  liveReveal(slot.index, 'char');
   card.classList.remove('is-charging');
   say('boom');
   play($('#flash'), [{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 0 }], { duration: 950, fill: 'none' });
@@ -610,6 +613,7 @@ async function rollTrait(slot, final) {
   showTrait(slot, final);
   box.classList.remove('rolling');
   box.classList.add('locked');
+  liveReveal(slot.index, 'trait');
   say('lock');
   play($('.trait-icon', box), [{ transform: 'scale(1.3)' }, { transform: 'scale(1)' }],
     { duration: 380, easing: 'cubic-bezier(.3,1.6,.5,1)', fill: 'none' });
@@ -642,9 +646,7 @@ function draw() {
 
     const lights = [];
     for (let i = 0; i < 4; i++) {
-      liveReveal(i, 'char');
       await openCard(slots[i]);
-      liveReveal(i, 'build');
       lights.push(lightPanel(slots[i], match.slots[i]));
       await wait(240);
     }
@@ -652,7 +654,6 @@ function draw() {
     const hunter = slots[4];
     syncLive('hunter');
     await revealHunter(hunter);
-    liveReveal(4, 'char', 'build');
     lights.push(lightPanel(hunter, match.slots[4], 60));
     if (match.slots[4].trait) {
       await wait(520);
@@ -660,6 +661,7 @@ function draw() {
       await rollTrait(hunter, match.slots[4].trait);
     } else {
       showTraitFree(hunter);
+      liveReveal(4, 'trait');
     }
     await Promise.all(lights);
   });
@@ -688,7 +690,9 @@ function rerollCharacter(slot) {
     && (traitBad || (!entry.trait && traitsFor(next).length > 0));
 
   sequence(async () => {
+    startLiveReroll(slot.index, ['char', ...(rebuild ? ['build'] : []), ...(retrait ? ['trait'] : [])]);
     if (rebuild) setPanelPending(slot);
+    if (retrait) resetTrait(slot);
     closeCard(slot);
     say('flip');
     await wait(680);
@@ -702,18 +706,23 @@ function rerollCharacter(slot) {
       { transform: 'translateY(2px) rotate(1.5deg)' },
       { transform: 'none' },
     ], { duration: 460, easing: 'ease-in-out', fill: 'none' });
-    if (slot.side === 'hunter') await revealHunter(slot);
-    else await openCard(slot);
-    syncLive('done');
+    if (slot.side === 'hunter') {
+      syncLive('hunter');
+      await revealHunter(slot);
+    } else await openCard(slot);
     if (rebuild) {
       entry.build = rollFor(slot.side, next);
-      syncLive('done');
       await lightPanel(slot, entry, 60);
     }
     if (retrait) {
       entry.trait = pickTrait(next);
-      if (entry.trait) await rollTrait(slot, entry.trait);
-      else showTraitFree(slot);
+      if (entry.trait) {
+        syncLive('trait');
+        await rollTrait(slot, entry.trait);
+      } else {
+        showTraitFree(slot);
+        liveReveal(slot.index, 'trait');
+      }
     }
     if (rebuild && traitBad) toast('原人格和辅助特质不适配，已一并重抽');
     else if (rebuild) toast('原人格不适配，已一并重抽');
@@ -728,9 +737,9 @@ function rerollBuild(slot) {
   match.at = new Date();
   sfx.unlock();
   sequence(async () => {
+    startLiveReroll(slot.index, ['build']);
     setPanelPending(slot);
     say('flip');
-    syncLive('done');
     await lightPanel(slot, entry, 220);
   });
 }
@@ -750,7 +759,10 @@ function rerollTrait(slot) {
   track('lottery_reroll', { side: slot.side, target: 'trait' });
   match.at = new Date();
   sfx.unlock();
-  sequence(() => rollTrait(slot, entry.trait));
+  sequence(() => {
+    startLiveReroll(slot.index, ['trait'], 'trait');
+    return rollTrait(slot, entry.trait);
+  });
 }
 
 /** 切换“抽取辅助特质”后，立即更新当前结果。 */
@@ -1322,6 +1334,7 @@ const live = createLiveHost({
 });
 let liveShown = null; // 抽取动画期间记录每个位置已揭晓的部分；null 表示全部已揭晓
 let liveRound = 0;
+let livePhase = 'idle';
 let livePoll = 0;
 let liveResetTimer = 0;
 let liveSuppressed = false; // 重置后不再发布上一场结果，下一次抽取才恢复
@@ -1333,9 +1346,17 @@ function startLiveRound() {
   syncLive('drawing');
 }
 
+/** 重抽也先撤下对应结果，直到主控真正揭晓后再发布。 */
+function startLiveReroll(index, parts, phase = 'drawing') {
+  liveShown = match.slots.map(() => ({ char: true, build: true, trait: true }));
+  for (const part of parts) liveShown[index][part] = false;
+  syncLive(phase);
+}
+
 function liveReveal(index, ...parts) {
+  if (!liveShown) return;
   for (const part of parts) liveShown[index][part] = true;
-  syncLive('drawing');
+  syncLive(livePhase);
 }
 
 /** 只发送已揭晓的内容，还没揭晓的结果不会离开裁判的浏览器。 */
@@ -1366,6 +1387,7 @@ function liveSnapshot(phase) {
 }
 
 function syncLive(phase) {
+  livePhase = phase;
   if (live.room && !liveSuppressed) live.push(liveSnapshot(phase));
 }
 
@@ -1530,7 +1552,7 @@ function bindLive() {
       toast('暂时无法创建同步房间，请稍后再试。');
       return;
     }
-    syncLive(busy ? 'drawing' : 'done');
+    syncLive(busy ? livePhase : 'done');
     syncLiveUI();
     refreshLiveViewers();
   });

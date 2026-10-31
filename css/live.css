@@ -592,3 +592,28 @@
   .ult-pct { min-width: 0; }
   .ult-weights input { width: 26px; padding: 2px 1px; }
 }
+
+
+/* 同步页的待揭晓动作；结果仍由主控的逐步快照控制。 */
+.live-page .card.live-rerolling {
+  animation: live-reroll .46s ease-in-out infinite alternate;
+}
+.live-page .card.is-charging {
+  animation: live-charge .36s ease-in-out infinite;
+}
+@keyframes live-reroll {
+  from { transform: translateY(0) rotate(0); }
+  to { transform: translateY(-12px) rotate(-2.5deg); }
+}
+@keyframes live-charge {
+  0%, 100% { transform: none; }
+  25% { transform: translate(-2px, 1px) rotate(-.7deg); }
+  50% { transform: translate(2px, -1px) rotate(.7deg); }
+  75% { transform: translate(-1px, 1px) rotate(-.4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-page *, .live-page *::before, .live-page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
