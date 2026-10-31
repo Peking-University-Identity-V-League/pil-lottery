@@ -154,7 +154,8 @@
       </header>
       <div class="live-body">
         <div id="live-off">
-          <button type="button" class="btn btn-wax" id="live-create">创建同步房间</button>
+          <button type="button" class="btn btn-wax" id="live-create">创建房间</button>
+          <a class="btn btn-quiet" id="live-join" href="live/" target="_blank" rel="noopener">加入房间</a>
         </div>
         <div id="live-on" hidden>
           <section class="live-group" id="live-links">
@@ -193,22 +194,25 @@
             <div class="live-access" id="live-access">
               <div class="live-access-row" data-access="hunter">
                 <span class="live-access-name">监管者</span>
-                <label>密码<input type="password" class="access-password" maxlength="64" autocomplete="new-password" placeholder="不设密码" aria-label="监管者密码"></label>
-                <label>人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="监管者人数上限"></label>
+                <label class="switch"><input type="checkbox" class="access-open" aria-label="开放监管者身份"><span class="switch-track"></span></label>
+                <label class="access-password-field">密码<input type="password" class="access-password" maxlength="64" autocomplete="new-password" placeholder="不设密码" aria-label="监管者密码"></label>
+                <label class="access-limit-field">人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="监管者人数上限"></label>
                 <span class="live-access-taken"></span>
                 <button type="button" class="btn btn-mini access-clear">清空名额</button>
               </div>
               <div class="live-access-row" data-access="survivor">
                 <span class="live-access-name">求生者</span>
-                <label>密码<input type="password" class="access-password" maxlength="64" autocomplete="new-password" placeholder="不设密码" aria-label="求生者密码"></label>
-                <label>人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="求生者人数上限"></label>
+                <label class="switch"><input type="checkbox" class="access-open" aria-label="开放求生者身份"><span class="switch-track"></span></label>
+                <label class="access-password-field">密码<input type="password" class="access-password" maxlength="64" autocomplete="new-password" placeholder="不设密码" aria-label="求生者密码"></label>
+                <label class="access-limit-field">人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="求生者人数上限"></label>
                 <span class="live-access-taken"></span>
                 <button type="button" class="btn btn-mini access-clear">清空名额</button>
               </div>
               <div class="live-access-row" data-access="spectator">
                 <span class="live-access-name">观众</span>
-                <label>密码<input type="password" class="access-password" maxlength="64" autocomplete="new-password" placeholder="不设密码" aria-label="观众密码"></label>
-                <label>人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="观众人数上限"></label>
+                <label class="switch"><input type="checkbox" class="access-open" aria-label="开放观众身份"><span class="switch-track"></span></label>
+                <label class="access-password-field">密码<input type="password" class="access-password" maxlength="64" autocomplete="new-password" placeholder="不设密码" aria-label="观众密码"></label>
+                <label class="access-limit-field">人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="观众人数上限"></label>
                 <span class="live-access-taken"></span>
                 <button type="button" class="btn btn-mini access-clear">清空名额</button>
               </div>

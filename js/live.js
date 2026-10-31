@@ -1,3 +1,4 @@
+import { createPlayerSessions } from './live-session.js';
 import { reconnectDelay, retryAfterMs } from './live-retry.js';
 // 选手页：保持和服务器的连接，收到推送后自动更新，不需要手动刷新。
 import { sfx } from './sound.js';
@@ -386,6 +387,7 @@ const LEAVE_MESSAGES = {
   reset: '房间已重置，请重新进入。',
   'password-changed': '密码已更改，请使用新密码重新进入。',
   'seat-cleared': '裁判已清空该身份的名额，请重新进入。',
+  'view-closed': '裁判已关闭该身份，请选择其他身份。',
   'room-closed': '房间已结束，请向裁判确认房间号。',
   'room-not-found': '房间不存在或已结束，请向裁判确认房间号。',
   'view-full': '该身份人数已满，请联系裁判。',
@@ -397,24 +399,19 @@ const JOIN_ERRORS = {
   'server-busy': '进入的人较多，请稍后重试，已输入的密码会保留。',
   'room-changed': '房间设置已更改，请确认后重新进入。',
   'view-full': LEAVE_MESSAGES['view-full'],
+  'view-closed': LEAVE_MESSAGES['view-closed'],
   'too-many-attempts': '尝试次数过多，请 10 分钟后再试。',
   'room-not-found': LEAVE_MESSAGES['room-not-found'],
 };
 
-const sessionKey = (room) => `pil-lottery:live-session:${room}`;
+const NONE_OPEN = '裁判暂未开放任何身份，请稍候。';
 
-function loadSession(room) {
-  try { return JSON.parse(localStorage.getItem(sessionKey(room))); } catch { return null; }
-}
-
-function saveSession(room, value) {
-  try {
-    if (value) localStorage.setItem(sessionKey(room), JSON.stringify(value));
-    else localStorage.removeItem(sessionKey(room));
-  } catch { /* 隐私模式下刷新后需要重新进入 */ }
-}
-
-const entry = { room: '', view: '', info: null, previous: null };
+const playerSessions = createPlayerSessions();
+const loadSession = room => playerSessions.load(room);
+const saveSession = (room, value) => playerSessions.save(room, value);
+const EXIT_PENDING = '退出尚未完成，名额可能仍被占用。请重试退出，或重新选择身份进入。';
+const EXIT_SAVING = '正在退出房间，请稍候…';
+const entry = { room: '', view: '', info: null };
 
 function showEntry(message = '') {
   $('#live-entry').hidden = false;
@@ -431,7 +428,7 @@ function setEntryMessage(message) {
   $('#entry-message').textContent = message;
 }
 
-/** 退回进入页。kept 表示主动切换身份，保留凭证以便释放原来的名额。 */
+/** 主动退出保留凭证和退出记录；收到服务器撤销通知后才清理对应凭证。 */
 function leaveRoom(message, { kept = false } = {}) {
   const leavingSession = connection?.session;
   closed = true;
@@ -444,9 +441,7 @@ function leaveRoom(message, { kept = false } = {}) {
   delete dlg.dataset.kind;
   if (dlg.open) dlg.close();
   if ($('#dlg-tree').open) $('#dlg-tree').close();
-  entry.previous = kept ? leavingSession : null;
-  // A delayed exit in another tab must not delete the replacement identity.
-  if (!kept && loadSession(entry.room)?.session === leavingSession) saveSession(entry.room, null);
+  if (!kept) playerSessions.forget(entry.room, leavingSession);
   shownRound = null;
   firstState = true;
   everConnected = false;
@@ -469,29 +464,42 @@ function enterRoom(room, session) {
   closed = false;
   retryAttempt = 0;
   const query = `session=${encodeURIComponent(session)}`;
-  connection = { session, url: `${API}/${room}/events?${query}`, checkUrl: `${API}/${room}/check?${query}` };
+  connection = { session, view: loadSession(room)?.view, url: `${API}/${room}/events?${query}`, checkUrl: `${API}/${room}/check?${query}` };
   connect(connection.url, connection.checkUrl);
 }
 
 function renderEntryViews() {
   const { info } = entry;
+  const room = $('#entry-room').value.trim();
+  const pending = playerSessions.pending(room);
+  const savingExit = playerSessions.isLeaving(room);
+  $('#entry-retry-leave').hidden = !pending;
+  $('#entry-retry-leave').disabled = savingExit;
+  $('#entry-retry-leave').textContent = savingExit ? '正在退出…' : '重试退出';
+  if (info?.views[entry.view]?.open === false) entry.view = '';
   $('#entry-views-box').hidden = !info;
+  const noneOpen = Boolean(info) && Object.values(info.views).every((access) => access.open === false);
+  if (noneOpen && $('#entry-message').hidden) setEntryMessage(NONE_OPEN);
+  else if (!noneOpen && $('#entry-message').textContent === NONE_OPEN) setEntryMessage('');
   document.querySelectorAll('#entry-views [data-view]').forEach((button) => {
     const access = info?.views[button.dataset.view];
     const on = button.dataset.view === entry.view;
     button.setAttribute('aria-checked', String(on));
     button.tabIndex = on || !entry.view ? 0 : -1;
     if (!access) return;
+    button.hidden = access.open === false;
     const parts = [];
     if (access.password) parts.push('需要密码');
     if (access.effectiveLimit || access.limit) parts.push(`${access.taken}/${access.effectiveLimit || access.limit}`);
-    $('small', button).textContent = access.full ? `人数已满${access.limit ? ` ${access.taken}/${access.limit}` : ''}` : parts.join(' · ') || '可直接进入';
-    button.classList.toggle('is-full', access.full);
+    const canReplace = pending?.view === button.dataset.view;
+    $('small', button).textContent = canReplace ? '原身份，可尝试重新进入' : access.full ? `人数已满${access.limit ? ` ${access.taken}/${access.limit}` : ''}` : parts.join(' · ') || '可直接进入';
+    button.classList.toggle('is-full', access.full && !canReplace);
   });
   const needsPassword = Boolean(entry.view && info?.views[entry.view]?.password);
   $('#entry-password-box').hidden = !needsPassword;
   if (!needsPassword) $('#entry-password').value = '';
-  $('#entry-submit').disabled = !info || !entry.view || Boolean(info.views[entry.view]?.full) || Date.now() < joinBusyUntil;
+  const canReplace = pending?.view === entry.view;
+  $('#entry-submit').disabled = !info || !entry.view || savingExit || (Boolean(info.views[entry.view]?.full) && !canReplace) || Date.now() < joinBusyUntil;
 }
 
 let entryRequest = 0;
@@ -513,17 +521,42 @@ async function refreshEntryInfo() {
       renderEntryViews();
       return;
     }
+    const info = await res.json();
+    if (request !== entryRequest) return;
     entry.room = room;
-    entry.info = await res.json();
+    entry.info = info;
   } catch {
     if (request === entryRequest && $('#entry-message').hidden) setEntryMessage('暂时无法连接服务器，请检查网络后重试。');
   }
   if (request === entryRequest) renderEntryViews();
 }
 
+async function retryLeave(room, pending = playerSessions.pending(room)) {
+  if (!pending?.session) return;
+  const relevant = () => !$('#live-entry').hidden && $('#entry-room').value.trim() === room;
+  const releasing = playerSessions.release(room, pending.session);
+  if (relevant()) { setEntryMessage(EXIT_SAVING); renderEntryViews(); }
+  try {
+    await releasing;
+    if (relevant()) setEntryMessage('已退出，请选择身份重新进入。');
+  } catch {
+    if (relevant()) setEntryMessage(playerSessions.pending(room) ? EXIT_PENDING : '已退出，请选择身份重新进入。');
+  }
+  if (relevant()) { renderEntryViews(); await refreshEntryInfo(); }
+}
+
+/** 先保存退出记录，刷新后继续退出；keepalive 只是尽量完成请求，不能代替确认。 */
+async function switchIdentity() {
+  const room = entry.room;
+  const pending = playerSessions.beginLeave(room, connection?.session, connection?.view || entry.view);
+  leaveRoom(EXIT_SAVING, { kept: true });
+  await retryLeave(room, pending);
+}
+
 async function submitEntry() {
   const room = $('#entry-room').value.trim();
-  if (!entry.info || !entry.view || Date.now() < joinBusyUntil) return;
+  if (!entry.info || !entry.view || playerSessions.isLeaving(room) || Date.now() < joinBusyUntil) return;
+  const pending = playerSessions.pending(room);
   const button = $('#entry-submit');
   button.disabled = true;
   setEntryMessage('');
@@ -531,7 +564,7 @@ async function submitEntry() {
     const res = await fetch(`${API}/${room}/join`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ view: entry.view, password: $('#entry-password').value, previous: entry.previous || undefined }),
+      body: JSON.stringify({ view: entry.view, password: $('#entry-password').value, previous: pending?.session }),
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -546,7 +579,7 @@ async function submitEntry() {
       return;
     }
     saveSession(room, { session: body.session, view: body.view });
-    entry.previous = null;
+    playerSessions.forget(room, pending?.session);
     $('#entry-password').value = '';
     enterRoom(room, body.session);
   } catch {
@@ -565,7 +598,6 @@ function bindEntry() {
     e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
     setEntryMessage('');
     entry.view = '';
-    entry.previous = null;
     refreshEntryInfo();
   });
   $('#entry-views').addEventListener('click', (e) => {
@@ -576,7 +608,8 @@ function bindEntry() {
     renderEntryViews();
     if (!$('#entry-password-box').hidden) $('#entry-password').focus();
   });
-  $('#btn-leave').addEventListener('click', () => leaveRoom('', { kept: true }));
+  $('#btn-leave').addEventListener('click', switchIdentity);
+  $('#entry-retry-leave').addEventListener('click', () => retryLeave($('#entry-room').value.trim()));
   // 等名额时不用手动刷新；房间不存在时不再轮询，避免消耗猜测次数
   setInterval(() => {
     if (!$('#live-entry').hidden && entry.info && !document.hidden) refreshEntryInfo();
@@ -702,12 +735,15 @@ async function main() {
   }
   const room = /^#(\d{6})$/.exec(location.hash)?.[1] || '';
   const saved = room ? loadSession(room) : null;
-  if (saved?.session) {
+  const pending = room ? playerSessions.pending(room) : null;
+  if (saved?.session && saved.session !== pending?.session) {
     enterRoom(room, saved.session);
   } else {
     $('#entry-room').value = room;
+    entry.view = pending?.view || '';
     showEntry(location.hash && !room ? '链接格式已更新，请向裁判确认 6 位房间号。' : '');
     refreshEntryInfo();
+    if (pending) retryLeave(room, pending);
     $(room ? '#entry-views [data-view]' : '#entry-room').focus();
   }
   const reconnectIfStale = () => {

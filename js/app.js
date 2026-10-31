@@ -1425,7 +1425,11 @@ function syncLiveAccess(room, visibility) {
   for (const view of LIVE_VIEWS) {
     const row = $(`[data-access="${view}"]`);
     const access = room.access?.[view] || {};
-    passwords[view] = access.password;
+    // 未开放的身份没有人能选择，不需要密码
+    passwords[view] = access.password || access.open === false;
+    const open = $('.access-open', row);
+    open.checked = access.open !== false;
+    row.classList.toggle('is-closed', !open.checked);
     const password = $('.access-password', row);
     const limit = $('.access-limit', row);
     // 正在输入时不覆盖
@@ -1436,7 +1440,8 @@ function syncLiveAccess(room, visibility) {
     if (document.activeElement !== limit) limit.value = access.limit ?? '';
     limit.max = String(access.maxLimit ?? 64);
     limit.placeholder = `默认 ${access.maxLimit ?? 64}`;
-    $('.live-access-taken', row).textContent = `已占 ${access.taken ?? 0}/${access.effectiveLimit ?? access.limit ?? 64}`;
+    password.disabled = limit.disabled = $('.access-clear', row).disabled = !open.checked;
+    $('.live-access-taken', row).textContent = open.checked ? `已占 ${access.taken ?? 0}/${access.effectiveLimit ?? access.limit ?? 64}` : '未开放';
   }
   const exposed = exposedViews(visibility, passwords);
   const warning = $('#live-access-warning');
@@ -1558,7 +1563,9 @@ function bindLive() {
   $('#live-access').addEventListener('change', (e) => {
     const view = e.target.closest('[data-access]')?.dataset.access;
     if (!view) return;
-    if (e.target.matches('.access-password')) {
+    if (e.target.matches('.access-open')) {
+      saveAccess(view, { open: e.target.checked }, e.target.checked ? '已开放该身份' : '已关闭该身份，已进入的人会退出');
+    } else if (e.target.matches('.access-password')) {
       const value = e.target.value.trim();
       if (value === (live.room.passwords?.[view] || '')) return;
       saveAccess(view, { password: value || null }, value ? '密码已更新，该身份已进入的人需要重新进入' : '密码已取消，该身份已进入的人需要重新进入');

@@ -548,3 +548,42 @@ test('the global password-check cap also covers requests from different IPs', { 
     assert.equal(recovered.status, 200);
   } finally { await limited.shutdown(); }
 });
+
+test('主动退出立即释放名额，其他页面一起退出，凭证失效且可重复调用', { timeout: 5000 }, async () => {
+  const room = await createRoom();
+  await hostCall(room, 'PUT', '/access', { view: 'hunter', limit: 1 });
+  const first = await openStream(room, 'hunter');
+  const otherTab = await openStream(room, 'hunter', undefined, first.session);
+  await first.next(); await otherTab.next();
+  const leave = () => fetch(`${base}/${room.roomId}/leave`, { method: 'POST', body: JSON.stringify({ session: first.session }) });
+  assert.equal((await leave()).status, 200);
+  assert.equal((await first.next('closed')).reason, 'session-replaced');
+  assert.equal((await otherTab.next('closed')).reason, 'session-replaced');
+  const { views } = await (await fetch(`${base}/${room.roomId}/info`)).json();
+  assert.equal(views.hunter.taken, 0);
+  assert.equal(views.hunter.full, false);
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${first.session}`)).status, 403);
+  assert.equal((await leave()).status, 200);
+  assert.equal((await join(room, 'hunter')).status, 200);
+});
+
+test('关闭身份后不能选择，已进入的人退出，重置后仍关闭，重新开放后可进入', { timeout: 5000 }, async () => {
+  const room = await createRoom();
+  const stream = await openStream(room, 'spectator');
+  await stream.next();
+  const info = async () => (await (await fetch(`${base}/${room.roomId}/info`)).json()).views.spectator;
+  assert.equal((await info()).open, true);
+  assert.equal((await hostCall(room, 'PUT', '/access', { view: 'spectator', open: 'no' })).status, 400);
+  assert.equal((await hostCall(room, 'PUT', '/access', { view: 'spectator', open: false })).status, 200);
+  assert.equal((await stream.next('closed')).reason, 'view-closed');
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${stream.session}`)).status, 403);
+  assert.deepEqual([(await info()).open, (await info()).taken], [false, 0]);
+  const refused = await join(room, 'spectator');
+  assert.equal(refused.status, 403);
+  assert.equal((await refused.json()).error, 'view-closed');
+  assert.equal((await join(room, 'hunter')).status, 200);
+  assert.equal((await hostCall(room, 'POST', '/reset', {})).status, 200);
+  assert.equal((await info()).open, false);
+  assert.equal((await hostCall(room, 'PUT', '/access', { view: 'spectator', open: true })).status, 200);
+  assert.equal((await join(room, 'spectator')).status, 200);
+});

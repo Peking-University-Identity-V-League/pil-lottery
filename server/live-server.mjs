@@ -217,7 +217,7 @@ export function createLiveServer({
     const online = viewers(room);
     return Object.fromEntries(LIVE_VIEWS.map((view) => {
       const { passwordHash, limit } = room.access[view];
-      return [view, { password: Boolean(passwordHash), limit, maxLimit: maxClientsPerRoom, effectiveLimit: seatLimit(room, view), taken: seatsTaken(room, view), online: online[view] }];
+      return [view, { open: !room.access[view].closed, password: Boolean(passwordHash), limit, maxLimit: maxClientsPerRoom, effectiveLimit: seatLimit(room, view), taken: seatsTaken(room, view), online: online[view] }];
     }));
   }
 
@@ -304,6 +304,7 @@ export function createLiveServer({
     if (admissionVersion !== room.admissionVersion) return reply(res, 409, { error: 'room-changed' });
     const { view, password, previous } = body;
     if (!LIVE_VIEWS.includes(view)) return reply(res, 400, { error: 'invalid-view' });
+    if (room.access[view].closed) return reply(res, 403, { error: 'view-closed' });
     const failureKey = `password:${clientIp(req)}:${room.id}`;
     const { passwordHash } = room.access[view];
     if (passwordHash) {
@@ -337,6 +338,28 @@ export function createLiveServer({
         room.presence.delete(previousHash);
       }
       return reply(res, 200, { session, view });
+    });
+  }
+
+  /** 选手主动退出：立即释放名额，同一凭证打开的其他页面也一起退回进入页。 */
+  async function leaveRoomSeat(req, res, room) {
+    let body;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      return reply(res, error.message === 'too-large' ? 413 : 400, { error: error.message });
+    }
+    if (typeof body.session !== 'string') return reply(res, 400, { error: 'invalid-session' });
+    const hash = hashSession(body.session);
+    return commit(async () => {
+      if (!isCurrent(room)) return reply(res, 404, { error: 'room-not-found' });
+      if (!room.seats[hash]) return reply(res, 200, {});
+      const seats = { ...room.seats };
+      delete seats[hash];
+      await saveSeats(room, seats);
+      closeClients(room, 'session-replaced', client => client.seat === hash);
+      room.presence.delete(hash);
+      return reply(res, 200, {});
     });
   }
 
@@ -447,8 +470,9 @@ export function createLiveServer({
     }
     if (!isCurrent(room)) return reply(res, 404, { error: 'room-not-found' });
     if (generation !== room.generation) return reply(res, 409, { error: 'room-changed' });
-    const { view, password, limit } = body;
+    const { view, password, limit, open } = body;
     if (!LIVE_VIEWS.includes(view)) return reply(res, 400, { error: 'invalid-view' });
+    if (open !== undefined && typeof open !== 'boolean') return reply(res, 400, { error: 'invalid-open' });
     if (limit !== undefined && limit !== null && (!Number.isInteger(limit) || limit < 1 || limit > maxClientsPerRoom)) {
       return reply(res, 400, { error: 'invalid-limit' });
     }
@@ -462,15 +486,17 @@ export function createLiveServer({
       const next = { ...room.access[view] };
       if (limit !== undefined) next.limit = limit;
       if (password !== undefined) next.passwordHash = passwordHash;
+      if (open !== undefined) next.closed = !open;
       const changes = { access: { ...room.access, [view]: next } };
-      // 改密码后，这个身份已进入的人要用新密码重新进入
-      if (password !== undefined) {
+      // 改密码或关闭身份后，这个身份已进入的人都要退出
+      const removeSeats = password !== undefined || open === false;
+      if (removeSeats) {
         changes.seats = Object.fromEntries(Object.entries(room.seats).filter(([, seat]) => seat.view !== view));
       }
       await updateRoom(room, changes);
-      if (password !== undefined) {
+      if (removeSeats) {
         room.admissionVersion++;
-        closeClients(room, 'password-changed', (client) => client.view === view);
+        closeClients(room, open === false ? 'view-closed' : 'password-changed', (client) => client.view === view);
       }
       return reply(res, 200, { access: accessSummary(room) });
     });
@@ -555,12 +581,13 @@ export function createLiveServer({
       const summary = accessSummary(room);
       return reply(res, 200, {
         views: Object.fromEntries(LIVE_VIEWS.map((view) => [view, {
-          password: summary[view].password, limit: summary[view].limit, effectiveLimit: summary[view].effectiveLimit, taken: summary[view].taken,
+          open: summary[view].open, password: summary[view].password, limit: summary[view].limit, effectiveLimit: summary[view].effectiveLimit, taken: summary[view].taken,
           full: summary[view].taken >= seatLimit(room, view),
         }])),
       });
     }
     if (req.method === 'POST' && action === 'join') return joinRoom(req, res, room);
+    if (req.method === 'POST' && action === 'leave') return leaveRoomSeat(req, res, room);
     if (req.method === 'GET' && action === 'events') return subscribe(req, res, room, session);
     if (req.method === 'GET' && action === 'check') {
       const { hash, view, status, error } = sessionStatus(room, session);

@@ -138,7 +138,8 @@
 
 .live-access-row {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) auto 72px auto;
+  grid-template-columns: 56px auto auto auto 72px auto;
+  justify-content: start;
   align-items: center;
   gap: 8px 14px;
   font-size: 13px;
@@ -166,7 +167,20 @@
   font: inherit;
 }
 
-.access-password { flex: 1 1 auto; width: 100%; }
+#live-off:not([hidden]) { display: flex; gap: 10px; }
+
+#live-off .btn {
+  padding: 8px 22px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.live-access .switch { --accent: #6fc48c; }
+.access-password { width: 180px; }
+.live-access-row.is-closed .live-access-name,
+.live-access-row.is-closed .access-password-field,
+.live-access-row.is-closed .access-limit-field { opacity: .45; }
+.live-access-row.is-closed .live-access-taken { color: var(--muted); }
 .access-limit { width: 58px; }
 .live-access-taken { color: #6fc48c; white-space: nowrap; }
 
@@ -187,16 +201,19 @@
 }
 
 @media (max-width: 720px) {
+  #live-off .btn { flex: 1; width: auto; text-align: center; }
   .live-access-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     padding-bottom: 8px;
     border-bottom: 1px solid rgba(255, 255, 255, .06);
   }
-  .live-access-row label:first-of-type { grid-column: 1 / -1; grid-row: 2; }
-  .live-access-row label:nth-of-type(2) { grid-row: 3; }
-  .live-access-name { grid-row: 1; }
-  .live-access-taken { grid-row: 1; justify-self: end; }
-  .access-clear { grid-row: 3; justify-self: end; }
+  .live-access-row .switch { grid-column: 3; grid-row: 1; justify-self: end; }
+  .access-password-field { grid-column: 1 / -1; grid-row: 2; }
+  .access-password { flex: 1 1 auto; width: auto; }
+  .access-limit-field { grid-column: 1 / 3; grid-row: 3; }
+  .live-access-name { grid-column: 1; grid-row: 1; }
+  .live-access-taken { grid-column: 2; grid-row: 1; }
+  .access-clear { grid-column: 3; grid-row: 3; justify-self: end; }
 }
 
 /* 选手进入页 */
@@ -271,6 +288,8 @@
 
 .live-entry-views b { font-weight: 400; font-size: 15px; }
 .live-entry-views small { font-size: 12px; color: var(--muted); }
+
+.live-entry-views button[hidden] { display: none; }
 
 .live-entry-views [aria-checked="true"] {
   border-color: var(--brass);
