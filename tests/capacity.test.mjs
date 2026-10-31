@@ -101,11 +101,13 @@ test('batch lease renewal commits together, preserves results and survives resta
   const dir=await mkdtemp(join(tmpdir(),'pil-lease-batch-')), dbPath=join(dir,'rooms.sqlite');
   let time=1000000;
   const api=await start(t,{dbPath,now:()=>time,pingIntervalMs:100000});
-  const ids=[];
+  const ids=[],streams=[];
   for(let i=0;i<3;i++){
     const room=await api.create();ids.push(room.roomId);
     await api.host(room,'PUT','/state',{seq:1,state:state(i+1)});
-    assert.equal((await api.connect(room,await api.enter(room,'hunter'))).status,200);
+    // 保留响应对象：未被引用的 fetch 响应可能被 GC 回收并断开连接，房间就不会续期
+    streams.push(await api.connect(room,await api.enter(room,'hunter')));
+    assert.equal(streams[i].status,200);
   }
   time+=60000;
   await api.server.heartbeat();assert.equal(api.server.metrics().leaseBatches,1);
@@ -115,7 +117,7 @@ test('batch lease renewal commits together, preserves results and survives resta
     assert.equal(JSON.parse(row.state).round,ids.indexOf(row.id)+1);
     assert.equal(Object.values(JSON.parse(row.seats))[0].expiresAt,time+120000);
   }
-  db.close();await api.server.shutdown();
+  db.close();await Promise.all(streams.map(stream=>stream.body.cancel()));await api.server.shutdown();
   const restarted=await start(t,{dbPath,now:()=>time,pingIntervalMs:100000});
   const loaded=new DatabaseSync(dbPath,{readOnly:true});
   assert.equal(loaded.prepare('SELECT count(*) AS n FROM rooms_v2').get().n,3);loaded.close();
