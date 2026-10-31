@@ -93,7 +93,7 @@ export const sfx = {
   light: guard((i = 0) => {
     tone({ type: 'triangle', freq: 520 * Math.pow(1.122, i % 6), peak: 0.035, decay: 0.12 });
   }),
-  // 终极人格
+  // 最终天赋
   ultimate: guard(() => {
     tone({ freq: 880, peak: 0.12, attack: 0.01, decay: 1.1 });
     tone({ freq: 1318.5, peak: 0.08, attack: 0.01, decay: 1.3, delay: 0.05 });

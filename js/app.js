@@ -790,7 +790,7 @@ function formatTime(date) {
 
 function ultimateText(entry) {
   const { ultimates } = splitBuild(data.trees[entry.side], entry.build);
-  return `终极人格：${ultimates.length ? ultimates.map((t) => t.node.name).join('、') : '无'}`;
+  return `最终天赋：${ultimates.length ? ultimates.map((t) => t.node.name).join('、') : '无'}`;
 }
 
 function othersLine(entry) {
@@ -800,7 +800,7 @@ function othersLine(entry) {
 }
 
 /**
- * 完整版包含其他人格和监管者辅助特质；简略版只保留角色和终极人格。
+ * 完整版包含其他人格和监管者辅助特质；简略版只保留角色和最终天赋。
  */
 function resultText({ brief = false } = {}) {
   const lines = [`第五人格随机抽取工具-抽取结果 (${formatTime(match.at)})`, '', '【求生者】'];
@@ -889,7 +889,7 @@ async function renderTreeImage(slot, entry) {
   ctx.fillStyle = glow;
   ctx.fillRect(0, HEAD, W, 760);
 
-  // 标题：角色名 + 终极人格
+  // 标题：角色名 + 最终天赋
   const { ultimates } = splitBuild(tree, entry.build);
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
@@ -899,7 +899,7 @@ async function renderTreeImage(slot, entry) {
   ctx.textAlign = 'right';
   ctx.fillStyle = color.brass;
   ctx.font = `16px ${font}`;
-  ctx.fillText(`终极人格：${ultimates.length ? ultimates.map((t) => t.node.name).join('、') : '无'}`, W - 32, 42);
+  ctx.fillText(`最终天赋：${ultimates.length ? ultimates.map((t) => t.node.name).join('、') : '无'}`, W - 32, 42);
   ctx.fillStyle = 'rgba(179, 145, 88, .35)';
   ctx.fillRect(32, HEAD - 1, W - 64, 1);
 
@@ -1282,7 +1282,7 @@ function bindFit() {
   dlg.addEventListener('close', disarmFitReset);
 }
 
-/* ------------------------------------------------------------------ 随机终极人格概率 */
+/* ------------------------------------------------------------------ 随机最终天赋概率 */
 
 function syncUltWeights() {
   document.querySelectorAll('.ult-weights').forEach((box) => {

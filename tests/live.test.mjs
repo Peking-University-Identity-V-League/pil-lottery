@@ -40,7 +40,7 @@ test('隐藏特质时求生者收不到，监管者和观众可以看到', () =>
   assert.equal(project(state, 'spectator', visibility).slots[4].trait.name, 'SECRET-TRAIT');
 });
 
-test('敌方只看终极时收不到其他人格', () => {
+test('敌方只看最终天赋时收不到其他人格', () => {
   const state = normalizeState(fullState());
   const out = project(state, 'survivor', preset('ultimates'));
   assert.equal(out.slots[4].build.status, 'ultimates');
@@ -76,7 +76,7 @@ test('未揭晓的内容不会出现在输出里', () => {
   assert.deepEqual(out.slots[4], { side: 'hunter', char: { status: 'pending' }, build: { status: 'pending' }, trait: { status: 'pending' } });
 });
 
-test('双方可以分别设置：求生者看不到监管者终极，监管者能看到求生者终极和绝处逢生', () => {
+test('双方可以分别设置：求生者看不到监管者最终天赋，监管者能看到求生者最终天赋和绝处逢生', () => {
   const raw = fullState();
   raw.slots[0].despair = true;
   const state = normalizeState(raw);
@@ -117,7 +117,7 @@ test('按钮亮不亮只取决于当前状态', () => {
   assert.deepEqual(on(press(ALL_VISIBLE, 'mutual')), ['trait']);
   assert.deepEqual(on(press(ALL_VISIBLE, 'trait')), ['despair', 'hunter-ult', 'mutual', 'survivor-ult']);
 
-  // 绝处逢生可以单独打开；能看到全部人格时要隐藏它，只能退到仅终极
+  // 绝处逢生可以单独打开；能看到全部人格时要隐藏它，只能退到仅最终天赋
   const despairOnly = press(ALL_HIDDEN, 'despair');
   assert.deepEqual(on(despairOnly), ['despair']);
   assert.equal(despairOnly.hunterSeesTalents, 'hide');
@@ -134,7 +134,7 @@ test('按钮亮不亮只取决于当前状态', () => {
   assert.deepEqual(on(press(fromHidden, 'hunter-ult')), ['hunter-ult', 'mutual', 'survivor-ult']);
   assert.deepEqual(on(press(fromHidden, 'hunter-ult', 'hunter-ult')), ['survivor-ult']);
 
-  // 互相可见不会把“全部”降级成“仅终极”
+  // 互相可见不会把“全部”降级成“仅最终天赋”
   const oneWay = { ...ALL_VISIBLE, survivorSeesTalents: 'hide' };
   const mutual = press(oneWay, 'mutual');
   assert.equal(mutual.hunterSeesTalents, 'all');

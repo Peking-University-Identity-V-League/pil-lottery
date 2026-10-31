@@ -2,7 +2,7 @@
 // 人格规则（BWIKI 已核对）：
 //   - 每层人格 5 点，每人最多 130 点 = 26 层；
 //   - 前置人格必须点满，后续人格才能解锁（例：韦伯定律需要 3 点祸福相依）；
-//   - 四个方向最外侧为终极人格，最多携带 2 个。
+//   - 四个方向最外侧为最终天赋，最多携带 2 个。
 
 export const POINTS_PER_LAYER = 5;
 export const MAX_POINTS = 130;
@@ -56,7 +56,7 @@ export function prepareTree(raw, descs = {}) {
   };
 }
 
-/** 终极人格数量设为“随机”时的默认权重：[0 个, 1 个, 2 个]，主办方可以自定义。 */
+/** 最终天赋数量设为“随机”时的默认权重：[0 个, 1 个, 2 个]，主办方可以自定义。 */
 export const RANDOM_ULTIMATE_WEIGHTS = [1, 1, 1];
 
 /** 权重必须是 3 个非负数且不能全为 0；否则返回 null。 */
@@ -97,9 +97,9 @@ function rollTargetLevel(node, current, rng) {
  * 随机生成一套人格。
  *
  * 分配思路（“按分支生长”）：
- *   1. 先抽出 k 个终极人格，把从中心到它们的整条路径点满；
+ *   1. 先抽出 k 个最终天赋，把从中心到它们的整条路径点满；
  *   2. 再把“必带”人格（如绝处逢生）的路径点满；
- *   3. 剩余层数按轮分配：每轮从所有“非终极、未点满”的人格里等概率抽一个目标，
+ *   3. 剩余层数按轮分配：每轮从所有“非最终天赋、未点满”的人格里等概率抽一个目标，
  *      再为目标抽一个层数（多层人格按 TARGET_LEVEL_WEIGHTS 抽 1～3 层），
  *      然后沿中心到目标的路径点：路径上的前置人格按规则必须点满，目标点到抽中的层数。
  *      于是每轮长出一条小分支；分支末端可能停在任意层数，
@@ -108,7 +108,7 @@ function rollTargetLevel(node, current, rng) {
  *
  * @param tree             prepareTree 的结果
  * @param ultimateSetting  'random' | 0 | 1 | 2
- * @param ultimateWeights  “随机”时 0、1、2 个终极人格的权重
+ * @param ultimateWeights  “随机”时 0、1、2 个最终天赋的权重
  * @param requiredIds      必须点亮的人格（会连同前置路径一起点满）
  * @param bannedIds        不会抽到的人格，路径经过它们的目标也不会被选中
  * @param softBannedIds    不会被主动抽中，但作为后续人格的前置时仍会点亮
@@ -199,6 +199,6 @@ export function validateBuild(tree, build) {
     total += lv;
   }
   if (total > MAX_LAYERS) problems.push(`共 ${total} 层，超过 ${MAX_LAYERS} 层`);
-  if (ults > MAX_ULTIMATES) problems.push(`终极人格 ${ults} 个，超过 ${MAX_ULTIMATES} 个`);
+  if (ults > MAX_ULTIMATES) problems.push(`最终天赋 ${ults} 个，超过 ${MAX_ULTIMATES} 个`);
   return problems;
 }

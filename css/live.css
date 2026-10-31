@@ -432,10 +432,10 @@
 
 .live-note[hidden] { display: none; }
 
-/* 看不到全部人格时的摘要：终极人格同一行，绝处逢生单独一行，格式相同 */
+/* 看不到全部人格时的摘要：最终天赋同一行，绝处逢生单独一行，格式相同 */
 .t-ult { min-height: 32px; }
 
-/* 绝处逢生：样式和终极人格相同，有时用绿色，无时用暗灰 */
+/* 绝处逢生：样式和最终天赋相同，有时用绿色，无时用暗灰 */
 .t-despair.is-on {
   color: #bff0cf;
   background: rgba(73, 186, 116, .22);
@@ -450,7 +450,7 @@
 
 .t-despair.is-off img { opacity: .25; filter: grayscale(1); }
 
-/* 按面板实际宽度收紧并排的终极人格，保证放得下 */
+/* 按面板实际宽度收紧并排的最终天赋，保证放得下 */
 .panel { container-type: inline-size; }
 
 @container (max-width: 260px) {
@@ -493,7 +493,7 @@
   color: var(--brass);
 }
 
-/* 随机终极人格权重 */
+/* 随机最终天赋权重 */
 
 .ult-weights {
   display: flex;

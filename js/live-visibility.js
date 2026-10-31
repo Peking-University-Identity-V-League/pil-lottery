@@ -27,15 +27,15 @@ export const DEFAULT_VISIBILITY = ALL_VISIBLE;
 
 export const VISIBILITY_TOGGLES = [
   { id: 'all', name: '全部可见' },
-  { id: 'mutual', name: '终极人格互相可见' },
-  { id: 'survivor-ult', name: '求生者终极人格对监管者可见' },
-  { id: 'hunter-ult', name: '监管者终极人格对求生者可见' },
+  { id: 'mutual', name: '最终天赋互相可见' },
+  { id: 'survivor-ult', name: '求生者最终天赋对监管者可见' },
+  { id: 'hunter-ult', name: '监管者最终天赋对求生者可见' },
   { id: 'despair', name: '求生者绝处逢生对监管者可见' },
   { id: 'trait', name: '监管者辅助特质对求生者可见' },
   { id: 'none', name: '全部隐藏' },
 ];
 
-const seesUltimates = (talents) => talents !== 'hide'; // 能看到全部人格时也包含终极人格
+const seesUltimates = (talents) => talents !== 'hide'; // 能看到全部人格时也包含最终天赋
 
 /**
  * 按钮亮不亮只取决于当前可见范围，没有单独的选中记录，所以下拉框改动后按钮也会跟着变。
@@ -72,7 +72,7 @@ export function toggleVisibility(v, id, options = {}) {
   if (id === 'trait') {
     next.survivorSeesTrait = active.has('trait') ? 'hide' : 'show';
   } else if (id === 'despair') {
-    // 全部人格里包含绝处逢生，要隐藏它只能退到“仅终极”
+    // 全部人格里包含绝处逢生，要隐藏它只能退到“仅最终天赋”
     if (active.has(id) && next.hunterSeesTalents === 'all') next.hunterSeesTalents = 'ultimates';
     next.hunterSeesDespair = active.has(id) ? 'hide' : 'show';
   } else if (id === 'survivor-ult') {

@@ -43,7 +43,7 @@ export function splitBuild(tree, build) {
   };
 }
 
-/** 绝处逢生独立一行，大小和终极人格相同，用颜色区分有无。 */
+/** 绝处逢生独立一行，大小和最终天赋相同，用颜色区分有无。 */
 export function despairItem(tree, has) {
   const node = tree.findByName(DESPAIR);
   const li = el('li', `t t-ult is-single t-despair ${has ? 'is-on' : 'is-off'}`);
@@ -63,7 +63,7 @@ export function talentItems(tree, build) {
   const { ultimates, others } = splitBuild(tree, build);
   const despair = tree.findByName(DESPAIR);
   const items = [];
-  if (!ultimates.length) items.push(el('li', 't t-ult is-single is-none', '无终极人格'));
+  if (!ultimates.length) items.push(el('li', 't t-ult is-single is-none', '无最终天赋'));
   for (const { node } of ultimates) {
     const li = el('li', ultimates.length === 1 ? 't t-ult is-single' : 't t-ult');
     const img = new Image();
@@ -86,7 +86,7 @@ export function talentItems(tree, build) {
 }
 
 export function talentStatus(node, level) {
-  if (node.is_ultimate) return level ? '终极人格' : '终极人格（未解锁）';
+  if (node.is_ultimate) return level ? '最终天赋' : '最终天赋（未解锁）';
   return level ? `${level}/${node.max_level} 层` : `未解锁（最高 ${node.max_level} 层）`;
 }
 
@@ -141,7 +141,7 @@ export function renderWeb(svg, tree, build, { animate = false, detailed = false 
     g.append(body);
     if (!detailed) {
       const title = svgEl('title');
-      title.textContent = `${n.name}　${level}/${n.max_level}${n.is_ultimate ? '（终极人格）' : ''}${n.desc ? `\n${n.desc}` : ''}`;
+      title.textContent = `${n.name}　${level}/${n.max_level}${n.is_ultimate ? '（最终天赋）' : ''}${n.desc ? `\n${n.desc}` : ''}`;
       g.append(title);
     }
     nodes.append(g);
@@ -168,7 +168,7 @@ export function showTreeDialog({ tree, build, side, name }) {
   dlg.classList.add(`side-${side}`);
   $('#tree-title').textContent = `${name}的人格`;
   $('#tree-sub').textContent = `${build.used} 层，${build.used * POINTS_PER_LAYER} 点。`
-    + (ultimates.length ? `终极人格：${ultimates.map((t) => t.node.name).join('、')}` : '这套人格没有终极人格');
+    + (ultimates.length ? `最终天赋：${ultimates.map((t) => t.node.name).join('、')}` : '这套人格没有最终天赋');
 
   const svg = svgEl('svg', { class: 'web', viewBox: '-372 -372 744 744', role: 'group', 'aria-label': '人格树，点击人格图标查看详情' });
   renderWeb(svg, tree, build, { detailed: true });

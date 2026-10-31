@@ -700,7 +700,7 @@ body.is-busy .table { cursor: pointer; }
 .t small { font-size: 11px; color: var(--accent); }
 
 .t-ult {
-  flex: 1 1 calc(50% - 3px); /* 2 个终极人格并排一行 */
+  flex: 1 1 calc(50% - 3px); /* 2 个最终天赋并排一行 */
   min-width: 0;
   gap: 8px;
   white-space: nowrap;
@@ -713,7 +713,7 @@ body.is-busy .table { cursor: pointer; }
 }
 
 .t-ult.is-wide { flex-basis: 100%; }
-/* 只有 1 个或没有终极人格时：宽度和并排时一样，居中独占一行 */
+/* 只有 1 个或没有最终天赋时：宽度和并排时一样，居中独占一行 */
 .t-ult.is-single { flex: 0 0 calc(50% - 3px); margin-inline: calc(25% + 1px); }
 .t-ult.is-single.is-none { justify-content: center; }
 .t-ult.is-none { min-height: 32px; color: var(--muted); }

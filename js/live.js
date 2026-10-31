@@ -141,13 +141,13 @@ function summaryItem(className, text, iconPath) {
   return li;
 }
 
-/** 看不到全部人格时的摘要：终极人格一行，绝处逢生一行。 */
+/** 看不到全部人格时的摘要：最终天赋一行，绝处逢生一行。 */
 function limitedItems(tree, build) {
   const items = [];
   if (build.status === 'ultimates') {
     const nodes = build.ultimates.map((id) => tree.byId.get(id));
     if (nodes.length) items.push(...nodes.map((n) => summaryItem(nodes.length === 1 ? 'is-single' : '', n.name, n.icon?.local_path)));
-    else items.push(summaryItem('is-single is-none', '无终极人格'));
+    else items.push(summaryItem('is-single is-none', '无最终天赋'));
   }
   if (build.despair !== undefined) items.push(despairItem(tree, build.despair));
   items.forEach((li, i) => li.style.setProperty('--i', i));

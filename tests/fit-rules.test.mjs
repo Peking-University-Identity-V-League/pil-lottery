@@ -132,7 +132,7 @@ test('规则说明跟随名单和开关变化', () => {
   }
 });
 
-test('随机终极人格默认各 1/3，也可以自定义', () => {
+test('随机最终天赋默认各 1/3，也可以自定义', () => {
   const tree = trees.survivor;
   const count = (ultimateWeights) => {
     const out = [0, 0, 0];

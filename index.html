@@ -45,7 +45,7 @@
     <fieldset class="rule rule-survivor">
       <legend>求生者</legend>
       <div class="rule-row">
-        <span class="rule-label" id="lbl-s-ult">终极人格</span>
+        <span class="rule-label" id="lbl-s-ult">最终天赋</span>
         <div class="segmented" role="radiogroup" aria-labelledby="lbl-s-ult" data-setting="survivor">
           <button type="button" role="radio" data-value="random">随机</button>
           <button type="button" role="radio" data-value="0">0 个</button>
@@ -55,9 +55,9 @@
       </div>
       <div class="ult-weights" data-side="survivor">
         <span class="rule-label">随机权重</span>
-        <label><span>0 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="0 个终极人格的权重"></label>
-        <label><span>1 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="1 个终极人格的权重"></label>
-        <label><span>2 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="2 个终极人格的权重"></label>
+        <label><span>0 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="0 个最终天赋的权重"></label>
+        <label><span>1 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="1 个最终天赋的权重"></label>
+        <label><span>2 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="2 个最终天赋的权重"></label>
         <button type="button" class="btn btn-mini ult-reset" aria-label="恢复默认权重">默认</button>
       </div>
       <label class="switch">
@@ -70,7 +70,7 @@
     <fieldset class="rule rule-hunter">
       <legend>监管者</legend>
       <div class="rule-row">
-        <span class="rule-label" id="lbl-h-ult">终极人格</span>
+        <span class="rule-label" id="lbl-h-ult">最终天赋</span>
         <div class="segmented" role="radiogroup" aria-labelledby="lbl-h-ult" data-setting="hunter">
           <button type="button" role="radio" data-value="random">随机</button>
           <button type="button" role="radio" data-value="0">0 个</button>
@@ -80,9 +80,9 @@
       </div>
       <div class="ult-weights" data-side="hunter">
         <span class="rule-label">随机权重</span>
-        <label><span>0 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="0 个终极人格的权重"></label>
-        <label><span>1 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="1 个终极人格的权重"></label>
-        <label><span>2 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="2 个终极人格的权重"></label>
+        <label><span>0 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="0 个最终天赋的权重"></label>
+        <label><span>1 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="1 个最终天赋的权重"></label>
+        <label><span>2 个</span><b class="ult-pct"></b><input type="number" min="0" step="any" inputmode="decimal" aria-label="2 个最终天赋的权重"></label>
         <button type="button" class="btn btn-mini ult-reset" aria-label="恢复默认权重">默认</button>
       </div>
       <label class="switch">
@@ -184,7 +184,7 @@
                 <h4>监管者能看到求生者的</h4>
                 <div class="live-options">
                   <div class="live-opt"><span id="lbl-hunterSeesChar">角色</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-hunterSeesChar" data-vis="hunterSeesChar"><button type="button" role="radio" data-value="show">公开</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
-                  <div class="live-opt"><span id="lbl-hunterSeesTalents">人格</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-hunterSeesTalents" data-vis="hunterSeesTalents"><button type="button" role="radio" data-value="all">全部</button><button type="button" role="radio" data-value="ultimates">仅终极</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
+                  <div class="live-opt"><span id="lbl-hunterSeesTalents">人格</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-hunterSeesTalents" data-vis="hunterSeesTalents"><button type="button" role="radio" data-value="all">全部</button><button type="button" role="radio" data-value="ultimates">仅最终天赋</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
                   <div class="live-opt"><span id="lbl-hunterSeesDespair">是否带绝处逢生</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-hunterSeesDespair" data-vis="hunterSeesDespair"><button type="button" role="radio" data-value="show">公开</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
                 </div>
               </div>
@@ -192,7 +192,7 @@
                 <h4>求生者能看到监管者的</h4>
                 <div class="live-options">
                   <div class="live-opt"><span id="lbl-survivorSeesChar">角色</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-survivorSeesChar" data-vis="survivorSeesChar"><button type="button" role="radio" data-value="show">公开</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
-                  <div class="live-opt"><span id="lbl-survivorSeesTalents">人格</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-survivorSeesTalents" data-vis="survivorSeesTalents"><button type="button" role="radio" data-value="all">全部</button><button type="button" role="radio" data-value="ultimates">仅终极</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
+                  <div class="live-opt"><span id="lbl-survivorSeesTalents">人格</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-survivorSeesTalents" data-vis="survivorSeesTalents"><button type="button" role="radio" data-value="all">全部</button><button type="button" role="radio" data-value="ultimates">仅最终天赋</button><button type="button" role="radio" data-value="hide">隐藏</button></div></div>
                   <div class="live-opt"><span id="lbl-survivorSeesTrait">辅助特质</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-survivorSeesTrait" data-vis="survivorSeesTrait"><button type="button" role="radio" data-value="show">公开</button><button type="button" role="radio" data-value="hide">隐藏</button><button type="button" role="radio" data-value="free" hidden>自选</button></div></div>
                 </div>
               </div>
