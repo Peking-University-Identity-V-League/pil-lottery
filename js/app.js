@@ -1442,9 +1442,6 @@ function syncLiveAccess(room, visibility) {
   const warning = $('#live-access-warning');
   warning.hidden = !exposed.length;
   warning.textContent = exposed.length ? `已隐藏部分内容，但${exposed.join('、')}没有密码：知道房间号的人都能选择这些身份。` : '';
-  const hasPassword = LIVE_VIEWS.some((view) => passwords[view]);
-  $('#live-reset-passwords').disabled = !hasPassword;
-  if (!hasPassword) $('#live-reset-passwords').checked = false;
 }
 
 function disarmLiveReset() {
@@ -1453,7 +1450,6 @@ function disarmLiveReset() {
   const button = $('#live-reset');
   button.textContent = '重置房间';
   button.classList.remove('is-armed');
-  $('#live-reset-hint').textContent = '重置后所有人需要重新进入，上一场结果也会清除；房间号、可见范围和人数上限保留。';
 }
 
 async function refreshLiveViewers() {
@@ -1590,21 +1586,16 @@ function bindLive() {
   });
   $('#live-reset').addEventListener('click', async (e) => {
     if (busy) { toast('抽取进行中，结束后才能重置房间。'); return; }
-    const clearPasswords = $('#live-reset-passwords').checked;
     if (!liveResetTimer) {
       e.currentTarget.textContent = '再点一次确认';
       e.currentTarget.classList.add('is-armed');
-      const kept = !clearPasswords && LIVE_VIEWS.some((view) => live.room.access?.[view]?.password);
-      if (kept) $('#live-reset-hint').textContent = '密码未更换，上一场的选手仍可用旧密码进入。如有换人或换边，请同时更换密码。';
-      $('#live-reset-hint').scrollIntoView({ block: 'nearest' });
       liveResetTimer = setTimeout(disarmLiveReset, 6000);
       return;
     }
     disarmLiveReset();
     try {
       liveSuppressed = true;
-      await live.reset({ clearPasswords });
-      $('#live-reset-passwords').checked = false;
+      await live.reset();
       toast('房间已重置，所有人需要重新进入');
     } catch {
       liveSuppressed = false;

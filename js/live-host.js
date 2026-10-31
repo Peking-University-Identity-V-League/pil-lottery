@@ -144,7 +144,7 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
       context.visibilityQueue = saving;
       return saving;
     },
-    /** 改某个身份的密码或人数上限；password 为 null 表示取消密码。明文只留在裁判自己的浏览器，方便转告选手。 */
+    /** 改某个身份的密码或人数上限；password 为 null 表示取消密码。明文只留在裁判自己的浏览器，用于回填密码框。 */
     setAccess(view, changes) {
       const context = current;
       if (!context) return Promise.reject(new Error('room-lost'));

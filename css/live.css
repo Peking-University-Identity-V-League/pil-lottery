@@ -181,14 +181,6 @@
 
 .live-warning[hidden] { display: none; }
 
-.live-reset-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text);
-}
-
 #live-reset.is-armed {
   border-color: #e0676a;
   color: #f0a3a5;

@@ -193,31 +193,26 @@
             <div class="live-access" id="live-access">
               <div class="live-access-row" data-access="hunter">
                 <span class="live-access-name">监管者</span>
-                <label>密码<input type="text" class="access-password" maxlength="64" autocomplete="off" placeholder="不设密码" aria-label="监管者密码"></label>
+                <label>密码<input type="password" class="access-password" maxlength="64" autocomplete="new-password" placeholder="不设密码" aria-label="监管者密码"></label>
                 <label>人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="监管者人数上限"></label>
                 <span class="live-access-taken"></span>
                 <button type="button" class="btn btn-mini access-clear">清空名额</button>
               </div>
               <div class="live-access-row" data-access="survivor">
                 <span class="live-access-name">求生者</span>
-                <label>密码<input type="text" class="access-password" maxlength="64" autocomplete="off" placeholder="不设密码" aria-label="求生者密码"></label>
+                <label>密码<input type="password" class="access-password" maxlength="64" autocomplete="new-password" placeholder="不设密码" aria-label="求生者密码"></label>
                 <label>人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="求生者人数上限"></label>
                 <span class="live-access-taken"></span>
                 <button type="button" class="btn btn-mini access-clear">清空名额</button>
               </div>
               <div class="live-access-row" data-access="spectator">
                 <span class="live-access-name">观众</span>
-                <label>密码<input type="text" class="access-password" maxlength="64" autocomplete="off" placeholder="不设密码" aria-label="观众密码"></label>
+                <label>密码<input type="password" class="access-password" maxlength="64" autocomplete="new-password" placeholder="不设密码" aria-label="观众密码"></label>
                 <label>人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="观众人数上限"></label>
                 <span class="live-access-taken"></span>
                 <button type="button" class="btn btn-mini access-clear">清空名额</button>
               </div>
             </div>
-          </section>
-          <section class="live-group">
-            <h3>下一场</h3>
-            <label class="live-reset-option"><input type="checkbox" id="live-reset-passwords">同时清空密码</label>
-            <p class="live-hint" id="live-reset-hint">重置后所有人需要重新进入，上一场结果也会清除；房间号、可见范围和人数上限保留。</p>
           </section>
         </div>
       </div>
