@@ -538,7 +538,7 @@ const LEAVE_MESSAGES = {
   'room-not-found': '房间不存在或已结束，请向裁判确认房间号。',
   'view-full': '该身份人数已满，请联系裁判。',
   'invalid-session': '身份已失效，请重新进入。',
-  'session-replaced': '已在其他页面切换身份，请重新进入。',
+  'session-replaced': '已在其他页面退出或切换身份，请重新进入。',
 };
 const JOIN_ERRORS = {
   'wrong-password': '密码不正确，请重新输入。',
