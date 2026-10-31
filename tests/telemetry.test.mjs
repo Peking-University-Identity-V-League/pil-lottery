@@ -92,3 +92,31 @@ test('early actions queue once with a bound, and tracking failures never escape'
   assert.doesNotThrow(() => context.pilLotteryTrack('lottery_draw'));
   await new Promise(resolve => setImmediate(resolve));
 });
+
+test('room entry pageviews exclude room, role, password, access token and state', async () => {
+  for (const pathname of ['/lottery/live/', '/lottery/live/index.html']) {
+    const { tracker, context, filter, loaded } = client({ pathname });
+    assert.equal(tracker['data-tag'], 'lottery-live');
+    const payload = filter('event', { website, url: pathname + '?room=PRIVATE&token=PRIVATE#PRIVATE',
+      id: 'PRIVATE', title: 'PRIVATE', referrer: 'https://pkuidv.com/lottery/?token=PRIVATE',
+      data: { password: 'PRIVATE', role: 'PRIVATE', results: 'PRIVATE' } });
+    assert.deepEqual(plain(payload), { website, hostname: 'pkuidv.com', title: '第五人格抽签房间',
+      url: '/lottery/live/', tag: 'lottery-live', referrer: 'https://pkuidv.com' });
+    assert.equal(filter('event', { website, name: 'lottery_draw', data: { result: 'PRIVATE' } }), false);
+    assert.equal(filter('identify', { website, id: 'PRIVATE' }), false);
+    const sent = []; context.umami = { track: (...event) => sent.push(event) }; loaded();
+    context.pilLotteryTrack('lottery_draw', { room: 'PRIVATE' });
+    assert.equal(sent.length, 0);
+  }
+  const liveHtml = await readFile(new URL('../live/index.html', import.meta.url), 'utf8');
+  assert.equal((liveHtml.match(/src="\.\.\/js\/telemetry.js"/g) || []).length, 1);
+  assert.equal(client({ pathname: '/lottery/live/', dnt: '1' }).tracker, undefined);
+});
+
+test('main-page sponsor clicks are retained without arbitrary data', () => {
+  const { filter } = client();
+  const event = filter('event', { website, name: 'sponsor_afdian_open', data: { private: 'PRIVATE', total: 10 } });
+  assert.equal(event.name, 'sponsor_afdian_open');
+  assert.deepEqual(plain(event.data), { application: 'lottery' });
+  assert.ok(html.includes('data-umami-event="sponsor_afdian_open"'));
+});
