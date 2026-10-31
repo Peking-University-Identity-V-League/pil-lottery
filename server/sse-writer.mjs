@@ -36,11 +36,11 @@ export function createSseWriter(res, { maxBufferedBytes = 64 * 1024, slowClientT
       }
       write(text);
     },
-    close() {
+    close(reason) {
       pending = null;
       if (!alive()) return;
       if (blocked || res.writableLength) res.destroy();
-      else res.end(frame('closed', '{}'));
+      else res.end(frame('closed', JSON.stringify(reason ? { reason } : {})));
     },
   };
 }

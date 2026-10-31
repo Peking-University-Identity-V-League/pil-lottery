@@ -15,15 +15,38 @@
   <header class="masthead">
     <div class="masthead-title">
       <h1>房间同步<span class="live-view" id="live-view"></span></h1>
-      <p id="live-phase" role="status" aria-live="polite">正在连接…</p>
+      <p id="live-phase" role="status" aria-live="polite">输入房间号进入</p>
     </div>
     <div class="masthead-tools">
-      <span class="live-conn" id="live-conn" data-state="wait">连接中…</span>
+      <span class="live-conn" id="live-conn" data-state="wait" hidden>连接中…</span>
+      <button type="button" class="btn btn-quiet" id="btn-leave" hidden>切换身份</button>
       <button type="button" class="btn btn-quiet" id="btn-sound" aria-pressed="false">音效</button>
     </div>
   </header>
 
-  <main class="table" id="table">
+  <section class="live-entry" id="live-entry" hidden aria-labelledby="entry-title">
+    <form class="live-entry-card" id="entry-form" autocomplete="off" novalidate>
+      <h2 id="entry-title">进入房间</h2>
+      <p class="live-entry-message" id="entry-message" role="alert" hidden></p>
+      <label class="live-entry-field" for="entry-room">房间号</label>
+      <input id="entry-room" inputmode="numeric" maxlength="6" placeholder="6 位数字" aria-describedby="entry-message">
+      <div id="entry-views-box" hidden>
+        <span class="live-entry-field" id="entry-view-label">身份</span>
+        <div class="live-entry-views" id="entry-views" role="radiogroup" aria-labelledby="entry-view-label">
+          <button type="button" role="radio" data-view="hunter"><b>监管者</b><small></small></button>
+          <button type="button" role="radio" data-view="survivor"><b>求生者</b><small></small></button>
+          <button type="button" role="radio" data-view="spectator"><b>观众</b><small></small></button>
+        </div>
+      </div>
+      <div id="entry-password-box" hidden>
+        <label class="live-entry-field" for="entry-password">密码</label>
+        <input id="entry-password" type="password" maxlength="64" autocomplete="off" placeholder="向裁判索取">
+      </div>
+      <button class="btn btn-wax" id="entry-submit">进入</button>
+    </form>
+  </section>
+
+  <main class="table" id="table" hidden>
     <p class="notice" id="notice">正在整理庄园的信件…</p>
   </main>
 
@@ -71,9 +94,6 @@
           <p>也可能是服务器状态异常，请联系开发者。</p>
         </div>
       </div>
-      <footer class="sheet-foot" id="conn-foot">
-        <button type="button" class="btn btn-quiet" id="conn-reload">重新检查</button>
-      </footer>
     </form>
   </dialog>
 

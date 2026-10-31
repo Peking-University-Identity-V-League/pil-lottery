@@ -195,8 +195,7 @@ before(async () => {
 });
 
 after(async () => {
-  server.closeAllConnections();
-  await new Promise((resolve) => { server.close(resolve); });
+  await server.shutdown();
 });
 
 async function createRoom() {
@@ -212,9 +211,22 @@ const hostCall = (room, method, path, body, token = room.hostToken) => fetch(`${
 });
 
 /** 读取 SSE，把 state 事件依次交给调用方。 */
-async function openStream(room, view) {
+const join = (room, view, password) => fetch(`${base}/${room.roomId}/join`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ view, password }),
+});
+
+async function sessionFor(room, view, password) {
+  const res = await join(room, view, password);
+  assert.equal(res.status, 200);
+  return (await res.json()).session;
+}
+
+async function openStream(room, view, password, existingSession) {
   const controller = new AbortController();
-  const res = await fetch(`${base}/${room.roomId}/events?token=${room.tokens[view]}`, { signal: controller.signal });
+  const session = existingSession || await sessionFor(room, view, password);
+  const res = await fetch(`${base}/${room.roomId}/events?session=${session}`, { signal: controller.signal });
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-type'), /text\/event-stream/);
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -238,18 +250,28 @@ async function openStream(room, view) {
         }
       }
     },
+    session,
     close: () => controller.abort(),
   };
 }
 
-test('错误的令牌被拒绝，不存在的房间返回 404', async () => {
+test('房间号是 6 位数字，裁判令牌不会出现在公开信息里', async () => {
   const room = await createRoom();
-  assert.equal((await fetch(`${base}/${room.roomId}/events?token=bad`)).status, 403);
-  assert.equal((await fetch(`${base}/${room.roomId}/check?token=bad`)).status, 403);
-  assert.equal((await fetch(`${base}/nope/events?token=bad`)).status, 404);
+  assert.match(room.roomId, /^\d{6}$/);
+  const info = await (await fetch(`${base}/${room.roomId}/info`)).text();
+  assert.ok(!info.includes(room.hostToken));
+  assert.ok(!info.includes('passwordHash'));
+});
+
+test('错误的凭证被拒绝，不存在的房间返回 404', async () => {
+  const room = await createRoom();
+  assert.equal((await fetch(`${base}/${room.roomId}/events?session=bad`)).status, 403);
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=bad`)).status, 403);
+  assert.equal((await fetch(`${base}/000000/events?session=bad`)).status, 404);
   assert.equal((await hostCall(room, 'PUT', '/state', { seq: 1, state: fullState() }, 'bad')).status, 403);
-  // 选手令牌不能当裁判令牌使用
-  assert.equal((await hostCall(room, 'PUT', '/state', { seq: 1, state: fullState() }, room.tokens.spectator)).status, 403);
+  // 选手凭证不能当裁判令牌使用
+  const session = await sessionFor(room, 'spectator');
+  assert.equal((await hostCall(room, 'PUT', '/state', { seq: 1, state: fullState() }, session)).status, 403);
 });
 
 test('裁判提交后，已连接的选手不刷新就收到按视角过滤的推送', async () => {
@@ -294,21 +316,166 @@ test('乱序到达的旧状态被丢弃', async () => {
   stream.close();
 });
 
-test('重新生成链接后旧链接立即失效', async () => {
+test('密码按身份生效，错误密码进不去，也收不到任何抽取数据', async () => {
   const room = await createRoom();
-  const stream = await openStream(room, 'survivor');
-  await stream.next();
-  const rotated = await (await hostCall(room, 'POST', '/rotate')).json();
-  await stream.next('closed');
-  assert.equal((await fetch(`${base}/${room.roomId}/check?token=${room.tokens.survivor}`)).status, 403);
-  assert.equal((await fetch(`${base}/${room.roomId}/check?token=${rotated.tokens.survivor}`)).status, 200);
+  await hostCall(room, 'PUT', '/state', { seq: 1, state: fullState() });
+  await hostCall(room, 'PUT', '/access', { view: 'hunter', password: 'hunter-secret' });
+  const info = await (await fetch(`${base}/${room.roomId}/info`)).json();
+  assert.equal(info.views.hunter.password, true);
+  assert.equal(info.views.survivor.password, false);
+  for (const password of [undefined, 'wrong', 123]) {
+    const denied = await join(room, 'hunter', password);
+    assert.equal(denied.status, 403);
+    assert.ok(!JSON.stringify(await denied.json()).includes('SECRET-TRAIT'));
+  }
+  assert.equal((await join(room, 'hunter', 'hunter-secret')).status, 200);
+  assert.equal((await join(room, 'survivor')).status, 200);
+});
+
+test('改密码后该身份立即退出，其他身份不受影响，旧凭证失效', async () => {
+  const room = await createRoom();
+  await hostCall(room, 'PUT', '/access', { view: 'hunter', password: 'old' });
+  const hunter = await openStream(room, 'hunter', 'old');
+  const survivor = await openStream(room, 'survivor');
+  await hunter.next();
+  await survivor.next();
+  await hostCall(room, 'PUT', '/access', { view: 'hunter', password: 'new' });
+  assert.equal((await hunter.next('closed')).reason, 'password-changed');
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${hunter.session}`)).status, 403);
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${survivor.session}`)).status, 200);
+  assert.equal((await join(room, 'hunter', 'old')).status, 403);
+  assert.equal((await join(room, 'hunter', 'new')).status, 200);
+  survivor.close();
+});
+
+test('人数上限：同一凭证重连不多占，满员拒绝，断线保留 2 分钟后释放', async () => {
+  const room = await createRoom();
+  await hostCall(room, 'PUT', '/access', { view: 'hunter', limit: 1 });
+  const first = await openStream(room, 'hunter');
+  await first.next();
+  const full = await join(room, 'hunter');
+  assert.equal(full.status, 409);
+  assert.equal((await full.json()).error, 'view-full');
+  assert.equal((await (await fetch(`${base}/${room.roomId}/info`)).json()).views.hunter.full, true);
+
+  // 同一凭证开第二个连接（多标签页）不算第二人
+  const second = await fetch(`${base}/${room.roomId}/events?session=${first.session}`);
+  assert.equal(second.status, 200);
+  await second.body.cancel();
+  first.close();
+  await new Promise((resolve) => { setTimeout(resolve, 50); });
+
+  // 断线后名额保留，别人进不来；原凭证可以回来
+  clock += 60 * 1000;
+  assert.equal((await join(room, 'hunter')).status, 409);
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${first.session}`)).status, 200);
+
+  // 超过保留期后释放；此时别人占了名额，原凭证就回不来了
+  clock += 61 * 1000;
+  const takeover = await join(room, 'hunter');
+  assert.equal(takeover.status, 200);
+  const stale = await fetch(`${base}/${room.roomId}/check?session=${first.session}`);
+  assert.equal(stale.status, 409);
+  assert.equal((await stale.json()).error, 'view-full');
+});
+
+test('调低上限不踢人，清空名额才会退出', async () => {
+  const room = await createRoom();
+  const a = await openStream(room, 'survivor');
+  const b = await openStream(room, 'survivor');
+  await a.next();
+  await b.next();
+  await hostCall(room, 'PUT', '/access', { view: 'survivor', limit: 1 });
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${a.session}`)).status, 200);
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${b.session}`)).status, 200);
+  assert.equal((await join(room, 'survivor')).status, 409);
+  const cleared = await (await hostCall(room, 'POST', '/seats/clear', { view: 'survivor' })).json();
+  assert.equal(cleared.access.survivor.taken, 0);
+  assert.equal((await a.next('closed')).reason, 'seat-cleared');
+  assert.equal((await b.next('closed')).reason, 'seat-cleared');
+  assert.equal((await join(room, 'survivor')).status, 200);
+});
+
+test('重置房间：退出所有人、清除结果，保留房间号、可见范围、上限；旧状态写不回来', async () => {
+  const room = await createRoom();
+  const visibility = preset('no-trait');
+  await hostCall(room, 'PUT', '/visibility', { visibility });
+  await hostCall(room, 'PUT', '/access', { view: 'hunter', password: 'pw', limit: 1 });
+  await hostCall(room, 'PUT', '/state', { seq: 100, state: fullState() });
+  const hunter = await openStream(room, 'hunter', 'pw');
+  const viewer = await openStream(room, 'spectator');
+  await hunter.next();
+  await viewer.next();
+  const reset = await hostCall(room, 'POST', '/reset', { seq: 200 });
+  assert.equal(reset.status, 200);
+  assert.equal((await hunter.next('closed')).reason, 'reset');
+  assert.equal((await viewer.next('closed')).reason, 'reset');
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${hunter.session}`)).status, 403);
+
+  // 迟到的旧状态被丢弃
+  assert.equal((await (await hostCall(room, 'PUT', '/state', { seq: 150, state: fullState() })).json()).stale, true);
+  const status = await (await hostCall(room, 'GET', '/status')).json();
+  assert.deepEqual(status.visibility, visibility);
+  assert.equal(status.access.hunter.limit, 1);
+  assert.equal(status.access.hunter.password, true);
+  assert.equal(status.access.hunter.taken, 0);
+  // 旧密码保留，新进入的人看不到上一场结果
+  assert.equal((await join(room, 'hunter', 'bad')).status, 403);
+  const next = await openStream(room, 'hunter', 'pw');
+  const first = await next.next();
+  assert.equal(first.phase, 'idle');
+  assert.deepEqual(first.slots, []);
+  next.close();
+});
+
+test('重置时可以同时清空密码', async () => {
+  const room = await createRoom();
+  await hostCall(room, 'PUT', '/access', { view: 'spectator', password: 'pw' });
+  const res = await (await hostCall(room, 'POST', '/reset', { clearPasswords: true })).json();
+  assert.equal(res.access.spectator.password, false);
+  assert.equal((await join(room, 'spectator')).status, 200);
+});
+
+test('无效的密码和上限被拒绝', async () => {
+  const room = await createRoom();
+  for (const body of [{ view: 'x' }, { view: 'hunter', limit: 0 }, { view: 'hunter', limit: 65 }, { view: 'hunter', limit: 1.5 }, { view: 'hunter', password: '' }, { view: 'hunter', password: 'x'.repeat(65) }]) {
+    assert.equal((await hostCall(room, 'PUT', '/access', body)).status, 400);
+  }
+  assert.equal((await join(room, 'x')).status, 400);
+});
+
+test('密码连续输错和猜房间号都会被限制，且不影响裁判', async () => {
+  const limited = createLiveServer({ maxCreatesPerHour: 1000, maxPasswordFailures: 3, maxRoomMisses: 5 });
+  await new Promise((resolve) => { limited.listen(0, '127.0.0.1', resolve); });
+  const api = `http://127.0.0.1:${limited.address().port}/lottery/live-api/rooms`;
+  try {
+    const room = await (await fetch(api, { method: 'POST' })).json();
+    const hostAuth = { Authorization: `Bearer ${room.hostToken}`, 'Content-Type': 'application/json' };
+    await fetch(`${api}/${room.roomId}/access`, { method: 'PUT', headers: hostAuth, body: JSON.stringify({ view: 'hunter', password: 'right' }) });
+    const tryJoin = (password) => fetch(`${api}/${room.roomId}/join`, { method: 'POST', body: JSON.stringify({ view: 'hunter', password }) });
+    for (let i = 0; i < 3; i++) assert.equal((await tryJoin('bad')).status, 403);
+    const blocked = await tryJoin('right'); // 超限后即使密码正确也要等
+    assert.equal(blocked.status, 429);
+    assert.equal((await blocked.json()).error, 'too-many-attempts');
+
+    for (let i = 0; i < 5; i++) assert.equal((await fetch(`${api}/000000/info`)).status, 404);
+    // 超限后不再区分房间是否存在
+    assert.equal((await fetch(`${api}/000000/info`)).status, 429);
+    assert.equal((await fetch(`${api}/${room.roomId}/info`)).status, 429);
+    // 伪造裁判请求头也绕不过
+    assert.equal((await fetch(`${api}/000000/info`, { headers: { Authorization: 'Bearer forged' } })).status, 429);
+    // 真正的裁判不受影响
+    assert.equal((await fetch(`${api}/${room.roomId}/status`, { headers: hostAuth })).status, 200);
+  } finally {
+    await limited.shutdown();
+  }
 });
 
 test('房间超时后被清理', async () => {
   const room = await createRoom();
   clock += 12 * 60 * 60 * 1000 + 1;
-  server.sweep();
-  assert.equal((await fetch(`${base}/${room.roomId}/check?token=${room.tokens.survivor}`)).status, 404);
+  await server.sweep();
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=x`)).status, 404);
 });
 
 test('过大的请求被拒绝', async () => {
@@ -323,4 +490,61 @@ test('健康端点不创建房间，跨站建房请求被拒绝', async () => {
   assert.equal((await health.json()).ok, true);
   const crossSite = await fetch(base, { method: 'POST', headers: { Origin: 'https://other.invalid' } });
   assert.equal(crossSite.status, 403);
+});
+
+
+test('switching identity revokes every old tab and delivers no later state to those streams', { timeout: 5000 }, async () => {
+  const room = await createRoom();
+  await hostCall(room, 'PUT', '/access', { view: 'hunter', limit: 1 });
+  const old = await openStream(room, 'hunter');
+  const otherTab = await openStream(room, 'hunter', undefined, old.session);
+  await old.next(); await otherTab.next();
+  const res = await fetch(`${base}/${room.roomId}/join`, {
+    method: 'POST', body: JSON.stringify({ view: 'survivor', previous: old.session }),
+  });
+  assert.equal(res.status, 200);
+  assert.equal((await old.next('closed')).reason, 'session-replaced');
+  assert.equal((await otherTab.next('closed')).reason, 'session-replaced');
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${old.session}`)).status, 403);
+  assert.equal((await join(room, 'hunter')).status, 200);
+  await hostCall(room, 'PUT', '/state', { seq: 1, state: fullState() });
+  await assert.rejects(old.next(), /stream ended/);
+  await assert.rejects(otherTab.next(), /stream ended/);
+  const status = await (await hostCall(room, 'GET', '/status')).json();
+  assert.equal(status.access.hunter.taken, 1);
+  assert.equal(status.access.hunter.online, 0);
+});
+
+test('concurrent wrong passwords share the ten-attempt budget and recover after the window', { timeout: 10000 }, async () => {
+  const room = await createRoom();
+  await hostCall(room, 'PUT', '/access', { view: 'hunter', password: 'correct' });
+  const results = await Promise.all(Array.from({ length: 24 }, () => join(room, 'hunter', 'wrong')));
+  assert.equal(results.filter(res => res.status === 403).length, 10);
+  assert.equal(results.filter(res => res.status === 429).length, 14);
+  assert.equal((await join(room, 'hunter', 'correct')).status, 429);
+  clock += 10 * 60 * 1000 + 1;
+  // Successful checks release their reservation, including repeated attempts.
+  for (let i = 0; i < 12; i++) assert.equal((await join(room, 'hunter', 'correct')).status, 200);
+});
+
+
+test('the global password-check cap also covers requests from different IPs', { timeout: 10000 }, async () => {
+  const limited = createLiveServer({ maxPasswordChecks: 1 });
+  await new Promise(resolve => limited.listen(0, '127.0.0.1', resolve));
+  const api = `http://127.0.0.1:${limited.address().port}/lottery/live-api/rooms`;
+  try {
+    const room = await (await fetch(api, { method: 'POST' })).json();
+    await fetch(`${api}/${room.roomId}/access`, { method: 'PUT', headers: { Authorization: `Bearer ${room.hostToken}` },
+      body: JSON.stringify({ view: 'hunter', password: 'right' }) });
+    const results = await Promise.all(Array.from({ length: 12 }, (_, i) => fetch(`${api}/${room.roomId}/join`, {
+      method: 'POST', headers: { 'X-Real-IP': `192.0.2.${i + 1}` }, body: JSON.stringify({ view: 'hunter', password: 'wrong' }),
+    })));
+    assert.ok(results.some(res => res.status === 429));
+    assert.ok(results.some(res => res.status === 403));
+    assert.ok(results.every(res => [403, 429].includes(res.status)));
+    const recovered = await fetch(`${api}/${room.roomId}/join`, {
+      method: 'POST', headers: { 'X-Real-IP': '192.0.2.99' }, body: JSON.stringify({ view: 'hunter', password: 'right' }),
+    });
+    assert.equal(recovered.status, 200);
+  } finally { await limited.shutdown(); }
 });

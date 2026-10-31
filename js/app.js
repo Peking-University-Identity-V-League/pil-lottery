@@ -1323,9 +1323,12 @@ const live = createLiveHost({
 let liveShown = null; // 抽取动画期间记录每个位置已揭晓的部分；null 表示全部已揭晓
 let liveRound = 0;
 let livePoll = 0;
+let liveResetTimer = 0;
+let liveSuppressed = false; // 重置后不再发布上一场结果，下一次抽取才恢复
 
 function startLiveRound() {
   liveRound = Date.now();
+  liveSuppressed = false;
   liveShown = match.slots.map(() => ({ char: false, build: false, trait: false }));
   syncLive('drawing');
 }
@@ -1363,7 +1366,7 @@ function liveSnapshot(phase) {
 }
 
 function syncLive(phase) {
-  if (live.room) live.push(liveSnapshot(phase));
+  if (live.room && !liveSuppressed) live.push(liveSnapshot(phase));
 }
 
 function syncLiveUI() {
@@ -1377,7 +1380,7 @@ function syncLiveUI() {
   button.setAttribute('aria-pressed', String(Boolean(room)));
   $('#live-off').hidden = Boolean(room);
   $('#live-on').hidden = !room;
-  $('#live-rotate').hidden = !room;
+  $('#live-reset').hidden = !room;
   $('#live-end').hidden = !room;
   if (!room) { $('#live-count').textContent = ''; return; }
   const visibility = room.visibility || DEFAULT_VISIBILITY;
@@ -1402,13 +1405,62 @@ function syncLiveUI() {
     b.disabled = isTrait && !settings.drawTrait;
     b.setAttribute('aria-pressed', String(active.has(b.dataset.toggle)));
   });
-  for (const view of LIVE_VIEWS) $(`#link-${view}`).value = liveLink(room, view);
+  $('#live-room-id').textContent = room.roomId;
+  syncLiveAccess(room, visibility);
+}
+
+/** 隐藏了内容却没设密码的身份：知道房间号的人都能选择。 */
+function exposedViews(visibility, passwords) {
+  const hiddenFromSurvivors = ['survivorSeesChar', 'survivorSeesTrait'].some((key) => visibility[key] === 'hide') || visibility.survivorSeesTalents !== 'all';
+  const hiddenFromHunter = visibility.hunterSeesChar === 'hide' || visibility.hunterSeesTalents !== 'all';
+  const needed = [];
+  if (hiddenFromSurvivors) needed.push(['hunter', '监管者']);
+  if (hiddenFromHunter) needed.push(['survivor', '求生者']);
+  if (hiddenFromSurvivors || hiddenFromHunter) needed.push(['spectator', '观众']);
+  return needed.filter(([view]) => !passwords[view]).map(([, name]) => name);
+}
+
+function syncLiveAccess(room, visibility) {
+  const passwords = {};
+  for (const view of LIVE_VIEWS) {
+    const row = $(`[data-access="${view}"]`);
+    const access = room.access?.[view] || {};
+    passwords[view] = access.password;
+    const password = $('.access-password', row);
+    const limit = $('.access-limit', row);
+    // 正在输入时不覆盖
+    if (document.activeElement !== password) {
+      password.value = room.passwords?.[view] || '';
+      password.placeholder = access.password && !room.passwords?.[view] ? '已设密码（在其他设备设置）' : '不设密码';
+    }
+    if (document.activeElement !== limit) limit.value = access.limit ?? '';
+    limit.max = String(access.maxLimit ?? 64);
+    limit.placeholder = `默认 ${access.maxLimit ?? 64}`;
+    $('.live-access-taken', row).textContent = `已占 ${access.taken ?? 0}/${access.effectiveLimit ?? access.limit ?? 64}`;
+  }
+  const exposed = exposedViews(visibility, passwords);
+  const warning = $('#live-access-warning');
+  warning.hidden = !exposed.length;
+  warning.textContent = exposed.length ? `已隐藏部分内容，但${exposed.join('、')}没有密码：知道房间号的人都能选择这些身份。` : '';
+  const hasPassword = LIVE_VIEWS.some((view) => passwords[view]);
+  $('#live-reset-passwords').disabled = !hasPassword;
+  if (!hasPassword) $('#live-reset-passwords').checked = false;
+}
+
+function disarmLiveReset() {
+  clearTimeout(liveResetTimer);
+  liveResetTimer = 0;
+  const button = $('#live-reset');
+  button.textContent = '重置房间';
+  button.classList.remove('is-armed');
+  $('#live-reset-hint').textContent = '重置后所有人需要重新进入，上一场结果也会清除；房间号、可见范围和人数上限保留。';
 }
 
 async function refreshLiveViewers() {
   if (!live.room) return;
   try {
     const { viewers } = await live.status();
+    syncLiveUI();
     const counts = [['监管者', viewers.hunter], ['求生者', viewers.survivor], ['观众', viewers.spectator]];
     $('#live-count').replaceChildren(el('span', 'live-online-label', '在线'), ...counts.map(([name, count]) => {
       const item = el('span', 'live-online-item', name);
@@ -1429,16 +1481,23 @@ async function applyVisibility(visibility) {
   syncLiveUI();
 }
 
-async function copyLink(input) {
-  let copied = false;
+async function copyText(text, label) {
   try {
-    await navigator.clipboard.writeText(input.value);
-    copied = true;
+    await navigator.clipboard.writeText(text);
+    toast(`${label}已复制`);
   } catch {
-    input.select();
-    try { copied = document.execCommand('copy'); } catch { copied = false; }
+    toast(`浏览器不允许自动复制，${label}：${text}`);
   }
-  toast(copied ? '链接已复制' : '浏览器不允许自动复制，请手动复制');
+}
+
+async function saveAccess(view, changes, savedMessage) {
+  try {
+    await live.setAccess(view, changes);
+    if (savedMessage) toast(savedMessage);
+  } catch {
+    toast('设置没有保存，请重试。');
+  }
+  syncLiveUI();
 }
 
 function bindLive() {
@@ -1459,7 +1518,10 @@ function bindLive() {
     refreshLiveViewers();
     livePoll = setInterval(refreshLiveViewers, 5000);
   });
-  dlg.addEventListener('close', () => clearInterval(livePoll));
+  dlg.addEventListener('close', () => {
+    clearInterval(livePoll);
+    disarmLiveReset();
+  });
   $('#live-create').addEventListener('click', async () => {
     try {
       await live.create();
@@ -1495,18 +1557,61 @@ function bindLive() {
     chooseVisibility(next);
     next.focus();
   });
-  $('#live-links').addEventListener('click', (e) => {
-    const view = e.target.closest('[data-copy]')?.dataset.copy;
-    if (view) copyLink($(`#link-${view}`));
+  $('#copy-room').addEventListener('click', () => copyText(live.room.roomId, '房间号'));
+  $('#copy-link').addEventListener('click', () => copyText(liveLink(live.room), '链接'));
+  $('#live-access').addEventListener('change', (e) => {
+    const view = e.target.closest('[data-access]')?.dataset.access;
+    if (!view) return;
+    if (e.target.matches('.access-password')) {
+      const value = e.target.value.trim();
+      if (value === (live.room.passwords?.[view] || '')) return;
+      saveAccess(view, { password: value || null }, value ? '密码已更新，该身份已进入的人需要重新进入' : '密码已取消，该身份已进入的人需要重新进入');
+    } else if (e.target.matches('.access-limit')) {
+      const value = e.target.value.trim();
+      const limit = value === '' ? null : Number(value);
+      const maximum = Number(e.target.max) || 64;
+      if (limit !== null && (!Number.isInteger(limit) || limit < 1 || limit > maximum)) {
+        toast(`人数上限要填 1 到 ${maximum} 的整数，留空使用默认上限。`);
+        syncLiveUI();
+        return;
+      }
+      saveAccess(view, { limit });
+    }
   });
-  $('#live-rotate').addEventListener('click', async () => {
+  $('#live-access').addEventListener('click', async (e) => {
+    if (!e.target.matches('.access-clear')) return;
     try {
-      await live.rotate();
-      toast('已生成新链接，旧链接立即失效');
+      await live.clearSeats(e.target.closest('[data-access]').dataset.access);
+      toast('已清空该身份的名额');
     } catch {
-      toast('没有生成新链接，请重试。');
+      toast('没有清空名额，请重试。');
     }
     syncLiveUI();
+  });
+  $('#live-reset').addEventListener('click', async (e) => {
+    if (busy) { toast('抽取进行中，结束后才能重置房间。'); return; }
+    const clearPasswords = $('#live-reset-passwords').checked;
+    if (!liveResetTimer) {
+      e.currentTarget.textContent = '再点一次确认';
+      e.currentTarget.classList.add('is-armed');
+      const kept = !clearPasswords && LIVE_VIEWS.some((view) => live.room.access?.[view]?.password);
+      if (kept) $('#live-reset-hint').textContent = '密码未更换，上一场的选手仍可用旧密码进入。如有换人或换边，请同时更换密码。';
+      $('#live-reset-hint').scrollIntoView({ block: 'nearest' });
+      liveResetTimer = setTimeout(disarmLiveReset, 6000);
+      return;
+    }
+    disarmLiveReset();
+    try {
+      liveSuppressed = true;
+      await live.reset({ clearPasswords });
+      $('#live-reset-passwords').checked = false;
+      toast('房间已重置，所有人需要重新进入');
+    } catch {
+      liveSuppressed = false;
+      toast('房间没有重置，请重试。');
+    }
+    syncLiveUI();
+    refreshLiveViewers();
   });
   $('#live-end').addEventListener('click', async () => {
     try {

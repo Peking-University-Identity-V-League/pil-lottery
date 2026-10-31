@@ -3,7 +3,7 @@ import { createReadStream, statSync } from 'node:fs';
 import { createServer, request } from 'node:http';
 import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { API_PREFIX, createLiveServer } from './live-server.mjs';
+import { API_PREFIX, createLiveServer, liveCapacityOptions } from './live-server.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const port = Number(process.env.PORT || 4181);
@@ -13,9 +13,9 @@ const TYPES = {
   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp',
 };
 
-createLiveServer({ dbPath: process.env.LIVE_DB_PATH || resolve(root, '.data/rooms.sqlite') }).listen(apiPort, '127.0.0.1');
+const liveServer = createLiveServer({ ...liveCapacityOptions(), dbPath: process.env.LIVE_DB_PATH || resolve(root, '.data/rooms.sqlite') }).listen(apiPort, '127.0.0.1');
 
-createServer((req, res) => {
+const previewServer = createServer((req, res) => {
   const { pathname } = new URL(req.url, 'http://dev.invalid');
   if (pathname.startsWith(`${API_PREFIX}/`)) {
     const proxy = request({ host: '127.0.0.1', port: apiPort, method: req.method, path: req.url, headers: req.headers }, (upstream) => {
@@ -50,3 +50,10 @@ createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': TYPES[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
   createReadStream(file).pipe(res);
 }).listen(port, '127.0.0.1', () => console.log(`preview on http://127.0.0.1:${port}/lottery/`));
+
+const stop = async () => {
+  previewServer.closeAllConnections();
+  await Promise.all([liveServer.shutdown(), new Promise(resolve => previewServer.close(resolve))]);
+};
+process.once('SIGTERM', () => { stop().catch(() => { process.exitCode = 1; }); });
+process.once('SIGINT', () => { stop().catch(() => { process.exitCode = 1; }); });

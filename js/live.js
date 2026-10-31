@@ -1,3 +1,4 @@
+import { reconnectDelay, retryAfterMs } from './live-retry.js';
 // 选手页：保持和服务器的连接，收到推送后自动更新，不需要手动刷新。
 import { sfx } from './sound.js';
 import { prepareTree } from './rules.js';
@@ -11,6 +12,7 @@ const ORDINALS = ['第一位', '第二位', '第三位', '第四位'];
 const API = '/lottery/live-api/rooms';
 const WATCHDOG_MS = 35_000; // 服务器每 25 秒发一次 ping，超时视为断线
 const FLIP_MS = 460;
+const ENTRY_POLL_MS = 5000;
 
 const data = { survivors: new Map(), hunters: new Map(), traits: new Map(), trees: {} };
 const slots = [];
@@ -18,9 +20,13 @@ let shownRound = null;
 let firstState = true;
 let source = null;
 let lastEvent = 0;
-let retryDelay = 1000;
+let retryAttempt = 0;
+let retryInFlight = false;
+let joinBusyUntil = 0;
 let retryTimer = 0;
-let closed = false;
+let closed = true; // 还没进入房间，或已被退回进入页
+let connection = null; // { url, checkUrl }
+let tableBuilt = false;
 let everConnected = false;
 
 async function getJSON(path) {
@@ -302,19 +308,10 @@ const CONN_ALERTS = {
     title: '连接已中断',
     waiting: true,
   },
-  invalid: {
-    title: '链接已失效',
-    body: '裁判可能重新生成了链接或结束了同步，房间也可能已过期。请确认链接是否是最新的，或向裁判索取新链接。',
-    reload: true,
-  },
   reconnected: {
     title: '已重新连接',
     body: '页面已更新到最新状态。',
     success: true,
-  },
-  incomplete: {
-    title: '链接不完整',
-    body: '这个链接缺少房间信息。请完整复制裁判发来的链接，或向裁判重新索取。',
   },
 };
 const RECONNECTED_CLOSE_MS = 1600; // 成功动画播放完后自动关闭
@@ -340,11 +337,9 @@ function showConnAlert(kind) {
   $('#conn-checklist').hidden = !alert.waiting;
   $('#conn-body').hidden = !alert.body;
   $('#conn-check').style.display = alert.success ? 'block' : 'none';
-  $('#conn-foot').hidden = !alert.reload;
   $('#conn-title').textContent = alert.title;
   $('#conn-body').textContent = alert.body || '';
   $('#conn-waiting').hidden = !alert.waiting;
-  $('#conn-reload').hidden = !alert.reload;
   if (!dlg.open) dlg.showModal();
 }
 
@@ -387,25 +382,250 @@ function connectionLost() {
   if (!closed) showConnAlert('retry');
 }
 
-function invalidate(message) {
-  closed = true;
-  source?.close();
-  source = null;
-  clearTimeout(retryTimer);
-  stopLostTimer();
-  setConnection('lost', message);
-  $('#live-phase').textContent = '请向裁判索取新链接';
-  showConnAlert('invalid');
+const LEAVE_MESSAGES = {
+  reset: '房间已重置，请重新进入。',
+  'password-changed': '密码已更改，请使用新密码重新进入。',
+  'seat-cleared': '裁判已清空该身份的名额，请重新进入。',
+  'room-closed': '房间已结束，请向裁判确认房间号。',
+  'room-not-found': '房间不存在或已结束，请向裁判确认房间号。',
+  'view-full': '该身份人数已满，请联系裁判。',
+  'invalid-session': '身份已失效，请重新进入。',
+  'session-replaced': '已在其他页面切换身份，请重新进入。',
+};
+const JOIN_ERRORS = {
+  'wrong-password': '密码不正确，请重新输入。',
+  'server-busy': '进入的人较多，请稍后重试，已输入的密码会保留。',
+  'room-changed': '房间设置已更改，请确认后重新进入。',
+  'view-full': LEAVE_MESSAGES['view-full'],
+  'too-many-attempts': '尝试次数过多，请 10 分钟后再试。',
+  'room-not-found': LEAVE_MESSAGES['room-not-found'],
+};
+
+const sessionKey = (room) => `pil-lottery:live-session:${room}`;
+
+function loadSession(room) {
+  try { return JSON.parse(localStorage.getItem(sessionKey(room))); } catch { return null; }
 }
 
-function scheduleRetry(url, checkUrl) {
-  clearTimeout(retryTimer);
-  retryTimer = setTimeout(() => connect(url, checkUrl), retryDelay);
-  retryDelay = Math.min(retryDelay * 2, 15_000);
+function saveSession(room, value) {
+  try {
+    if (value) localStorage.setItem(sessionKey(room), JSON.stringify(value));
+    else localStorage.removeItem(sessionKey(room));
+  } catch { /* 隐私模式下刷新后需要重新进入 */ }
+}
+
+const entry = { room: '', view: '', info: null, previous: null };
+
+function showEntry(message = '') {
+  $('#live-entry').hidden = false;
+  $('#table').hidden = true;
+  $('#live-conn').hidden = true;
+  $('#btn-leave').hidden = true;
+  $('#live-view').textContent = '';
+  $('#live-phase').textContent = '输入房间号进入';
+  setEntryMessage(message);
+}
+
+function setEntryMessage(message) {
+  $('#entry-message').hidden = !message;
+  $('#entry-message').textContent = message;
+}
+
+/** 退回进入页。kept 表示主动切换身份，保留凭证以便释放原来的名额。 */
+function leaveRoom(message, { kept = false } = {}) {
+  const leavingSession = connection?.session;
+  closed = true;
+  connection = null;
+  source?.close();
+  source = null;
+  clearTimeout(retryTimer); retryTimer = 0;
+  stopLostTimer();
+  const dlg = $('#dlg-conn');
+  delete dlg.dataset.kind;
+  if (dlg.open) dlg.close();
+  if ($('#dlg-tree').open) $('#dlg-tree').close();
+  entry.previous = kept ? leavingSession : null;
+  // A delayed exit in another tab must not delete the replacement identity.
+  if (!kept && loadSession(entry.room)?.session === leavingSession) saveSession(entry.room, null);
+  shownRound = null;
+  firstState = true;
+  everConnected = false;
+  showEntry(message);
+  $('#entry-room').value = entry.room;
+  refreshEntryInfo();
+}
+
+function enterRoom(room, session) {
+  entry.room = room;
+  history.replaceState(null, '', `#${room}`);
+  $('#live-entry').hidden = true;
+  if (!tableBuilt) {
+    buildTable();
+    tableBuilt = true;
+  }
+  $('#table').hidden = false;
+  $('#live-conn').hidden = false;
+  $('#btn-leave').hidden = false;
+  closed = false;
+  retryAttempt = 0;
+  const query = `session=${encodeURIComponent(session)}`;
+  connection = { session, url: `${API}/${room}/events?${query}`, checkUrl: `${API}/${room}/check?${query}` };
+  connect(connection.url, connection.checkUrl);
+}
+
+function renderEntryViews() {
+  const { info } = entry;
+  $('#entry-views-box').hidden = !info;
+  document.querySelectorAll('#entry-views [data-view]').forEach((button) => {
+    const access = info?.views[button.dataset.view];
+    const on = button.dataset.view === entry.view;
+    button.setAttribute('aria-checked', String(on));
+    button.tabIndex = on || !entry.view ? 0 : -1;
+    if (!access) return;
+    const parts = [];
+    if (access.password) parts.push('需要密码');
+    if (access.effectiveLimit || access.limit) parts.push(`${access.taken}/${access.effectiveLimit || access.limit}`);
+    $('small', button).textContent = access.full ? `人数已满${access.limit ? ` ${access.taken}/${access.limit}` : ''}` : parts.join(' · ') || '可直接进入';
+    button.classList.toggle('is-full', access.full);
+  });
+  const needsPassword = Boolean(entry.view && info?.views[entry.view]?.password);
+  $('#entry-password-box').hidden = !needsPassword;
+  if (!needsPassword) $('#entry-password').value = '';
+  $('#entry-submit').disabled = !info || !entry.view || Boolean(info.views[entry.view]?.full) || Date.now() < joinBusyUntil;
+}
+
+let entryRequest = 0;
+
+/** 读取房间的身份信息。message 为空时才显示读取错误，避免盖掉退回进入页的原因。 */
+async function refreshEntryInfo() {
+  const room = $('#entry-room').value.trim();
+  const request = ++entryRequest;
+  // 同一房间刷新名额时保留旧信息，避免界面闪动
+  if (room !== entry.room) entry.info = null;
+  if (!/^\d{6}$/.test(room)) { entry.info = null; renderEntryViews(); return; }
+  try {
+    const res = await fetch(`${API}/${room}/info`, { cache: 'no-store' });
+    if (request !== entryRequest) return;
+    if (!res.ok) {
+      entry.info = null;
+      const { error } = await res.json().catch(() => ({}));
+      if ($('#entry-message').hidden) setEntryMessage(JOIN_ERRORS[error] || '暂时无法读取房间，请稍后再试。');
+      renderEntryViews();
+      return;
+    }
+    entry.room = room;
+    entry.info = await res.json();
+  } catch {
+    if (request === entryRequest && $('#entry-message').hidden) setEntryMessage('暂时无法连接服务器，请检查网络后重试。');
+  }
+  if (request === entryRequest) renderEntryViews();
+}
+
+async function submitEntry() {
+  const room = $('#entry-room').value.trim();
+  if (!entry.info || !entry.view || Date.now() < joinBusyUntil) return;
+  const button = $('#entry-submit');
+  button.disabled = true;
+  setEntryMessage('');
+  try {
+    const res = await fetch(`${API}/${room}/join`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ view: entry.view, password: $('#entry-password').value, previous: entry.previous || undefined }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (body.error === 'server-busy') {
+        const delay = retryAfterMs(res.headers.get('Retry-After')) || 2000;
+        joinBusyUntil = Date.now() + delay;
+        setTimeout(renderEntryViews, delay + 10);
+      }
+      setEntryMessage(JOIN_ERRORS[body.error] || '暂时无法进入，请稍后再试。');
+      if (body.error === 'wrong-password') { $('#entry-password').value = ''; $('#entry-password').focus(); }
+      await refreshEntryInfo();
+      return;
+    }
+    saveSession(room, { session: body.session, view: body.view });
+    entry.previous = null;
+    $('#entry-password').value = '';
+    enterRoom(room, body.session);
+  } catch {
+    setEntryMessage('暂时无法连接服务器，请检查网络后重试。');
+  } finally {
+    renderEntryViews();
+  }
+}
+
+function bindEntry() {
+  $('#entry-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitEntry();
+  });
+  $('#entry-room').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setEntryMessage('');
+    entry.view = '';
+    entry.previous = null;
+    refreshEntryInfo();
+  });
+  $('#entry-views').addEventListener('click', (e) => {
+    const button = e.target.closest('[data-view]');
+    if (!button) return;
+    entry.view = button.dataset.view;
+    setEntryMessage('');
+    renderEntryViews();
+    if (!$('#entry-password-box').hidden) $('#entry-password').focus();
+  });
+  $('#btn-leave').addEventListener('click', () => leaveRoom('', { kept: true }));
+  // 等名额时不用手动刷新；房间不存在时不再轮询，避免消耗猜测次数
+  setInterval(() => {
+    if (!$('#live-entry').hidden && entry.info && !document.hidden) refreshEntryInfo();
+  }, ENTRY_POLL_MS);
+}
+
+const CONNECTION_MESSAGES = {
+  'too-many-tabs': '同一身份打开的页面过多，请关闭其他页面后等待重连。',
+  'spectator-capacity': '观众连接已满，正在等待空位。',
+  'too-many-viewers': '房间连接已满，正在等待空位。',
+};
+
+function scheduleRetry(url, checkUrl, minimumMs = 0) {
+  if (closed || retryTimer || retryInFlight) return;
+  const expected = connection;
+  const delay = reconnectDelay(retryAttempt++, Math.random, minimumMs);
+  retryTimer = setTimeout(async () => {
+    retryTimer = 0;
+    if (closed || connection !== expected) return;
+    retryInFlight = true;
+    let ready = false, nextMinimum = 0;
+    try {
+      const res = await fetch(checkUrl, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+      const body = await res.json();
+      if (closed || connection !== expected) return;
+      if ([403, 404, 409].includes(res.status)) {
+        leaveRoom(LEAVE_MESSAGES[body.error] || LEAVE_MESSAGES['invalid-session']);
+        return;
+      }
+      ready = res.ok && !body.connectionError;
+      nextMinimum = retryAfterMs(res.headers.get('Retry-After'));
+      if (body.connectionError) {
+        const message = CONNECTION_MESSAGES[body.connectionError] || '正在等待重连';
+        setConnection('wait', message);
+        $('#conn-body').hidden = false;
+        $('#conn-body').textContent = message;
+        $('#conn-checklist').hidden = true;
+      }
+    } catch { /* Temporary network failure; preserve credentials and back off. */ }
+    finally { retryInFlight = false; }
+    if (closed || connection !== expected) return;
+    if (ready) connect(url, checkUrl);
+    else scheduleRetry(url, checkUrl, nextMinimum);
+  }, delay);
 }
 
 /** 收到服务器的消息说明连接正常；网络短暂波动时连接可能没断，要恢复显示。 */
 function markAlive() {
+  retryAttempt = 0;
   lastEvent = Date.now();
   everConnected = true;
   setConnection('on', '已连接');
@@ -414,43 +634,46 @@ function markAlive() {
 function connect(url, checkUrl) {
   if (closed) return;
   source?.close();
+  clearTimeout(retryTimer); retryTimer = 0;
   if (!everConnected) setConnection('wait', '连接中…');
-  source = new EventSource(url);
+  const openedSource = source = new EventSource(url);
+  const isCurrent = () => source === openedSource && !closed;
   lastEvent = Date.now();
   source.onopen = () => {
-    retryDelay = 1000;
+    if (!isCurrent()) return;
     firstState = true; // 重连后直接显示最新状态，不补播动画
     everConnected = true;
     setConnection('on', '已连接');
   };
   source.addEventListener('state', (e) => {
+    if (!isCurrent()) return;
     markAlive();
     applyState(JSON.parse(e.data));
   });
-  source.addEventListener('ping', markAlive);
-  source.addEventListener('closed', () => invalidate('链接已失效'));
-  source.onerror = async () => {
+  source.addEventListener('ping', () => { if (isCurrent()) markAlive(); });
+  source.addEventListener('closed', (e) => {
+    if (!isCurrent()) return;
+    const { reason } = JSON.parse(e.data);
+    leaveRoom(LEAVE_MESSAGES[reason] || LEAVE_MESSAGES['invalid-session']);
+  });
+  source.onerror = () => {
+    if (!isCurrent()) return;
+    // Own the retry loop: native fixed-interval retries would bypass backoff.
+    openedSource.close();
     connectionLost();
-    if (source?.readyState !== EventSource.CLOSED) return; // 浏览器会自动重连
-    // 服务器返回错误状态时浏览器不再重连，先判断链接是否仍然有效
-    try {
-      const res = await fetch(checkUrl, { cache: 'no-store' });
-      if (res.status === 403 || res.status === 404) { invalidate('链接已失效'); return; }
-    } catch { /* 网络仍未恢复 */ }
     scheduleRetry(url, checkUrl);
   };
 }
 
 function bindConnAlert() {
   const dlg = $('#dlg-conn');
-  $('#conn-reload').addEventListener('click', () => location.reload());
   // 不允许手动退出：拦截 Esc；个别浏览器连按 Esc 仍会关闭，这时立刻重新打开
   dlg.addEventListener('cancel', (e) => e.preventDefault());
   dlg.addEventListener('close', () => {
     if (dlg.dataset.kind) dlg.showModal();
     else dlg.classList.remove('is-closing', 'is-success');
   });
-  // 在同一个标签页里粘贴新链接时，只有 # 后面变化，页面不会自动重新加载
+  // 在同一个标签页里粘贴新房间链接时，只有 # 后面变化，页面不会自动重新加载
   window.addEventListener('hashchange', () => location.reload());
 }
 
@@ -469,31 +692,30 @@ function bindSound() {
 async function main() {
   bindSound();
   bindConnAlert();
-  const match = /^#([\w-]+)\.([\w-]+)$/.exec(location.hash);
-  if (!match) {
-    $('#notice').textContent = '链接不完整，请向裁判重新获取。';
-    setConnection('lost', '链接不完整');
-    $('#live-phase').textContent = '请向裁判索取新链接';
-    showConnAlert('incomplete');
-    return;
-  }
+  bindEntry();
   try {
     await loadData();
   } catch (err) {
     console.error(err);
-    $('#notice').textContent = `暂时无法读取角色数据（${err.message}），请刷新页面后重试。`;
+    showEntry(`暂时无法读取角色数据（${err.message}），请刷新页面后重试。`);
     return;
   }
-  buildTable();
-  const [, room, token] = match;
-  const url = `${API}/${room}/events?token=${encodeURIComponent(token)}`;
-  const checkUrl = `${API}/${room}/check?token=${encodeURIComponent(token)}`;
-  connect(url, checkUrl);
+  const room = /^#(\d{6})$/.exec(location.hash)?.[1] || '';
+  const saved = room ? loadSession(room) : null;
+  if (saved?.session) {
+    enterRoom(room, saved.session);
+  } else {
+    $('#entry-room').value = room;
+    showEntry(location.hash && !room ? '链接格式已更新，请向裁判确认 6 位房间号。' : '');
+    refreshEntryInfo();
+    $(room ? '#entry-views [data-view]' : '#entry-room').focus();
+  }
   const reconnectIfStale = () => {
-    if (closed || document.hidden) return;
+    if (closed || !connection || document.hidden) return;
     if (source?.readyState !== EventSource.OPEN || Date.now() - lastEvent > WATCHDOG_MS) {
       connectionLost();
-      connect(url, checkUrl);
+      source?.close();
+      scheduleRetry(connection.url, connection.checkUrl);
     } else {
       setConnection('on', '已连接');
     }
@@ -501,7 +723,7 @@ async function main() {
   // 手机切后台时连接可能被静默断开
   document.addEventListener('visibilitychange', reconnectIfStale);
   window.addEventListener('online', reconnectIfStale);
-  window.addEventListener('offline', connectionLost);
+  window.addEventListener('offline', () => { if (!closed) connectionLost(); });
   setInterval(reconnectIfStale, 15_000);
 }
 

@@ -115,6 +115,191 @@
   color: var(--accent);
 }
 
+/* 房间号和身份权限 */
+
+.live-room-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.live-room-id {
+  font-size: 28px;
+  letter-spacing: .18em;
+  color: var(--parchment);
+  font-variant-numeric: tabular-nums;
+}
+
+.live-room-line .btn,
+.live-access .btn { flex: 0 0 auto; }
+
+.live-access { display: flex; flex-direction: column; gap: 8px; }
+
+.live-access-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto 72px auto;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.live-access-name { font-size: 14px; color: var(--parchment); }
+
+.live-access-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.live-access-row input,
+.live-entry input {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, .25);
+  color: var(--parchment);
+  font: inherit;
+}
+
+.access-password { flex: 1 1 auto; width: 100%; }
+.access-limit { width: 58px; }
+.live-access-taken { color: #6fc48c; white-space: nowrap; }
+
+.live-warning {
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-left: 2px solid #e0a35c;
+  background: rgba(224, 163, 92, .1);
+  font-size: 13px;
+  color: #e9c79b;
+}
+
+.live-warning[hidden] { display: none; }
+
+.live-reset-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+#live-reset.is-armed {
+  border-color: #e0676a;
+  color: #f0a3a5;
+}
+
+@media (max-width: 720px) {
+  .live-access-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, .06);
+  }
+  .live-access-row label:first-of-type { grid-column: 1 / -1; grid-row: 2; }
+  .live-access-row label:nth-of-type(2) { grid-row: 3; }
+  .live-access-name { grid-row: 1; }
+  .live-access-taken { grid-row: 1; justify-self: end; }
+  .access-clear { grid-row: 3; justify-self: end; }
+}
+
+/* 选手进入页 */
+
+.live-entry {
+  display: flex;
+  justify-content: center;
+  padding: 16px var(--pad) 72px;
+}
+
+.live-entry[hidden],
+.table[hidden],
+.live-conn[hidden],
+#btn-leave[hidden],
+#entry-views-box[hidden],
+#entry-password-box[hidden],
+.live-entry-message[hidden] { display: none; }
+
+.live-entry-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(460px, 100%);
+  padding: 22px 24px 24px;
+  border: 1px solid rgba(179, 145, 88, .35);
+  border-radius: 6px;
+  background: var(--night-2);
+}
+
+.live-entry-card h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  color: var(--parchment);
+}
+
+.live-entry-field {
+  display: block;
+  margin: 8px 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.live-entry-card > input,
+#entry-password { width: 100%; font-size: 16px; }
+
+#entry-room {
+  font-size: 24px;
+  letter-spacing: .2em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.live-entry-views {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.live-entry-views button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 4px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .03);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.live-entry-views b { font-weight: 400; font-size: 15px; }
+.live-entry-views small { font-size: 12px; color: var(--muted); }
+
+.live-entry-views [aria-checked="true"] {
+  border-color: var(--brass);
+  background: rgba(179, 145, 88, .25);
+  color: var(--parchment);
+}
+
+.live-entry-views .is-full small { color: #e0676a; }
+
+.live-entry-message {
+  margin: 0 0 4px;
+  padding: 7px 10px;
+  border-left: 2px solid #e0676a;
+  background: rgba(224, 103, 106, .1);
+  font-size: 13px;
+  color: #f0b4b5;
+}
+
+#entry-submit { margin-top: 12px; }
+#entry-submit:disabled { opacity: .4; cursor: not-allowed; }
+
 /* 选手页 */
 
 .sheet.sheet-alert {

@@ -6,9 +6,11 @@ import { join } from 'node:path';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
+import { request } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { createLiveServer } from '../server/live-server.mjs';
 import { openRoomStore } from '../server/room-store.mjs';
+import { openRoomStore as openV1Store } from './fixtures/room-store-v1.mjs';
 import { ALL_HIDDEN } from '../js/live-visibility.js';
 
 const state = {
@@ -22,7 +24,7 @@ async function start(options = {}) {
   const server = createLiveServer(options);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = 'http://127.0.0.1:' + server.address().port + '/lottery/live-api/rooms';
-  return { server, base, stop: () => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }) };
+  return { server, base, stop: () => server.shutdown() };
 }
 const create = async base => {
   const res = await fetch(base, { method: 'POST' });
@@ -33,8 +35,13 @@ const host = (base, room, method, path, body) => fetch(base + '/' + room.roomId 
   method, headers: { Authorization: 'Bearer ' + room.hostToken, 'Content-Type': 'application/json' },
   body: body ? JSON.stringify(body) : undefined,
 });
-async function firstState(base, room, token) {
-  const res = await fetch(base + '/' + room.roomId + '/events?token=' + token, { signal: AbortSignal.timeout(3000) });
+const joinAs = async (base, room, view, password) => {
+  const res = await fetch(base + '/' + room.roomId + '/join', { method: 'POST', body: JSON.stringify({ view, password }) });
+  assert.equal(res.status, 200);
+  return (await res.json()).session;
+};
+async function firstState(base, room, session) {
+  const res = await fetch(base + '/' + room.roomId + '/events?session=' + session, { signal: AbortSignal.timeout(3000) });
   assert.equal(res.status, 200);
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
   let text = '';
@@ -47,7 +54,7 @@ async function firstState(base, room, token) {
   } finally { await reader.cancel(); }
 }
 
-test('SQLite restores state, permissions, rotated tokens and sequence numbers; deletion survives restart', async () => {
+test('SQLite restores state, permissions, passwords, seats and sequence numbers; deletion survives restart', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'pil-room-db-'));
   const dbPath = join(dir, 'rooms.sqlite');
   let instance;
@@ -56,30 +63,110 @@ test('SQLite restores state, permissions, rotated tokens and sequence numbers; d
     const room = await create(instance.base);
     assert.equal((await host(instance.base, room, 'PUT', '/state', { seq: 50, state })).status, 200);
     assert.equal((await host(instance.base, room, 'PUT', '/visibility', { visibility: ALL_HIDDEN })).status, 200);
-    const tokens = (await (await host(instance.base, room, 'POST', '/rotate')).json()).tokens;
+    assert.equal((await host(instance.base, room, 'PUT', '/access', { view: 'spectator', password: 'watch', limit: 1 })).status, 200);
+    const survivorSession = await joinAs(instance.base, room, 'survivor');
+    const spectatorSession = await joinAs(instance.base, room, 'spectator', 'watch');
     await instance.stop();
     instance = await start({ dbPath });
     const restored = await (await host(instance.base, room, 'GET', '/status')).json();
     assert.deepEqual(restored.visibility, ALL_HIDDEN);
-    assert.deepEqual(restored.tokens, tokens);
-    assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?token=' + room.tokens.survivor)).status, 403);
-    const view = await firstState(instance.base, room, tokens.survivor);
+    assert.equal(restored.access.spectator.password, true);
+    assert.equal(restored.access.spectator.limit, 1);
+    // 重启后名额还在保留期内，占位不丢，密码仍要校验，明文不落库
+    assert.equal(restored.access.spectator.taken, 1);
+    const denied = await fetch(instance.base + '/' + room.roomId + '/join', { method: 'POST', body: JSON.stringify({ view: 'spectator', password: 'watch' }) });
+    assert.equal(denied.status, 409);
+    const wrong = await fetch(instance.base + '/' + room.roomId + '/join', { method: 'POST', body: JSON.stringify({ view: 'spectator', password: 'nope' }) });
+    assert.equal(wrong.status, 403);
+    assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?session=bad')).status, 403);
+    const view = await firstState(instance.base, room, survivorSession);
     assert.equal(view.round, 7);
     assert.deepEqual(view.slots[4].char, { status: 'hidden' });
     assert.deepEqual(view.slots[4].trait, { status: 'hidden' });
     const stale = await host(instance.base, room, 'PUT', '/state', { seq: 49, state: { round: 0, phase: 'idle', slots: [] } });
     assert.equal((await stale.json()).stale, true);
-    assert.equal((await firstState(instance.base, room, tokens.spectator)).round, 7);
+    assert.equal((await firstState(instance.base, room, spectatorSession)).round, 7);
     assert.equal((await host(instance.base, room, 'DELETE', '')).status, 200);
     await instance.stop();
     instance = await start({ dbPath });
-    assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?token=' + tokens.survivor)).status, 404);
+    assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?session=' + survivorSession)).status, 404);
     assert.equal((await stat(dbPath)).mode & 0o777, 0o600);
     await instance.stop(); instance = null;
     const db = new DatabaseSync(dbPath);
     assert.equal(db.prepare('PRAGMA integrity_check').get().integrity_check, 'ok');
-    assert.equal(db.prepare('SELECT count(*) AS count FROM rooms').get().count, 0);
+    assert.equal(db.prepare('SELECT count(*) AS count FROM rooms_v2').get().count, 0);
     db.close();
+  } finally { if (instance) await instance.stop(); await rm(dir, { recursive: true, force: true }); }
+});
+
+test('passwords and player credentials are never stored in plain text', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'pil-room-secret-'));
+  const dbPath = join(dir, 'rooms.sqlite');
+  let instance;
+  try {
+    instance = await start({ dbPath });
+    const room = await create(instance.base);
+    await host(instance.base, room, 'PUT', '/access', { view: 'hunter', password: 'plain-text-pass' });
+    const session = await joinAs(instance.base, room, 'hunter', 'plain-text-pass');
+    await instance.stop(); instance = null;
+    const db = new DatabaseSync(dbPath);
+    const row = JSON.stringify(db.prepare('SELECT access, seats FROM rooms_v2').get());
+    db.close();
+    assert.ok(!row.includes('plain-text-pass'));
+    assert.ok(!row.includes(session));
+  } finally { if (instance) await instance.stop(); await rm(dir, { recursive: true, force: true }); }
+});
+
+test('v1 records survive upgrade, old-code rollback writes, and a second upgrade', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'pil-room-migrate-'));
+  const dbPath = join(dir, 'rooms.sqlite');
+  const legacy = { id: 'old-room', hostToken: 'legacy-host', tokens: { hunter: 'h', survivor: 's', spectator: 'v' },
+    state, visibility: ALL_HIDDEN, seq: 7, touchedAt: Date.now() };
+  let instance;
+  try {
+    const before = openV1Store(dbPath); before.put(legacy); before.close();
+    instance = await start({ dbPath });
+    assert.equal((await fetch(instance.base + '/old-room/info')).status, 404);
+    const room = await create(instance.base);
+    await host(instance.base, room, 'PUT', '/state', { seq: 50, state });
+    await instance.stop(); instance = null;
+    // The exact deployed adapter must open and still update its original table.
+    const rollback = openV1Store(dbPath);
+    assert.deepEqual(rollback.load(0), [legacy]);
+    const changed = { ...legacy, seq: 8 };
+    rollback.put(changed);
+    assert.deepEqual(rollback.load(0), [changed]);
+    rollback.close();
+    instance = await start({ dbPath });
+    assert.equal((await firstState(instance.base, room, await joinAs(instance.base, room, 'spectator'))).round, 7);
+    await instance.stop(); instance = null;
+    const again = openV1Store(dbPath);
+    assert.deepEqual(again.load(0), [changed]); again.close();
+    const db = new DatabaseSync(dbPath);
+    assert.equal(db.prepare('PRAGMA user_version').get().user_version, 1);
+    assert.equal(db.prepare('PRAGMA integrity_check').get().integrity_check, 'ok'); db.close();
+  } finally { if (instance) await instance.stop(); await rm(dir, { recursive: true, force: true }); }
+});
+
+test('the unreleased v2 preview is migrated without losing room data or renewing unknown seat leases', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'pil-preview-migrate-'));
+  const dbPath = join(dir, 'rooms.sqlite');
+  let instance;
+  try {
+    const db = new DatabaseSync(dbPath);
+    db.exec(`CREATE TABLE rooms (id TEXT PRIMARY KEY, host_token TEXT NOT NULL, access TEXT NOT NULL, seats TEXT NOT NULL,
+      state TEXT NOT NULL, visibility TEXT NOT NULL, seq INTEGER NOT NULL, touched_at INTEGER NOT NULL) STRICT;
+      CREATE INDEX rooms_expiry ON rooms(touched_at); PRAGMA user_version = 2;`);
+    const access = Object.fromEntries(['hunter', 'survivor', 'spectator'].map(view => [view, { passwordHash: null, limit: 1 }]));
+    db.prepare('INSERT INTO rooms VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('123456', 'host', JSON.stringify(access),
+      JSON.stringify({ historical: 'hunter' }), JSON.stringify(state), JSON.stringify(ALL_HIDDEN), 10, Date.now()); db.close();
+    instance = await start({ dbPath });
+    const room = { roomId: '123456', hostToken: 'host' };
+    const status = await (await host(instance.base, room, 'GET', '/status')).json();
+    assert.equal(status.access.hunter.taken, 0);
+    assert.equal((await firstState(instance.base, room, await joinAs(instance.base, room, 'spectator'))).round, 7);
+    await instance.stop(); instance = null;
+    const rollback = openV1Store(dbPath); assert.deepEqual(rollback.load(0), []); rollback.close();
   } finally { if (instance) await instance.stop(); await rm(dir, { recursive: true, force: true }); }
 });
 
@@ -96,7 +183,7 @@ test('expired rooms are removed on restart and cannot reappear', async () => {
     assert.equal((await host(instance.base, room, 'GET', '/status')).status, 404);
     await instance.stop(); instance = null;
     const db = new DatabaseSync(dbPath);
-    assert.equal(db.prepare('SELECT count(*) AS count FROM rooms').get().count, 0); db.close();
+    assert.equal(db.prepare('SELECT count(*) AS count FROM rooms_v2').get().count, 0); db.close();
   } finally { if (instance) await instance.stop(); await rm(dir, { recursive: true, force: true }); }
 });
 
@@ -114,13 +201,13 @@ test('failed database writes do not publish or mutate authoritative room state',
     failing = true;
     for (const [method, path, body] of [
       ['PUT', '/state', { seq: 1, state }], ['PUT', '/visibility', { visibility: ALL_HIDDEN }],
-      ['POST', '/rotate', undefined], ['DELETE', '', undefined],
+      ['PUT', '/access', { view: 'hunter', limit: 1 }], ['POST', '/reset', {}], ['DELETE', '', undefined],
     ]) assert.equal((await host(instance.base, room, method, path, body)).status, 500);
     const saved = await (await host(instance.base, room, 'GET', '/status')).json();
     assert.deepEqual(saved.visibility, room.visibility);
-    assert.deepEqual(saved.tokens, room.tokens);
-    assert.equal((await firstState(instance.base, room, room.tokens.spectator)).phase, 'idle');
+    assert.equal(saved.access.hunter.limit, null);
     failing = false;
+    assert.equal((await firstState(instance.base, room, await joinAs(instance.base, room, 'spectator'))).phase, 'idle');
     assert.equal((await host(instance.base, room, 'PUT', '/state', { seq: 1, state })).status, 200);
   } finally { await instance.stop(); }
 });
@@ -129,7 +216,7 @@ test('committed room data survives an abrupt process kill and WAL recovery', { t
   const dir = await mkdtemp(join(tmpdir(), 'pil-room-crash-'));
   const dbPath = join(dir, 'rooms.sqlite');
   const source = new URL('../server/live-server.mjs', import.meta.url).href;
-  const code = "import {createLiveServer} from " + JSON.stringify(source) + "; const s=createLiveServer({dbPath:process.env.TEST_DB}); s.listen(0,'127.0.0.1',()=>console.log(s.address().port));";
+  const code = "import {createLiveServer} from " + JSON.stringify(source) + "; const s=createLiveServer({dbPath:process.env.TEST_DB,seatGraceMs:300,pingIntervalMs:50}); s.listen(0,'127.0.0.1',()=>console.log(s.address().port));";
   let child, instance;
   try {
     child = spawn(process.execPath, ['--input-type=module', '-e', code], { env: { ...process.env, TEST_DB: dbPath }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -138,12 +225,153 @@ test('committed room data survives an abrupt process kill and WAL recovery', { t
     const base = 'http://127.0.0.1:' + port + '/lottery/live-api/rooms';
     const room = await create(base);
     assert.equal((await host(base, room, 'PUT', '/state', { seq: 8, state })).status, 200);
+    await host(base, room, 'PUT', '/access', { view: 'hunter', limit: 1 });
+    const staleSession = await joinAs(base, room, 'hunter');
+    await new Promise(resolve => setTimeout(resolve, 350));
+    const currentSession = await joinAs(base, room, 'hunter');
+    const stream = await fetch(base + '/' + room.roomId + '/events?session=' + currentSession);
+    assert.equal(stream.status, 200);
     const exited = once(child, 'exit'); child.kill('SIGKILL'); await exited; child = null; lines.close();
+    await stream.body.cancel().catch(() => {});
     instance = await start({ dbPath });
-    assert.equal((await firstState(instance.base, room, room.tokens.spectator)).round, 7);
+    assert.equal((await firstState(instance.base, room, await joinAs(instance.base, room, 'spectator'))).round, 7);
+    assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?session=' + staleSession)).status, 409);
+    assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?session=' + currentSession)).status, 200);
   } finally {
     if (child) { const exited = once(child, 'exit'); child.kill('SIGKILL'); await exited; }
     if (instance) await instance.stop();
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+
+// Start handling a request, then hold back its JSON body while another request commits.
+async function pausedRequest(instance, room, method, path, body) {
+  const data = JSON.stringify(body);
+  const arrived = once(instance.server, 'request');
+  let finish;
+  const response = new Promise((resolve, reject) => {
+    const req = request(instance.base + '/' + room.roomId + path, {
+      method, headers: { Authorization: 'Bearer ' + room.hostToken, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+    }, res => { res.resume(); res.once('end', () => resolve(res.statusCode)); });
+    req.on('error', reject);
+    req.write(data.slice(0, 1));
+    finish = () => req.end(data.slice(1));
+  });
+  await arrived;
+  return { finish: () => { finish(); return response; } };
+}
+
+test('late join, settings, clear and reset bodies cannot resurrect a deleted room', { timeout: 10000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'pil-late-room-'));
+  const dbPath = join(dir, 'rooms.sqlite');
+  let instance;
+  try {
+    instance = await start({ dbPath });
+    const room = await create(instance.base);
+    const delayed = [];
+    for (const [method, path, body] of [
+      ['POST', '/join', { view: 'hunter' }], ['POST', '/seats/clear', { view: 'hunter' }],
+      ['POST', '/reset', { clearPasswords: true }], ['PUT', '/access', { view: 'hunter', password: 'late' }],
+      ['PUT', '/state', { seq: 99, state }], ['PUT', '/visibility', { visibility: ALL_HIDDEN }],
+    ]) delayed.push(await pausedRequest(instance, room, method, path, body));
+    assert.equal((await host(instance.base, room, 'DELETE', '')).status, 200);
+    for (const pending of delayed) assert.equal(await pending.finish(), 404);
+    await instance.stop();
+    instance = await start({ dbPath });
+    assert.equal((await host(instance.base, room, 'GET', '/status')).status, 404);
+    const db = new DatabaseSync(dbPath);
+    assert.equal(db.prepare('SELECT count(*) AS count FROM rooms_v2').get().count, 0); db.close();
+  } finally { if (instance) await instance.stop(); await rm(dir, { recursive: true, force: true }); }
+});
+
+test('pre-reset requests cannot enter or restore credentials into the next match', { timeout: 10000 }, async () => {
+  const instance = await start();
+  try {
+    const room = await create(instance.base);
+    const joining = await pausedRequest(instance, room, 'POST', '/join', { view: 'hunter' });
+    const changing = await pausedRequest(instance, room, 'PUT', '/access', { view: 'hunter', password: 'stale' });
+    assert.equal((await host(instance.base, room, 'POST', '/reset', { clearPasswords: true })).status, 200);
+    assert.equal(await joining.finish(), 409);
+    assert.equal(await changing.finish(), 409);
+    const status = await (await host(instance.base, room, 'GET', '/status')).json();
+    assert.equal(status.access.hunter.password, false);
+    assert.equal(status.access.hunter.taken, 0);
+  } finally { await instance.stop(); }
+});
+
+test('storage update never inserts a removed room', () => {
+  const store = openRoomStore();
+  try {
+    const room = { id: '123456', hostToken: 'h', access: {}, seats: {}, state, visibility: ALL_HIDDEN, seq: 1, touchedAt: Date.now() };
+    assert.throws(() => store.put(room), /no longer exists/);
+    store.create(room); store.remove(room.id);
+    assert.throws(() => store.put(room), /no longer exists/);
+    assert.deepEqual(store.load(0), []);
+  } finally { store.close(); }
+});
+
+test('restarting does not renew released seats or extend an unconnected seat lease', { timeout: 10000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'pil-seat-lease-'));
+  const dbPath = join(dir, 'rooms.sqlite');
+  let time = 1_000_000, instance;
+  const options = { dbPath, now: () => time };
+  try {
+    instance = await start(options);
+    const room = await create(instance.base);
+    await host(instance.base, room, 'PUT', '/access', { view: 'hunter', limit: 1 });
+    const a = await joinAs(instance.base, room, 'hunter');
+    time += 120001;
+    const b = await joinAs(instance.base, room, 'hunter');
+    const check = session => fetch(instance.base + '/' + room.roomId + '/check?session=' + session);
+    assert.equal((await check(a)).status, 409);
+    await instance.stop();
+    instance = await start(options);
+    assert.equal((await check(a)).status, 409);
+    assert.equal((await check(b)).status, 200);
+    const denied = await fetch(instance.base + '/' + room.roomId + '/events?session=' + a);
+    assert.equal(denied.status, 409);
+    const stream = await fetch(instance.base + '/' + room.roomId + '/events?session=' + b);
+    assert.equal(stream.status, 200);
+    let status = await (await host(instance.base, room, 'GET', '/status')).json();
+    assert.equal(status.access.hunter.taken, 1);
+    assert.equal(status.access.hunter.online, 1);
+    await stream.body.cancel();
+    await new Promise(resolve => setTimeout(resolve, 20));
+    await instance.stop();
+    time += 60000;
+    instance = await start(options);
+    status = await (await host(instance.base, room, 'GET', '/status')).json();
+    assert.equal(status.access.hunter.taken, 1);
+    await instance.stop();
+    time += 60001;
+    instance = await start(options);
+    status = await (await host(instance.base, room, 'GET', '/status')).json();
+    assert.equal(status.access.hunter.taken, 0);
+    // Only one expired session can reclaim the free seat, even concurrently.
+    const responses = await Promise.all([a, b].map(session => fetch(instance.base + '/' + room.roomId + '/events?session=' + session)));
+    assert.deepEqual(responses.map(res => res.status).sort(), [200, 409]);
+    for (const res of responses) await res.body.cancel();
+  } finally { if (instance) await instance.stop(); await rm(dir, { recursive: true, force: true }); }
+});
+
+
+test('online heartbeats persist leases without extending the host room lifetime', { timeout: 5000 }, async () => {
+  const real = openRoomStore();
+  let time = 1_000_000;
+  let saved;
+  const roomStore = { ...real, putSeats(id, seats) { real.putSeats(id, seats); saved = { seats: structuredClone(seats), touchedAt: 1_000_000 }; }, renewSeats(updates) { real.renewSeats(updates); saved = { seats: structuredClone(updates[0].seats), touchedAt: real.load(0)[0].touchedAt }; } };
+  const instance = await start({ roomStore, now: () => time, pingIntervalMs: 20 });
+  try {
+    const room = await create(instance.base);
+    const session = await joinAs(instance.base, room, 'hunter');
+    const stream = await fetch(instance.base + '/' + room.roomId + '/events?session=' + session);
+    const reader = stream.body.pipeThrough(new TextDecoderStream()).getReader();
+    await reader.read();
+    time += 120001;
+    while (Object.values(saved.seats)[0].expiresAt <= time) await reader.read();
+    assert.equal(Object.values(saved.seats)[0].expiresAt, time + 120000);
+    assert.equal(saved.touchedAt, 1_000_000);
+    await reader.cancel();
+  } finally { await instance.stop(); }
 });

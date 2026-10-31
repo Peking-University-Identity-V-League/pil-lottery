@@ -157,6 +157,14 @@
           <button type="button" class="btn btn-wax" id="live-create">创建同步房间</button>
         </div>
         <div id="live-on" hidden>
+          <section class="live-group" id="live-links">
+            <h3>房间号</h3>
+            <div class="live-room-line">
+              <b class="live-room-id" id="live-room-id"></b>
+              <button type="button" class="btn btn-mini" id="copy-room">复制房间号</button>
+              <button type="button" class="btn btn-mini" id="copy-link">复制链接</button>
+            </div>
+          </section>
           <section class="live-group">
             <h3>可见范围</h3>
             <div class="live-presets" id="live-presets"></div>
@@ -179,17 +187,43 @@
               </div>
             </div>
           </section>
-          <section class="live-group" id="live-links">
-            <h3>选手链接</h3>
-            <div class="live-link"><span>监管者</span><input id="link-hunter" readonly aria-label="监管者链接"><button type="button" class="btn btn-mini" data-copy="hunter">复制</button></div>
-            <div class="live-link"><span>求生者</span><input id="link-survivor" readonly aria-label="求生者链接"><button type="button" class="btn btn-mini" data-copy="survivor">复制</button></div>
-            <div class="live-link"><span>观众</span><input id="link-spectator" readonly aria-label="观众链接"><button type="button" class="btn btn-mini" data-copy="spectator">复制</button></div>
+          <section class="live-group">
+            <h3>身份权限</h3>
+            <p class="live-warning" id="live-access-warning" role="status" hidden></p>
+            <div class="live-access" id="live-access">
+              <div class="live-access-row" data-access="hunter">
+                <span class="live-access-name">监管者</span>
+                <label>密码<input type="text" class="access-password" maxlength="64" autocomplete="off" placeholder="不设密码" aria-label="监管者密码"></label>
+                <label>人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="监管者人数上限"></label>
+                <span class="live-access-taken"></span>
+                <button type="button" class="btn btn-mini access-clear">清空名额</button>
+              </div>
+              <div class="live-access-row" data-access="survivor">
+                <span class="live-access-name">求生者</span>
+                <label>密码<input type="text" class="access-password" maxlength="64" autocomplete="off" placeholder="不设密码" aria-label="求生者密码"></label>
+                <label>人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="求生者人数上限"></label>
+                <span class="live-access-taken"></span>
+                <button type="button" class="btn btn-mini access-clear">清空名额</button>
+              </div>
+              <div class="live-access-row" data-access="spectator">
+                <span class="live-access-name">观众</span>
+                <label>密码<input type="text" class="access-password" maxlength="64" autocomplete="off" placeholder="不设密码" aria-label="观众密码"></label>
+                <label>人数上限<input type="number" class="access-limit" min="1" max="64" step="1" inputmode="numeric" placeholder="不限" aria-label="观众人数上限"></label>
+                <span class="live-access-taken"></span>
+                <button type="button" class="btn btn-mini access-clear">清空名额</button>
+              </div>
+            </div>
+          </section>
+          <section class="live-group">
+            <h3>下一场</h3>
+            <label class="live-reset-option"><input type="checkbox" id="live-reset-passwords">同时清空密码</label>
+            <p class="live-hint" id="live-reset-hint">重置后所有人需要重新进入，上一场结果也会清除；房间号、可见范围和人数上限保留。</p>
           </section>
         </div>
       </div>
       <footer class="sheet-foot">
         <span class="pool-count" id="live-count"></span>
-        <button type="button" class="btn btn-quiet" id="live-rotate" hidden>重新生成链接</button>
+        <button type="button" class="btn btn-quiet" id="live-reset" hidden>重置房间</button>
         <button type="button" class="btn btn-quiet" id="live-end" hidden>结束同步</button>
         <button class="btn btn-wax" value="close">完成</button>
       </footer>
@@ -202,7 +236,7 @@
         <h2 id="live-lost-title">同步房间已失效</h2>
       </header>
       <div class="conn-body">
-        <p id="live-lost-body">原链接已停用。请创建新房间，并重新发送链接。</p>
+        <p id="live-lost-body">原房间号已停用。请创建新房间，并重新发送房间号。</p>
       </div>
       <footer class="sheet-foot">
         <button class="btn btn-quiet" value="close">稍后再说</button>
