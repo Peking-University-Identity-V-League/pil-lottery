@@ -5,6 +5,8 @@
 // 主办方在设置页的调整只记录与默认值不同的部分：
 //   overrides = { [规则 id]: { enabled?: false, toggled?: [与默认状态相反的角色 id] } }
 
+import { charName, joinList, t } from './i18n.js';
+
 export const normalizeName = (name) => String(name).replace(/[“”"]/g, '');
 
 const named = (names) => {
@@ -127,18 +129,18 @@ export function fitFor(char, side, tree, overrides = {}) {
 
 /** 根据当前名单生成规则说明。 */
 export function describeRule(rule, roster, overrides = {}) {
-  if (!isRuleEnabled(rule, overrides)) return '规则已关闭，名单会保留，重新开启后生效。';
+  if (!isRuleEnabled(rule, overrides)) return t('规则已关闭，名单会保留，重新开启后生效。');
   const blocked = roster.filter((c) => isListedBlocked(rule, c, overrides));
   const allowed = roster.filter((c) => !isListedBlocked(rule, c, overrides));
-  const list = (chars) => chars.map((c) => c.name).join('、');
-  const label = rule.side === 'hunter' ? '监管者' : '求生者';
+  const list = (chars) => joinList(chars.map(charName));
+  const hunter = rule.side === 'hunter';
   let text;
-  if (!blocked.length) text = `所有${label}都可以抽到。`;
-  else if (!allowed.length) text = `所有${label}都不会抽到。`;
-  else if (rule.summary && !overrides[rule.id]?.toggled?.length) text = rule.summary;
-  else if (blocked.length <= allowed.length) text = `${list(blocked)}不会抽到。`;
-  else text = `只有${list(allowed)}会抽到。`;
-  return rule.note && allowed.length < roster.length ? `${text}${rule.note}` : text;
+  if (!blocked.length) text = t(hunter ? '所有监管者都可以抽到。' : '所有求生者都可以抽到。');
+  else if (!allowed.length) text = t(hunter ? '所有监管者都不会抽到。' : '所有求生者都不会抽到。');
+  else if (rule.summary && !overrides[rule.id]?.toggled?.length) text = t(rule.summary);
+  else if (blocked.length <= allowed.length) text = t('{names}不会抽到。', { names: list(blocked) });
+  else text = t('只有{names}会抽到。', { names: list(allowed) });
+  return rule.note && allowed.length < roster.length ? `${text}${t(rule.note)}` : text;
 }
 
 /** 这套人格是否违反限制。软限制的人格只有作为已点亮后续人格的前置时才算合规。 */

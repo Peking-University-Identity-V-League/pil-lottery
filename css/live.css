@@ -146,7 +146,8 @@
   color: var(--muted);
 }
 
-.live-access-name { font-size: 14px; color: var(--parchment); }
+.live-access-name {
+  white-space: nowrap; font-size: 14px; color: var(--parchment); }
 
 .live-access-row label {
   display: flex;
@@ -566,10 +567,15 @@
   }
   .masthead p { margin-top: 6px; font-size: 13px; letter-spacing: 0; }
   .masthead-tools { width: 100%; align-items: center; }
+  :root:not(:lang(zh)) .masthead h1 {
+    font-size: min(26px, calc((100vw - 2 * var(--pad)) / 12));
+    letter-spacing: .02em;
+    white-space: normal;
+  }
   .masthead-tools .btn {
-    flex: 1 1 0;
+    flex: 1 1 auto;
     min-width: 0;
-    padding: 6px 2px;
+    padding: 6px 6px;
     font-size: 13px;
     letter-spacing: 0;
     white-space: nowrap;
@@ -616,4 +622,52 @@
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* 英语、日语的文字比中文长：收紧字间距，组件的尺寸和位置与中文版保持一致 */
+:root:not(:lang(zh)) .masthead h1 {
+  font-size: clamp(24px, 2.9vw, 36px);
+  line-height: clamp(37.4px, 4.84vw, 59.4px);
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+:root:not(:lang(zh)) body:not(.live-page) .masthead-tools .btn {
+  width: 101px;
+  padding-inline: 4px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+:root:not(:lang(zh)) body:not(.live-page) #btn-sound { width: 68px; }
+:root:not(:lang(zh)) .rule-row .rule-label { width: 56px; font-size: 12px; line-height: 1.15; }
+:root:not(:lang(zh)) .rule .segmented { width: 203px; }
+:root:not(:lang(zh)) .rule .segmented button { flex: 1 1 auto; padding-inline: 2px; white-space: nowrap; }
+:root:not(:lang(zh)) .ult-weights label > span { min-width: 23px; }
+:root:not(:lang(zh)) .rule > .switch { flex-basis: 100%; }
+:root:not(:lang(zh)) .actions .btn { padding-inline: 4px; letter-spacing: .02em; white-space: nowrap; }
+:root:not(:lang(zh)) .actions .btn-wax { font-size: 15px; line-height: 24px; }
+:root:not(:lang(zh)) .slot-actions .btn { flex: 1 1 0; min-width: 0; padding-inline: 2px; font-size: 12px; line-height: 18px; letter-spacing: 0; white-space: nowrap; }
+:root:not(:lang(zh)) .talent-list { font-size: 11.5px; }
+:root:not(:lang(zh)) .talent-list .t { padding-inline: 4px; }
+:root:not(:lang(zh)) .t-ult { font-size: 12px; line-height: 1.15; letter-spacing: 0; white-space: normal; }
+
+@media (min-width: 1101px) {
+  :root:not(:lang(zh)) .actions { width: 146px; }
+}
+
+@media (max-width: 760px) {
+  :root:lang(en) .masthead h1 { font-size: calc((100vw - 2 * var(--pad)) / 16.5); }
+  :root:lang(ja) .masthead h1 { font-size: calc((100vw - 2 * var(--pad)) / 14.6); }
+  :root:not(:lang(zh)) .masthead h1 { line-height: min(33px, calc((100vw - 2 * var(--pad)) / 9.9)); }
+  :root:not(:lang(zh)) body:not(.live-page) .masthead-tools .btn { flex: 1 1 0; width: auto; padding-inline: 0; }
+  :root:not(:lang(zh)) body:not(.live-page) #btn-sound { flex: 0 0 64px; width: 64px; }
+}
+
+@media (max-width: 520px) {
+  :root:not(:lang(zh)) .rule .segmented { width: 179px; }
+  :root:not(:lang(zh)) .actions .btn-wax { line-height: 22px; }
+}
+
+@media (max-width: 380px) {
+  :root:not(:lang(zh)) body:not(.live-page) .masthead-tools .btn { font-size: 12px; }
+  :root:not(:lang(zh)) .slot-actions .btn { font-size: 10px; }
 }

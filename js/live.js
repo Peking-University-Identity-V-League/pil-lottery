@@ -8,6 +8,7 @@ import { LIVE_VIEW_NAMES } from './live-visibility.js';
 import {
   applyPortraitView, asset, cleanDescription, despairItem, el, renderWeb, showTreeDialog, talentItems,
 } from './shared-ui.js';
+import { applyI18n, bindLanguageSelect, charName, roleName, t, talentName, traitName } from './i18n.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const ORDINALS = ['第一位', '第二位', '第三位', '第四位'];
@@ -38,7 +39,7 @@ const shuffleAnimations = new Set();
 
 async function getJSON(path) {
   const res = await fetch(asset(path));
-  if (!res.ok) throw new Error(`${path} 返回 HTTP ${res.status}`);
+  if (!res.ok) throw new Error(t('{path} 返回 HTTP {status}', { path, status: res.status }));
   return res.json();
 }
 
@@ -95,9 +96,10 @@ function createSlot(index) {
       <p class="live-note" hidden></p>
       <ul class="talent-list"></ul>
     </div>`;
+  applyI18n(root);
   const slot = {
     index, side, root,
-    defaultAddress: hunter ? '监管者' : `${ORDINALS[index]}求生者`,
+    defaultAddress: t(hunter ? '监管者' : `${ORDINALS[index]}求生者`),
     card: $('.card', root),
     sealHalves: [$('.seal-l', root), $('.seal-r', root)],
     address: $('.env-address', root),
@@ -124,7 +126,7 @@ function createSlot(index) {
   };
   slot.webBox.addEventListener('click', () => {
     if (!slot.fullBuild) return;
-    showTreeDialog({ tree: data.trees[side], build: slot.fullBuild, side, name: slot.charName || (hunter ? '监管者' : '求生者') });
+    showTreeDialog({ tree: data.trees[side], build: slot.fullBuild, side, name: slot.charName || t(hunter ? '监管者' : '求生者') });
   });
   return slot;
 }
@@ -146,8 +148,8 @@ function limitedItems(tree, build) {
   const items = [];
   if (build.status === 'ultimates') {
     const nodes = build.ultimates.map((id) => tree.byId.get(id));
-    if (nodes.length) items.push(...nodes.map((n) => summaryItem(nodes.length === 1 ? 'is-single' : '', n.name, n.icon?.local_path)));
-    else items.push(summaryItem('is-single is-none', '无最终天赋'));
+    if (nodes.length) items.push(...nodes.map((n) => summaryItem(nodes.length === 1 ? 'is-single' : '', talentName(n.name), n.icon?.local_path)));
+    else items.push(summaryItem('is-single is-none', t('无最终天赋')));
   }
   if (build.despair !== undefined) items.push(despairItem(tree, build.despair));
   items.forEach((li, i) => li.style.setProperty('--i', i));
@@ -156,9 +158,9 @@ function limitedItems(tree, build) {
 
 function buildTable() {
   const survivorSide = el('section', 'lineup lineup-survivor');
-  survivorSide.setAttribute('aria-label', '求生者');
+  survivorSide.setAttribute('aria-label', t('求生者'));
   const hunterSide = el('section', 'lineup lineup-hunter');
-  hunterSide.setAttribute('aria-label', '监管者');
+  hunterSide.setAttribute('aria-label', t('监管者'));
   const divider = el('div', 'divider');
   divider.setAttribute('aria-hidden', 'true');
   for (let i = 0; i < 5; i++) {
@@ -214,7 +216,7 @@ async function revealChar(slot, char, animate, run) {
   const wasOpen = slot.card.classList.contains('is-open');
   if (char.status !== 'shown') {
     slot.card.classList.remove('is-open');
-    slot.address.textContent = char.status === 'hidden' ? '角色未公开' : slot.defaultAddress;
+    slot.address.textContent = char.status === 'hidden' ? t('角色未公开') : slot.defaultAddress;
     slot.sealHalves.forEach(half => half.getAnimations().forEach(a => a.cancel()));
     return;
   }
@@ -228,10 +230,11 @@ async function revealChar(slot, char, animate, run) {
   if (!info) return;
   applyPortraitView(slot.portrait, info);
   slot.portrait.src = asset(info.portrait);
-  slot.portrait.alt = `${info.name}立绘`;
-  slot.name.textContent = info.name;
-  slot.charName = info.name;
-  slot.roles.replaceChildren(...(slot.side === 'survivor' ? (info.roles || []).map(r => el('li', '', r)) : []));
+  const name = charName(info);
+  slot.portrait.alt = t('{name}立绘', { name });
+  slot.name.textContent = name;
+  slot.charName = name;
+  slot.roles.replaceChildren(...(slot.side === 'survivor' ? (info.roles || []).map(r => el('li', '', roleName(r))) : []));
   if (animate) {
     crackSeal(slot);
     sfx.crack();
@@ -287,7 +290,7 @@ function applyBuild(slot, build, animate) {
   slot.panel.classList.remove('pending');
   slot.panel.classList.toggle('lighting', animate);
   if (build.status !== 'full') {
-    slot.note.textContent = '人格未公开';
+    slot.note.textContent = t('人格未公开');
     slot.note.hidden = build.status !== 'hidden';
     slot.list.replaceChildren(...limitedItems(tree, build));
     return;
@@ -308,14 +311,14 @@ function applyTrait(slot, trait, animate) {
   if (trait.status === 'shown') {
     const info = data.traits.get(trait.name);
     if (info) slot.traitImg.src = asset(info.icon.local_path);
-    slot.traitName.textContent = trait.name;
+    slot.traitName.textContent = traitName(trait.name);
     box.classList.add('locked');
     if (animate) sfx.lock();
   } else if (trait.status === 'free') {
     box.classList.add('is-free');
-    slot.traitName.textContent = '自选';
+    slot.traitName.textContent = t('自选');
   } else {
-    slot.traitName.textContent = trait.status === 'hidden' ? '未公开' : '待揭晓';
+    slot.traitName.textContent = t(trait.status === 'hidden' ? '未公开' : '待揭晓');
   }
 }
 
@@ -383,7 +386,7 @@ function startTraitRoll(slot) {
   let index = 0;
   slot.traitBox.classList.remove('locked', 'is-free');
   slot.traitBox.classList.add('rolling');
-  slot.traitName.textContent = '抽取中';
+  slot.traitName.textContent = t('抽取中');
   const tick = () => {
     if (icons.length) slot.traitImg.src = asset(icons[index++ % icons.length].icon.local_path);
     sfx.tick();
@@ -421,8 +424,8 @@ function applyState(state) {
   if (state.phase !== 'drawing' || !allPending || !activeMotion) stopShuffle();
   else if (restart) void shuffleAndDeal();
 
-  $('#live-view').textContent = `${LIVE_VIEW_NAMES[state.view]}视角`;
-  $('#live-phase').textContent = PHASE_TEXT[state.phase];
+  $('#live-view').textContent = t(`${LIVE_VIEW_NAMES[state.view]}视角`);
+  $('#live-phase').textContent = t(PHASE_TEXT[state.phase]);
   if (!state.slots.length) {
     slots.forEach(slot => queueBuild(slot, state.limited[slot.side] ? { status: 'pending', limited: true } : { status: 'pending' }, false));
   }
@@ -438,7 +441,7 @@ function applyState(state) {
   hunter.card.classList.toggle('is-charging', activeMotion && state.phase === 'hunter' && state.slots[4]?.char.status === 'pending');
   if (state.phase === 'trait' && state.slots[4]?.trait.status === 'pending') {
     if (activeMotion) startTraitRoll(hunter);
-    else { stopTraitRoll(hunter); hunter.traitName.textContent = '抽取中'; }
+    else { stopTraitRoll(hunter); hunter.traitName.textContent = t('抽取中'); }
   } else stopTraitRoll(hunter);
   firstState = false;
   if (!animate) {
@@ -469,7 +472,7 @@ let lostTicker = 0;
 
 function syncLostSeconds() {
   const seconds = Math.floor((Date.now() - lostAt) / 1000);
-  $('#conn-waiting').textContent = `正在等待重连......（${seconds} 秒）`;
+  $('#conn-waiting').textContent = t('正在等待重连......（{seconds} 秒）', { seconds });
 }
 
 function showConnAlert(kind) {
@@ -484,8 +487,8 @@ function showConnAlert(kind) {
   $('#conn-checklist').hidden = !alert.waiting;
   $('#conn-body').hidden = !alert.body;
   $('#conn-check').style.display = alert.success ? 'block' : 'none';
-  $('#conn-title').textContent = alert.title;
-  $('#conn-body').textContent = alert.body || '';
+  $('#conn-title').textContent = t(alert.title);
+  $('#conn-body').textContent = alert.body ? t(alert.body) : '';
   $('#conn-waiting').hidden = !alert.waiting;
   if (!dlg.open) dlg.showModal();
 }
@@ -511,7 +514,7 @@ function showReconnected() {
 function setConnection(kind, text) {
   const node = $('#live-conn');
   node.dataset.state = kind;
-  node.textContent = text;
+  node.textContent = t(text);
   if (kind === 'on') {
     stopLostTimer();
     if ($('#dlg-conn').dataset.kind === 'retry') showReconnected();
@@ -565,13 +568,13 @@ function showEntry(message = '') {
   $('#live-conn').hidden = true;
   $('#btn-leave').hidden = true;
   $('#live-view').textContent = '';
-  $('#live-phase').textContent = '输入房间号进入';
+  $('#live-phase').textContent = t('输入房间号进入');
   setEntryMessage(message);
 }
 
 function setEntryMessage(message) {
   $('#entry-message').hidden = !message;
-  $('#entry-message').textContent = message;
+  $('#entry-message').textContent = t(message);
 }
 
 /** 主动退出保留凭证和退出记录；收到服务器撤销通知后才清理对应凭证。 */
@@ -623,12 +626,12 @@ function renderEntryViews() {
   const savingExit = playerSessions.isLeaving(room);
   $('#entry-retry-leave').hidden = !pending;
   $('#entry-retry-leave').disabled = savingExit;
-  $('#entry-retry-leave').textContent = savingExit ? '正在退出…' : '重试退出';
+  $('#entry-retry-leave').textContent = t(savingExit ? '正在退出…' : '重试退出');
   if (info?.views[entry.view]?.open === false) entry.view = '';
   $('#entry-views-box').hidden = !info;
   const noneOpen = Boolean(info) && Object.values(info.views).every((access) => access.open === false);
   if (noneOpen && $('#entry-message').hidden) setEntryMessage(NONE_OPEN);
-  else if (!noneOpen && $('#entry-message').textContent === NONE_OPEN) setEntryMessage('');
+  else if (!noneOpen && $('#entry-message').textContent === t(NONE_OPEN)) setEntryMessage('');
   document.querySelectorAll('#entry-views [data-view]').forEach((button) => {
     const access = info?.views[button.dataset.view];
     const on = button.dataset.view === entry.view;
@@ -637,10 +640,10 @@ function renderEntryViews() {
     if (!access) return;
     button.hidden = access.open === false;
     const parts = [];
-    if (access.password) parts.push('需要密码');
+    if (access.password) parts.push(t('需要密码'));
     if (access.effectiveLimit || access.limit) parts.push(`${access.taken}/${access.effectiveLimit || access.limit}`);
     const canReplace = pending?.view === button.dataset.view;
-    $('small', button).textContent = canReplace ? '原身份，可尝试重新进入' : access.full ? `人数已满${access.limit ? ` ${access.taken}/${access.limit}` : ''}` : parts.join(' · ') || '可直接进入';
+    $('small', button).textContent = canReplace ? t('原身份，可尝试重新进入') : access.full ? `${t('人数已满')}${access.limit ? ` ${access.taken}/${access.limit}` : ''}` : parts.join(' · ') || t('可直接进入');
     button.classList.toggle('is-full', access.full && !canReplace);
   });
   const needsPassword = Boolean(entry.view && info?.views[entry.view]?.password);
@@ -795,7 +798,7 @@ function scheduleRetry(url, checkUrl, minimumMs = 0) {
         const message = CONNECTION_MESSAGES[body.connectionError] || '正在等待重连';
         setConnection('wait', message);
         $('#conn-body').hidden = false;
-        $('#conn-body').textContent = message;
+        $('#conn-body').textContent = t(message);
         $('#conn-checklist').hidden = true;
       }
     } catch { /* Temporary network failure; preserve credentials and back off. */ }
@@ -873,6 +876,13 @@ function bindSound() {
 }
 
 async function main() {
+  applyI18n();
+  bindLanguageSelect(() => {
+    // 选手页的状态都能从服务器恢复，直接重新加载；保留已输入的房间号
+    const room = $('#entry-room').value.trim();
+    if (/^\d{6}$/.test(room)) history.replaceState(null, '', `#${room}`);
+    location.reload();
+  });
   bindSound();
   bindConnAlert();
   bindEntry();
@@ -880,7 +890,7 @@ async function main() {
     await loadData();
   } catch (err) {
     console.error(err);
-    showEntry(`暂时无法读取角色数据（${err.message}），请刷新页面后重试。`);
+    showEntry(t('暂时无法读取角色数据（{error}），请刷新页面后重试。', { error: err.message }));
     return;
   }
   const room = /^#(\d{6})$/.exec(location.hash)?.[1] || '';

@@ -88,7 +88,28 @@ button { font: inherit; }
 
 .masthead-tools {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.lang-select {
+  min-height: 36px;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--parchment);
+  background: transparent;
+  border: 1px solid rgba(179, 145, 88, .55);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.lang-select option { color: #1b1611; background: #ddd0b1; }
+
+.tree-credit { flex: 1; font-size: 12px; }
+
+:root:lang(ja) {
+  --font: "Source Han Serif JP", "Noto Serif CJK JP", "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
 }
 
 /* ------------------------------------------------------------ 按钮 */
@@ -951,7 +972,7 @@ body.is-busy .table { cursor: pointer; }
 .tile[aria-pressed="false"] .tile-name { color: var(--muted); }
 
 .tile[aria-pressed="false"]::after {
-  content: "已移出";
+  content: attr(data-removed);
   position: absolute;
   top: 38%;
   left: 50%;

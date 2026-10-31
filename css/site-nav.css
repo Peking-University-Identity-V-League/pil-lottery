@@ -6,7 +6,6 @@
   padding: 14px var(--pad) 12px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px 20px;
   flex-wrap: wrap;
   border-bottom: 1px solid rgba(179, 145, 88, .18);
@@ -37,6 +36,7 @@
 }
 
 .site-nav-links {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 4px 22px;
@@ -63,9 +63,11 @@
 
 .site-nav-short { display: none; }
 
-@media (max-width: 560px) {
+@media (max-width: 760px) {
   .site-nav { font-size: 13px; }
   .site-nav-full { display: none; }
   .site-nav-short { display: inline; }
-  .site-nav-links { gap: 4px 14px; }
+  /* 语言选择留在右上角，链接换到第二行 */
+  .site-nav .lang-select { margin-left: auto; }
+  .site-nav-links { order: 1; width: 100%; margin-left: 0; gap: 4px 14px; }
 }

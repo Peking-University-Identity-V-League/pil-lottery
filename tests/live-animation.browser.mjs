@@ -31,7 +31,7 @@ const port = await (async () => {
 })();
 const origin = `http://127.0.0.1:${port}`;
 async function page(options = {}) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1080 }, ...options });
+  const context = await browser.newContext({ locale: 'zh-CN',  viewport: { width: 1440, height: 1080 }, ...options });
   await context.addInitScript(() => {
     window.__sent = []; window.__received = []; window.__motions = [];
     const fetchOriginal = window.fetch;

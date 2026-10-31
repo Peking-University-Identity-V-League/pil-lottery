@@ -1,6 +1,7 @@
 // 抽取页和选手页共用的界面函数。
 
 import { POINTS_PER_LAYER } from './rules.js';
+import { joinList, t, talentDesc, talentName } from './i18n.js';
 
 const DESPAIR = '绝处逢生';
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -47,7 +48,7 @@ export function splitBuild(tree, build) {
 export function despairItem(tree, has) {
   const node = tree.findByName(DESPAIR);
   const li = el('li', `t t-ult is-single t-despair ${has ? 'is-on' : 'is-off'}`);
-  li.title = has ? '带绝处逢生' : '没带绝处逢生';
+  li.title = t(has ? '带{name}' : '没带{name}', { name: talentName(DESPAIR) });
   li.setAttribute('aria-label', li.title);
   if (node?.icon?.local_path) {
     const img = new Image();
@@ -55,7 +56,7 @@ export function despairItem(tree, has) {
     img.alt = '';
     li.append(img);
   }
-  li.append(el('span', '', DESPAIR));
+  li.append(el('span', '', talentName(DESPAIR)));
   return li;
 }
 
@@ -63,22 +64,22 @@ export function talentItems(tree, build) {
   const { ultimates, others } = splitBuild(tree, build);
   const despair = tree.findByName(DESPAIR);
   const items = [];
-  if (!ultimates.length) items.push(el('li', 't t-ult is-single is-none', '无最终天赋'));
+  if (!ultimates.length) items.push(el('li', 't t-ult is-single is-none', t('无最终天赋')));
   for (const { node } of ultimates) {
     const li = el('li', ultimates.length === 1 ? 't t-ult is-single' : 't t-ult');
     const img = new Image();
     img.src = asset(node.icon.local_path);
     img.alt = '';
-    li.append(img, el('span', '', node.name));
-    li.title = node.desc;
+    li.append(img, el('span', '', talentName(node.name)));
+    li.title = talentDesc(node);
     items.push(li);
   }
   if (despair) items.push(despairItem(tree, Boolean(build.levels[despair.id])));
   for (const { node, level } of others) {
     if (node === despair) continue;
-    const li = el('li', 't', node.name);
+    const li = el('li', 't', talentName(node.name));
     if (node.max_level > 1) li.append(el('small', '', level < node.max_level ? `${level}/${node.max_level}` : `${level}`));
-    li.title = node.desc;
+    li.title = talentDesc(node);
     items.push(li);
   }
   items.forEach((li, i) => li.style.setProperty('--i', i));
@@ -86,8 +87,8 @@ export function talentItems(tree, build) {
 }
 
 export function talentStatus(node, level) {
-  if (node.is_ultimate) return level ? '最终天赋' : '最终天赋（未解锁）';
-  return level ? `${level}/${node.max_level} 层` : `未解锁（最高 ${node.max_level} 层）`;
+  if (node.is_ultimate) return t(level ? '最终天赋' : '最终天赋（未解锁）');
+  return level ? t('{level}/{max} 层', { level, max: node.max_level }) : t('未解锁（最高 {max} 层）', { max: node.max_level });
 }
 
 export function renderWeb(svg, tree, build, { animate = false, detailed = false } = {}) {
@@ -121,7 +122,7 @@ export function renderWeb(svg, tree, build, { animate = false, detailed = false 
     if (detailed) {
       g.setAttribute('tabindex', '0');
       g.setAttribute('role', 'button');
-      g.setAttribute('aria-label', `${n.name}，${talentStatus(n, level)}`);
+      g.setAttribute('aria-label', `${talentName(n.name)}${t('，')}${talentStatus(n, level)}`);
     }
     const body = svgEl('g', { class: 'node-body' });
     if (n.is_ultimate) body.append(svgEl('circle', { class: 'burst', r: r + 4 }));
@@ -141,7 +142,7 @@ export function renderWeb(svg, tree, build, { animate = false, detailed = false 
     g.append(body);
     if (!detailed) {
       const title = svgEl('title');
-      title.textContent = `${n.name}　${level}/${n.max_level}${n.is_ultimate ? '（最终天赋）' : ''}${n.desc ? `\n${n.desc}` : ''}`;
+      title.textContent = `${talentName(n.name)}　${level}/${n.max_level}${n.is_ultimate ? t('（最终天赋）') : ''}${n.desc ? `\n${talentDesc(n)}` : ''}`;
       g.append(title);
     }
     nodes.append(g);
@@ -166,11 +167,12 @@ export function showTreeDialog({ tree, build, side, name }) {
   const dlg = $('#dlg-tree');
   dlg.classList.remove('side-survivor', 'side-hunter');
   dlg.classList.add(`side-${side}`);
-  $('#tree-title').textContent = `${name}的人格`;
-  $('#tree-sub').textContent = `${build.used} 层，${build.used * POINTS_PER_LAYER} 点。`
-    + (ultimates.length ? `最终天赋：${ultimates.map((t) => t.node.name).join('、')}` : '这套人格没有最终天赋');
+  $('#tree-title').textContent = t('{name}的人格', { name });
+  $('#tree-sub').textContent = t('{layers} 层，{points} 点。', { layers: build.used, points: build.used * POINTS_PER_LAYER })
+    + (ultimates.length ? t('最终天赋：{names}', { names: joinList(ultimates.map((u) => talentName(u.node.name))) }) : t('这套人格没有最终天赋'));
+  $('#tree-credit').textContent = t('人格说明来源');
 
-  const svg = svgEl('svg', { class: 'web', viewBox: '-372 -372 744 744', role: 'group', 'aria-label': '人格树，点击人格图标查看详情' });
+  const svg = svgEl('svg', { class: 'web', viewBox: '-372 -372 744 744', role: 'group', 'aria-label': t('人格树，点击人格图标查看详情') });
   renderWeb(svg, tree, build, { detailed: true });
   $('#tree-web').replaceChildren(svg);
 
@@ -183,16 +185,16 @@ export function showTreeDialog({ tree, build, side, name }) {
     img.alt = '';
     const body = el('div');
     const head = el('p', 'tree-item-head');
-    head.append(el('b', '', node.name), el('span', '', talentStatus(node, level)));
+    head.append(el('b', '', talentName(node.name)), el('span', '', talentStatus(node, level)));
     body.append(head);
-    if (node.desc) body.append(el('p', 'tree-item-desc', node.desc));
+    if (node.desc) body.append(el('p', 'tree-item-desc', talentDesc(node)));
     li.append(img, body);
     return li;
   }));
 
   const focus = $('#tree-focus');
   focus.className = 'tree-focus is-empty';
-  focus.textContent = '点击人格树上的图标，查看对应人格的说明。';
+  focus.textContent = t('点击人格树上的图标，查看对应人格的说明。');
 
   const select = (id, fromTree = true) => {
     const node = tree.byId.get(id);
@@ -211,8 +213,8 @@ export function showTreeDialog({ tree, build, side, name }) {
     img.alt = '';
     const body = el('div');
     const head = el('p', 'tree-focus-head');
-    head.append(el('b', '', node.name), el('span', '', talentStatus(node, level)));
-    body.append(head, el('p', 'tree-focus-desc', node.desc || '暂无说明。'));
+    head.append(el('b', '', talentName(node.name)), el('span', '', talentStatus(node, level)));
+    body.append(head, el('p', 'tree-focus-desc', talentDesc(node) || t('暂无说明。')));
     focus.replaceChildren(img, body);
     // 说明显示在固定位置，列表不跟着跳；窄屏时说明在人格树下方，要保证看得到
     if (fromTree) focus.scrollIntoView({ block: 'nearest' });
