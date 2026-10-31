@@ -1,0 +1,70 @@
+/* 页面底部的爱发电赞助入口：黄铜细线加一枚火漆，和桌面上的信封同一套材质 */
+
+.site-sponsor {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 10px var(--pad) 14px;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid rgba(179, 145, 88, .18);
+}
+
+.sponsor-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  font-size: 12px;
+  letter-spacing: .1em;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .15s;
+}
+
+.sponsor-seal {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 48% 52% 50% 46% / 50% 46% 54% 50%;
+  color: rgba(255, 233, 214, .9);
+  background: radial-gradient(circle at 34% 30%, var(--wax-hi), var(--wax) 55%, var(--wax-deep) 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  transition: transform .2s;
+}
+
+.sponsor-platform {
+  padding: 0 6px;
+  border: 1px solid rgba(111, 92, 60, .6);
+  border-radius: 3px;
+  font-size: 12px;
+  letter-spacing: .05em;
+  color: var(--muted);
+  transition: border-color .15s, background-color .15s;
+}
+
+.sponsor-arrow {
+  font-size: 12px;
+  color: var(--brass-dim);
+}
+
+.sponsor-link:hover { color: var(--parchment); }
+
+.sponsor-link:hover .sponsor-platform {
+  border-color: var(--brass);
+  background: rgba(179, 145, 88, .2);
+}
+
+.sponsor-link:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 4px;
+}
+
+@media (hover: hover) {
+  .sponsor-link:hover .sponsor-seal { transform: rotate(-8deg) scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sponsor-seal { transition: none; }
+}
