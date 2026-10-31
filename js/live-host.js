@@ -1,3 +1,4 @@
+import { withRequestTimeout } from './request-timeout.js';
 // 裁判端同步：异步请求绑定房间，未确认的权限变更阻止结果发布。
 const API = '/lottery/live-api/rooms';
 const STORE_KEY = 'pil-lottery:live';
@@ -39,27 +40,26 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
     current = null;
     persist();
   }
-  async function request(url, options) {
-    return fetch(url, { ...options, signal: AbortSignal.timeout(requestTimeoutMs) });
-  }
   async function call(context, method, path, body, { missingOK = false } = {}) {
     assertActive(context);
-    const res = await request(API + '/' + context.room.roomId + path, {
-      method,
-      headers: { Authorization: 'Bearer ' + context.room.hostToken, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-      body: body ? JSON.stringify(body) : undefined,
+    return withRequestTimeout(requestTimeoutMs, async signal => {
+      const res = await fetch(API + '/' + context.room.roomId + path, {
+        method, signal,
+        headers: { Authorization: 'Bearer ' + context.room.hostToken, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      assertActive(context);
+      if (missingOK && res.status === 404) return {};
+      if (res.status === 404 || res.status === 403) {
+        forget(context);
+        onLost();
+        throw new Error('room-lost');
+      }
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const result = await res.json();
+      assertActive(context);
+      return result;
     });
-    assertActive(context);
-    if (missingOK && res.status === 404) return {};
-    if (res.status === 404 || res.status === 403) {
-      forget(context);
-      onLost();
-      throw new Error('room-lost');
-    }
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const result = await res.json();
-    assertActive(context);
-    return result;
   }
 
   async function flush(context) {
@@ -91,9 +91,12 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
       if (creating) return creating;
       if (current) return Promise.reject(new Error('room-exists'));
       creating = (async () => {
-        const res = await request(API, { method: 'POST' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const room = { ...(await res.json()), passwords: {} };
+        const data = await withRequestTimeout(requestTimeoutMs, async signal => {
+          const res = await fetch(API, { method: 'POST', signal });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        });
+        const room = { ...data, passwords: {} };
         current = session(room);
         persist();
         return room;

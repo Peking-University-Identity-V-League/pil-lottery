@@ -239,3 +239,27 @@ test('poll started during reset cannot restore the pre-reset access summary', as
   assert.equal(live.room.access.survivor.password, false);
   assert.equal(live.room.access.survivor.taken, 0);
 });
+
+
+test('older Safari can create, configure, poll and close rooms without AbortSignal.timeout', async t => {
+  const original=Object.getOwnPropertyDescriptor(AbortSignal,'timeout');
+  Object.defineProperty(AbortSignal,'timeout',{configurable:true,value:undefined});
+  t.after(()=>Object.defineProperty(AbortSignal,'timeout',original));
+  const {live,writes,rotations,polls}=setup(t);
+  await live.create();assert.ok(live.room.roomId);
+  const visibility={...live.room.visibility,hunterSeesChar:'hide'};
+  const saving=live.setVisibility(visibility);await tick();writes[0].finish(200);await saving;
+  const access={survivor:{password:true,limit:4,taken:0}};
+  const changing=live.setAccess('survivor',{password:'pw',limit:4});await tick();rotations[0]({access});await changing;
+  const polling=live.status();polls[0]({visibility,access,viewers:{}});await polling;
+  assert.equal(live.room.access.survivor.password,true);await live.close();assert.equal(live.room,null);
+});
+
+test('the request deadline includes a response body that stalls after successful headers', async t => {
+  setup(t);
+  t.mock.method(globalThis,'fetch',async(_url,{signal})=>({status:201,ok:true,
+    json:()=>new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true})),
+  }));
+  const live=createLiveHost({requestTimeoutMs:10});
+  await assert.rejects(live.create(),error=>error.name==='TimeoutError');assert.equal(live.room,null);
+});

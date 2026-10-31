@@ -81,3 +81,14 @@ test('blocked browser storage still permits in-page recovery without throwing', 
   assert.equal(sessions.pending('123456').session,'old-session');
   await sessions.release('123456','old-session');assert.equal(sessions.load('123456'),null);assert.equal(sessions.pending('123456'),null);
 });
+
+
+test('older Safari can release a pending exit without AbortSignal.timeout', async t => {
+  const original=Object.getOwnPropertyDescriptor(AbortSignal,'timeout');
+  Object.defineProperty(AbortSignal,'timeout',{configurable:true,value:undefined});
+  t.after(()=>Object.defineProperty(AbortSignal,'timeout',original));
+  let calls=0;
+  const sessions=prepare({storage:memory(),request:async(_url,options)=>{calls++;assert.equal(options.signal.aborted,false);return response();}});
+  await sessions.release('123456','old-session');assert.equal(calls,1);
+  assert.equal(sessions.load('123456'),null);assert.equal(sessions.pending('123456'),null);
+});

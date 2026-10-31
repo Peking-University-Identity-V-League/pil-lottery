@@ -1,3 +1,4 @@
+import { withRequestTimeout } from './request-timeout.js';
 import { createPlayerSessions } from './live-session.js';
 import { reconnectDelay, retryAfterMs } from './live-retry.js';
 // 选手页：保持和服务器的连接，收到推送后自动更新，不需要手动刷新。
@@ -632,8 +633,10 @@ function scheduleRetry(url, checkUrl, minimumMs = 0) {
     retryInFlight = true;
     let ready = false, nextMinimum = 0;
     try {
-      const res = await fetch(checkUrl, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
-      const body = await res.json();
+      const { res, body } = await withRequestTimeout(5000, async signal => {
+        const res = await fetch(checkUrl, { cache: 'no-store', signal });
+        return { res, body: await res.json() };
+      });
       if (closed || connection !== expected) return;
       if ([403, 404, 409].includes(res.status)) {
         leaveRoom(LEAVE_MESSAGES[body.error] || LEAVE_MESSAGES['invalid-session']);

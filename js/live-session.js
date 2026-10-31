@@ -1,3 +1,4 @@
+import { withRequestTimeout } from './request-timeout.js';
 const PREFIX = 'pil-lottery:live-session:';
 
 // Keep an exit receipt separately from the active session. Late responses from
@@ -40,17 +41,17 @@ export function createPlayerSessions({ storage, request = (...args) => fetch(...
     release(room, session) {
       const requestKey = room + ':' + session;
       if (inFlight.has(requestKey)) return inFlight.get(requestKey);
-      const task = (async () => {
+      const task = withRequestTimeout(requestTimeoutMs, async signal => {
         const res = await request('/lottery/live-api/rooms/' + room + '/leave', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session }), keepalive: true,
-          signal: AbortSignal.timeout(requestTimeoutMs),
+          signal,
         });
         // A missing route/proxy 404 is not confirmation that the room is gone.
         const gone = res.status === 404 && (await res.json().catch(() => ({}))).error === 'room-not-found';
         if (!res.ok && !gone) throw new Error('Exit not confirmed: HTTP ' + res.status);
         forget(room, session);
-      })().finally(() => inFlight.delete(requestKey));
+      }).finally(() => inFlight.delete(requestKey));
       inFlight.set(requestKey, task);
       return task;
     },
