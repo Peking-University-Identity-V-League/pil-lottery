@@ -1276,12 +1276,13 @@ function syncUltWeights() {
   document.querySelectorAll('.ult-weights').forEach((box) => {
     const { side } = box.dataset;
     const weights = settings.ultWeights[side];
-    const total = weights.reduce((a, b) => a + b, 0);
+    const scale = Math.max(...weights);
+    const total = weights.reduce((sum, weight) => sum + weight / scale, 0);
     const setting = side === 'survivor' ? settings.survivorUlt : settings.hunterUlt;
     box.hidden = setting !== 'random';
     box.querySelectorAll('label').forEach((label, i) => {
       $('input', label).value = String(weights[i]);
-      $('.ult-pct', label).textContent = `${Math.round((weights[i] / total) * 100)}%`;
+      $('.ult-pct', label).textContent = `${Math.round(((weights[i] / scale) / total) * 100)}%`;
     });
   });
 }
@@ -1367,6 +1368,11 @@ function syncLive(phase) {
 
 function syncLiveUI() {
   const { room } = live;
+  const warning = $('#live-sync-warning');
+  warning.hidden = !live.syncBlocked;
+  warning.textContent = live.syncBlockReason === 'closing'
+    ? '关闭房间尚未完成，结果同步已暂停。请打开房间设置重试。'
+    : '可见范围尚未确认保存，结果同步已暂停。请打开房间设置重新保存。';
   const button = $('#btn-live');
   button.setAttribute('aria-pressed', String(Boolean(room)));
   $('#live-off').hidden = Boolean(room);
@@ -1418,7 +1424,7 @@ async function applyVisibility(visibility) {
     syncLiveUI();
     await saving;
   } catch {
-    toast('可见范围没有保存，请重试。');
+    toast('可见范围没有保存，结果同步已暂停。请重试。');
   }
   syncLiveUI();
 }
@@ -1503,9 +1509,15 @@ function bindLive() {
     syncLiveUI();
   });
   $('#live-end').addEventListener('click', async () => {
-    await live.close();
+    try {
+      const closing = live.close();
+      syncLiveUI();
+      await closing;
+      toast('已结束同步');
+    } catch {
+      toast('关闭房间未完成，结果同步已暂停。请重试。');
+    }
     syncLiveUI();
-    toast('已结束同步');
   });
 }
 

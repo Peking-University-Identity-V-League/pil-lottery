@@ -1,8 +1,10 @@
-// 选手同步服务：裁判提交已揭晓的状态，服务器按视角过滤后用 SSE 推送。数据只放内存。
+// 选手同步服务：裁判提交已揭晓的状态，服务器按视角过滤后用 SSE 推送。房间数据先持久化到 SQLite，再向选手推送。
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFileSync, realpathSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
+import { openRoomStore } from './room-store.mjs';
+import { createSseWriter } from './sse-writer.mjs';
 import {
   DEFAULT_VISIBILITY, LIVE_VIEWS, emptyState, normalizeState, normalizeVisibility, project,
 } from '../js/live-visibility.js';
@@ -50,6 +52,10 @@ function readJson(req) {
 
 export function createLiveServer({
   now = Date.now,
+  dbPath = ':memory:',
+  roomStore,
+  maxSseBufferBytes = 64 * 1024,
+  slowClientTimeoutMs = 30000,
   runtimeVersion = 'development',
   ttlMs = 12 * 60 * 60 * 1000,
   maxRooms = 200,
@@ -57,33 +63,49 @@ export function createLiveServer({
   maxClientsPerRoom = 64,
   maxCreatesPerHour = 30,
 } = {}) {
-  const rooms = new Map();
+  const store = roomStore || openRoomStore(dbPath);
+  let rooms;
+  try {
+    rooms = new Map(store.load(now() - ttlMs).map(room => {
+      const visibility = normalizeVisibility(room.visibility);
+      if (!visibility || !room.id || !room.hostToken || !LIVE_VIEWS.every(view => typeof room.tokens?.[view] === 'string')) {
+        throw new Error('Invalid persisted room');
+      }
+      return [room.id, { ...room, state: normalizeState(room.state), visibility, clients: new Set() }];
+    }));
+  } catch (error) { store.close(); throw error; }
   const creates = new Map();
   let clientCount = 0;
 
-  const send = (client, event, data) => client.res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  const send = (client, event, data) => client.send(event, data);
 
   function pushTo(room, client) {
     const text = JSON.stringify(project(room.state, client.view, room.visibility));
     if (text === client.last) return;
     client.last = text;
-    client.res.write(`event: state\ndata: ${text}\n\n`);
+    client.send('state', text, true);
   }
 
   const broadcast = (room) => room.clients.forEach((client) => pushTo(room, client));
 
   function closeClients(room) {
     for (const client of room.clients) {
-      send(client, 'closed', {});
-      client.res.end();
+      client.close();
     }
   }
 
   function removeRoom(id) {
     const room = rooms.get(id);
     if (!room) return;
+    store.remove(id);
     closeClients(room);
     rooms.delete(id);
+  }
+
+  function updateRoom(room, changes) {
+    const next = { ...room, ...changes, touchedAt: now() };
+    store.put(next);
+    Object.assign(room, next);
   }
 
   const issueTokens = () => Object.fromEntries(LIVE_VIEWS.map((view) => [view, newToken()]));
@@ -116,6 +138,7 @@ export function createLiveServer({
       touchedAt: now(),
       clients: new Set(),
     };
+    store.put(room);
     rooms.set(room.id, room);
     return reply(res, 201, { roomId: room.id, hostToken: room.hostToken, tokens: room.tokens, visibility: room.visibility });
   }
@@ -129,12 +152,12 @@ export function createLiveServer({
       'Cache-Control': 'no-store, no-transform',
       'X-Accel-Buffering': 'no',
     });
-    const client = { res, view, last: null };
+    const client = { ...createSseWriter(res, { maxBufferedBytes: maxSseBufferBytes, slowClientTimeoutMs }), view, last: null };
     room.clients.add(client);
     clientCount++;
     res.write('retry: 2000\n\n');
     pushTo(room, client);
-    req.on('close', () => {
+    res.once('close', () => {
       room.clients.delete(client);
       clientCount--;
     });
@@ -149,31 +172,30 @@ export function createLiveServer({
       return reply(res, error.message === 'too-large' ? 413 : 400, { error: error.message });
     }
     if (!rooms.has(room.id)) return reply(res, 404, { error: 'room-not-found' });
-    room.touchedAt = now();
     if (action === 'state') {
       if (!Number.isSafeInteger(body.seq) || body.seq < 0) return reply(res, 400, { error: 'invalid-seq' });
       if (body.seq <= room.seq) return reply(res, 200, { stale: true, viewers: viewers(room) }); // 网络乱序时丢弃旧状态
+      let state;
       try {
-        room.state = normalizeState(body.state);
+        state = normalizeState(body.state);
       } catch (error) {
         return reply(res, 400, { error: error.message });
       }
-      room.seq = body.seq;
+      updateRoom(room, { state, seq: body.seq });
       broadcast(room);
       return reply(res, 200, { viewers: viewers(room) });
     }
     const visibility = normalizeVisibility(body.visibility);
     if (!visibility) return reply(res, 400, { error: 'invalid-visibility' });
-    room.visibility = visibility;
+    updateRoom(room, { visibility });
     broadcast(room);
     return reply(res, 200, { visibility, viewers: viewers(room) });
   }
 
   function rotateTokens(res, room) {
+    updateRoom(room, { tokens: issueTokens() });
     closeClients(room);
     room.clients.clear();
-    room.tokens = issueTokens();
-    room.touchedAt = now();
     return reply(res, 200, { tokens: room.tokens });
   }
 
@@ -185,7 +207,8 @@ export function createLiveServer({
       return reply(res, 403, { error: 'invalid-origin' });
     }
     if (req.method === 'GET' && url.pathname === `${API_PREFIX}/health`) {
-      return reply(res, 200, { ok: true, runtime_version: runtimeVersion });
+      store.check();
+      return reply(res, 200, { ok: true, runtime_version: runtimeVersion, storage: 'sqlite' });
     }
     if (!url.pathname.startsWith(`${API_PREFIX}/`)) return reply(res, 404, { error: 'not-found' });
     const parts = url.pathname.slice(API_PREFIX.length + 1).split('/');
@@ -240,12 +263,15 @@ export function createLiveServer({
   const pingTimer = setInterval(() => {
     for (const room of rooms.values()) room.clients.forEach((client) => send(client, 'ping', {}));
   }, PING_MS);
-  const sweepTimer = setInterval(sweep, SWEEP_MS);
+  const sweepTimer = setInterval(() => {
+    try { sweep(); } catch { console.error('Room expiration could not be persisted'); }
+  }, SWEEP_MS);
   pingTimer.unref();
   sweepTimer.unref();
   server.on('close', () => {
     clearInterval(pingTimer);
     clearInterval(sweepTimer);
+    store.close();
   });
   server.sweep = sweep;
   return server;
@@ -255,5 +281,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
   const port = Number(process.env.LIVE_PORT || 18306);
   const metadata = process.env.LIVE_METADATA ? JSON.parse(readFileSync(process.env.LIVE_METADATA, 'utf8')) : {};
   if (process.env.LIVE_METADATA && !/^[a-f0-9]{64}$/.test(metadata.runtime_version || '')) throw new Error('Invalid runtime metadata');
-  createLiveServer({ runtimeVersion: metadata.runtime_version }).listen(port, '127.0.0.1', () => console.log(`live server on 127.0.0.1:${port}`));
+  if (process.env.LIVE_METADATA && !process.env.LIVE_DB_PATH) throw new Error('LIVE_DB_PATH is required in production');
+  const dbPath = process.env.LIVE_DB_PATH || fileURLToPath(new URL('../.data/rooms.sqlite', import.meta.url));
+  const server = createLiveServer({ runtimeVersion: metadata.runtime_version, dbPath });
+  server.listen(port, '127.0.0.1', () => console.log('live server on 127.0.0.1:' + port));
+  const stop = () => { server.closeAllConnections(); server.close(); };
+  process.once('SIGTERM', stop);
+  process.once('SIGINT', stop);
 }

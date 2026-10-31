@@ -73,13 +73,15 @@ export function normalizeUltimateWeights(weights) {
 export const TARGET_LEVEL_WEIGHTS = [1, 1, 1];
 
 function weightedIndex(weights, rng) {
-  const total = weights.reduce((a, b) => a + b, 0);
+  const scale = Math.max(...weights);
+  const scaled = weights.map(weight => weight / scale);
+  const total = scaled.reduce((a, b) => a + b, 0);
   let r = rng() * total;
-  for (let i = 0; i < weights.length; i++) {
-    r -= weights[i];
+  for (let i = 0; i < scaled.length; i++) {
+    r -= scaled[i];
     if (r < 0) return i;
   }
-  return weights.length - 1;
+  return scaled.findLastIndex(weight => weight > 0);
 }
 
 /** 在 (当前层数, 最高层数] 中按 TARGET_LEVEL_WEIGHTS 抽一个目标层数。 */

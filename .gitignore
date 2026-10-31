@@ -18,3 +18,9 @@ Thumbs.db
 /scripts/
 /package.json
 /package-lock.json
+
+# Room persistence (contains access tokens)
+/.data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

@@ -13,7 +13,7 @@ const TYPES = {
   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp',
 };
 
-createLiveServer().listen(apiPort, '127.0.0.1');
+createLiveServer({ dbPath: process.env.LIVE_DB_PATH || resolve(root, '.data/rooms.sqlite') }).listen(apiPort, '127.0.0.1');
 
 createServer((req, res) => {
   const { pathname } = new URL(req.url, 'http://dev.invalid');
@@ -33,7 +33,11 @@ createServer((req, res) => {
     return;
   }
   if (!pathname.startsWith('/lottery/')) { res.writeHead(404); res.end(); return; }
-  let file = resolve(join(root, decodeURIComponent(pathname.slice('/lottery/'.length))));
+  let relative;
+  try { relative = decodeURIComponent(pathname.slice('/lottery/'.length)); }
+  catch { res.writeHead(400); res.end(); return; }
+  if (relative.split(/[\\/]/).some(part => part.startsWith('.'))) { res.writeHead(404); res.end(); return; }
+  let file = resolve(join(root, relative));
   if (file !== root && !file.startsWith(root + sep)) { res.writeHead(403); res.end(); return; }
   try {
     if (statSync(file).isDirectory()) file = join(file, 'index.html');

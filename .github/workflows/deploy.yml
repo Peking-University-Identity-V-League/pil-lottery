@@ -140,6 +140,8 @@ jobs:
           files.set('favicon.svg', favicon);
           const runtime = new Map([
             ['runtime/server/live-server.mjs', await readFile(join(root, 'server/live-server.mjs'))],
+            ['runtime/server/room-store.mjs', await readFile(join(root, 'server/room-store.mjs'))],
+            ['runtime/server/sse-writer.mjs', await readFile(join(root, 'server/sse-writer.mjs'))],
             ['runtime/js/live-visibility.js', await readFile(join(root, 'js/live-visibility.js'))],
             ['runtime/package.json', Buffer.from('{"type":"module"}\n')],
           ]);
