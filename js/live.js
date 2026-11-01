@@ -80,6 +80,7 @@ async function draftRequest(action, body) {
 }
 
 const BAN_ERRORS = {
+  'ban-step-changed': '禁用环节已更新，请按当前页面重新操作。',
   'already-locked': '这一方已经确认了。',
   'bans-closed': '禁用已结束。',
   'bans-full': '已经选满了，先取消一个。',
@@ -255,8 +256,8 @@ function buildTable() {
   banUI = createBanUI({
     table: $('#table'),
     lookup: (side, id) => (side === 'survivor' ? data.survivors : data.hunters).get(id),
-    onPick: (side, char) => banRequest('pick', { char }),
-    onConfirm: () => banRequest('confirm', {}),
+    onPick: (side, char, step) => banRequest('pick', { char, step }),
+    onConfirm: (side, step) => banRequest('confirm', { step }),
     motion: () => !reduceMotion.matches,
   });
   seatTabs = createSeatTabs({ slots, table: $('#table'), defaultSeat: mySeat });

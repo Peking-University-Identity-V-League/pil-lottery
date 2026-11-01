@@ -230,6 +230,7 @@ function composeMatch(survivors, hunter) {
 /* ------------------------------------------------------------------ 动画调度 */
 
 let busy = false;
+let initializing = false;
 let skipping = false;
 let instantFrame = 0;
 const running = new Set();
@@ -360,8 +361,8 @@ function buildTable() {
   });
   banUI = createBanUI({
     table, lookup: lookupChar,
-    onPick: (side, char) => hostBanAct('pick', side, char),
-    onConfirm: (side) => hostBanAct('confirm', side),
+    onPick: (side, char, step) => hostBanAct('pick', side, char, step),
+    onConfirm: (side, step) => hostBanAct('confirm', side, undefined, step),
     motion: () => !reduceMotion.matches,
   });
   seatTabs = createSeatTabs({ slots, table });
@@ -658,7 +659,7 @@ async function rollTrait(slot, final) {
 /* ------------------------------------------------------------------ 操作 */
 
 function draw() {
-  if (hostDraft || hostBans || banRevealing || draftResuming) return;
+  if (initializing || hostDraft || hostBans || banRevealing || draftResuming) return;
   if (busy) { skip(); return; }
   if (!data.trees.survivor) return;
   const problem = poolProblem();
@@ -833,7 +834,7 @@ function scheduleDraftPoll() {
 }
 
 function applyDraftStatus(res) {
-  if (!hostDraft || hostDraft.stage === 'finishing') return;
+  if (initializing || !hostDraft || hostDraft.stage === 'finishing') return;
   if (res.draft?.round !== hostDraft.draft.round) {
     // 房间被重置，或其他设备开始了新一轮
     abortHostDraft(t('选角已被其他操作取消。'));
@@ -856,7 +857,7 @@ function abortHostDraft(message) {
 }
 
 async function hostDraftPick(position, char, lock = false) {
-  if (!hostDraft || hostDraft.stage !== 'picking') return;
+  if (initializing || !hostDraft || hostDraft.stage !== 'picking') return;
   sfx.unlock();
   try {
     if (draftOnline()) {
@@ -872,7 +873,7 @@ async function hostDraftPick(position, char, lock = false) {
 }
 
 async function extendHostDraft() {
-  if (!hostDraft || hostDraft.draft.deadline === null || hostDraft.stage !== 'picking') return;
+  if (initializing || !hostDraft || hostDraft.draft.deadline === null || hostDraft.stage !== 'picking') return;
   try {
     if (draftOnline()) {
       applyDraftStatus(await live.draftAction('extend', { round: hostDraft.draft.round, seconds: DRAFT_EXTEND_SECONDS }));
@@ -892,7 +893,7 @@ function onDraftExpire() {
 
 /** 结束选角：未锁定的座位保留预选，没有预选的随机补齐，然后才抽人格。 */
 async function finishHostDraft() {
-  if (!hostDraft || hostDraft.stage === 'finishing') return;
+  if (initializing || !hostDraft || hostDraft.stage === 'finishing') return;
   const current = hostDraft;
   current.stage = 'finishing';
   clearTimeout(current.poll);
@@ -991,6 +992,7 @@ async function resumeHostDraft() {
 
 const BAN_TICK_MS = 1000;
 const BAN_ERRORS = {
+  'ban-step-changed': '禁用环节已更新，请按当前页面重新操作。',
   'already-locked': '这一方已经确认了。',
   'bans-closed': '禁用已结束。',
   'bans-full': '已经选满了，先取消一个。',
@@ -1071,7 +1073,7 @@ function scheduleBanTick() {
 }
 
 function applyBanStatus(res) {
-  if (!hostBans || hostBans.stage !== 'open' || res.bans?.round !== hostBans.bans.round) return;
+  if (initializing || !hostBans || hostBans.stage !== 'open' || res.bans?.round !== hostBans.bans.round) return;
   hostBans.bans = res.bans;
   banUI.setClockOffset(res.now - Date.now());
   renderHostBans();
@@ -1093,12 +1095,12 @@ function abortHostBans(message) {
   syncButtons();
 }
 
-async function hostBanAct(action, side, char) {
-  if (hostBans?.stage !== 'open') return;
+async function hostBanAct(action, side, char, step) {
+  if (initializing || hostBans?.stage !== 'open') return;
   sfx.unlock();
   try {
     if (hostBans.online) {
-      applyBanStatus(await live.banAction(`host-${action}`, { round: hostBans.bans.round, side, char }));
+      applyBanStatus(await live.banAction(`host-${action}`, { round: hostBans.bans.round, side, char, step }));
     } else {
       hostBans.bans = action === 'pick' ? toggleBan(hostBans.bans, side, char) : confirmBans(hostBans.bans, side, Date.now());
       afterLocalBan();
@@ -1109,7 +1111,7 @@ async function hostBanAct(action, side, char) {
 }
 
 async function extendHostBans() {
-  if (hostBans?.stage !== 'open' || (hostBans.bans.deadline === null && !hostBans.bans.expired)) return;
+  if (initializing || hostBans?.stage !== 'open' || (hostBans.bans.deadline === null && !hostBans.bans.expired)) return;
   try {
     if (hostBans.online) {
       applyBanStatus(await live.banAction('extend', { round: hostBans.bans.round, seconds: DRAFT_EXTEND_SECONDS }));
@@ -1125,7 +1127,7 @@ async function extendHostBans() {
 
 /** 结束禁用，把结果移出这一局的卡池，再接着发候选或抽取。 */
 async function finishHostBans() {
-  if (hostBans?.stage !== 'open') return;
+  if (initializing || hostBans?.stage !== 'open') return;
   const current = hostBans;
   current.stage = 'finishing';
   clearTimeout(current.poll);
@@ -1173,8 +1175,8 @@ function disarmInit() {
 }
 
 /** 回到开局前的样子：撤下上一局结果和进行中的禁用、选角，选手留在房间里，设置不变。 */
-function initRound() {
-  if (busy || banRevealing || draftResuming || hostBans?.stage === 'finishing' || hostDraft?.stage === 'finishing') return;
+async function initRound() {
+  if (initializing || busy || banRevealing || draftResuming || hostBans?.stage === 'finishing' || hostDraft?.stage === 'finishing') return;
   // 这会撤下所有人看到的结果，点两次才生效
   if (!initArmed) {
     $('#btn-init').textContent = t('再点一次确认');
@@ -1182,19 +1184,29 @@ function initRound() {
     return;
   }
   disarmInit();
-  if (hostBans) abortHostBans();
-  if (hostDraft) abortHostDraft();
-  match = null;
-  liveShown = null;
-  roundBans = { survivor: [], hunter: [] };
-  roundBanRound = null;
-  banUI.clear();
-  clearDraftResult();
-  seatTabs.reset();
-  slots.forEach((s) => { closeCard(s); setPanelPending(s); resetTrait(s); });
-  syncLive('idle');
+  initializing = true;
   syncButtons();
-  toast(t('已初始化'));
+  try {
+    if (live.room) await live.initialize();
+    if (hostBans) abortHostBans();
+    if (hostDraft) abortHostDraft();
+    match = null;
+    liveShown = null;
+    roundBans = { survivor: [], hunter: [] };
+    roundBanRound = null;
+    banUI.clear();
+    clearDraftResult();
+    seatTabs.reset();
+    slots.forEach((s) => { closeCard(s); setPanelPending(s); resetTrait(s); });
+    livePhase = 'idle';
+    liveSuppressed = false;
+    toast(t('已初始化'));
+  } catch {
+    toast(t('初始化未确认，请重试。'));
+  } finally {
+    initializing = false;
+    syncButtons();
+  }
 }
 
 /* ------------------------------------------------------------------ 高级玩法：设置 */
@@ -2004,7 +2016,7 @@ function liveSnapshot(phase) {
 
 function syncLive(phase) {
   livePhase = phase;
-  if (hostDraft || hostBans) return; // 选角和禁用期间的同步走各自的接口，这里发布会结束这一轮
+  if (initializing || hostDraft || hostBans) return; // 选角和禁用期间的同步走各自的接口，这里发布会结束这一轮
   if (live.room && !liveSuppressed) live.push(liveSnapshot(phase));
 }
 
@@ -2263,7 +2275,7 @@ function bindLive() {
     syncLiveUI();
   });
   $('#live-reset').addEventListener('click', async (e) => {
-    if (busy || hostDraft) { toast(t('抽取进行中，结束后才能重置房间。')); return; }
+    if (initializing || busy || hostDraft || hostBans || banRevealing || draftResuming) { toast(t('抽取进行中，结束后才能重置房间。')); return; }
     if (!liveResetTimer) {
       e.currentTarget.textContent = t('再点一次确认');
       e.currentTarget.classList.add('is-armed');
@@ -2310,9 +2322,9 @@ function syncButtons() {
   const draw = $('#btn-draw');
   const picking = hostDraft?.stage === 'picking';
   const banning = hostBans?.stage === 'open';
-  const inDraft = Boolean(hostDraft) || Boolean(hostBans) || banRevealing || draftResuming;
-  $('#btn-init').disabled = busy || banRevealing || draftResuming || hostBans?.stage === 'finishing' || hostDraft?.stage === 'finishing';
-  draw.disabled = !data.trees.survivor || (inDraft && !picking && !banning);
+  const inDraft = Boolean(hostDraft) || Boolean(hostBans) || banRevealing || draftResuming || initializing;
+  $('#btn-init').disabled = initializing || busy || banRevealing || draftResuming || hostBans?.stage === 'finishing' || hostDraft?.stage === 'finishing';
+  draw.disabled = initializing || !data.trees.survivor || (inDraft && !picking && !banning);
   const idleLabel = bansEnabled(settings.draft) ? '开始禁用' : draftEnabled(settings.draft) ? '发放候选' : (match ? '再抽一局' : '抽取结果');
   draw.textContent = t(banning ? '结束禁用' : picking ? (hostDraft.finishFailed ? '重试结束选角' : '结束选角') : busy ? '跳过动画' : idleLabel);
   draw.classList.toggle('is-skip', busy);
@@ -2320,6 +2332,7 @@ function syncButtons() {
   $('#btn-draft-redeal').hidden = !picking;
   $('#btn-advanced').disabled = busy || inDraft;
   $('#live-create').disabled = inDraft;
+  $('#live-reset').disabled = busy || inDraft;
   $('#btn-copy').disabled = !match || busy;
   $('#btn-copy-brief').disabled = !match || busy;
   $('#btn-pool').disabled = busy || inDraft;

@@ -147,6 +147,23 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
       context.visibilityQueue = saving;
       return saving;
     },
+    /** 撤下结果和进行中的流程，保留名额；调用方等待服务端确认后再清理本地。 */
+    async initialize() {
+      const context = current;
+      if (!context) throw new Error('room-lost');
+      context.resetting = true;
+      context.pending = null;
+      clearTimeout(context.retryTimer);
+      context.seq = Math.max(context.seq + 1, Date.now());
+      try {
+        const result = await call(context, 'PUT', '/state', { seq: context.seq, state: { round: 0, phase: 'idle', slots: [] } });
+        if (result.stale) throw new Error('state-changed');
+        return result;
+      } finally {
+        context.resetting = false;
+        if (active(context)) flush(context);
+      }
+    },
     /** 发放候选。旧状态序号更小，还在路上也不会盖掉这一轮。 */
     startDraft(draft, seconds, banRound = null) {
       const context = current;

@@ -2,6 +2,7 @@
 import { applyPortraitView, asset, el } from './shared-ui.js';
 import { charName, joinList, t } from './i18n.js';
 import { sfx } from './sound.js';
+import { banStep } from './live-visibility.js';
 
 const URGENT_SECONDS = 10;
 const CLOCK_MS = 250;
@@ -55,6 +56,7 @@ export function banModel(bans, { view = 'spectator', host = false, myPosition = 
     const canAct = host || (view === side && (side !== 'survivor' || myPosition !== null));
     return {
       side,
+      step: banStep(bans, side),
       groups,
       hasCurrent: Boolean(current),
       quota: current?.quota ?? 0,
@@ -129,7 +131,7 @@ export function createBanUI({ table, lookup, onPick, onConfirm, motion = () => t
     button.addEventListener('click', () => {
       const column = model?.columns.find((other) => other.side === side);
       const group = column?.groups.find((other) => other.kind === kind);
-      if (column?.actionable && !group.picks.includes(id) && !group.taken.includes(id)) onPick(side, id);
+      if (column?.actionable && !group.picks.includes(id) && !group.taken.includes(id)) onPick(side, id, button.dataset.step);
     });
     return button;
   }
@@ -156,7 +158,7 @@ export function createBanUI({ table, lookup, onPick, onConfirm, motion = () => t
     }
     const confirm = el('button', 'btn btn-quiet ban-confirm');
     confirm.type = 'button';
-    confirm.addEventListener('click', () => onConfirm(column.side));
+    confirm.addEventListener('click', () => onConfirm(column.side, confirm.dataset.step));
     box.append(confirm);
     grid.append(box);
     parts.set(column.side, { count, chip, groups, confirm });
@@ -184,12 +186,14 @@ export function createBanUI({ table, lookup, onPick, onConfirm, motion = () => t
       for (const [id, node] of view.tiles) {
         const banned = group.picks.includes(id) || group.taken.includes(id);
         const pending = group.pending.includes(id);
+        node.dataset.step = column.step;
         node.disabled = !column.actionable || !group.current || banned;
         node.classList.toggle('is-banned', banned);
         node.classList.toggle('is-pending', pending);
         node.setAttribute('aria-pressed', String(banned || pending));
       }
     }
+    part.confirm.dataset.step = column.step;
     part.confirm.hidden = !column.canAct || column.done || !column.hasCurrent;
     part.confirm.disabled = !column.actionable;
     const room = model.turn ? 1 : column.quota - column.used;

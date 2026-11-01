@@ -1,5 +1,7 @@
 // 界面文字译文，键是中文原文。游戏术语要和 i18n-terms.js、i18n-sources.md 保持一致。
 const en = {
+  '禁用环节已更新，请按当前页面重新操作。': 'The ban step has changed. Please use the current options.',
+  '初始化未确认，请重试。': 'Could not confirm initialization. Please retry.',
   '操作时限': 'Time limit',
   '超时操作': 'On timeout',
   '选择阶段': 'Selection phase',
@@ -392,6 +394,8 @@ const en = {
 };
 
 const ja = {
+  '禁用环节已更新，请按当前页面重新操作。': 'BAN の段階が更新されました。現在の画面で再度操作してください。',
+  '初始化未确认，请重试。': '初期化を確認できませんでした。再試行してください。',
   '操作时限': '操作の制限時間',
   '超时操作': '時間切れ時の操作',
   '选择阶段': '選択フェーズ',

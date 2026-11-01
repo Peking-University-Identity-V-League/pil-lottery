@@ -6,7 +6,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { openWorkerRoomStore, PERMANENT_SEAT_EXPIRY } from './room-store.mjs';
 import { createSseWriter } from './sse-writer.mjs';
 import {
-  DEFAULT_VISIBILITY, LIVE_VIEWS, applyDraftPick, bansComplete, bansOpen, closeBans, confirmBans, draftOpen, extendBans, normalizeBans, timeoutBans, toggleBan, emptyState, normalizeDraft, normalizeState, normalizeVisibility, project,
+  DEFAULT_VISIBILITY, LIVE_VIEWS, applyDraftPick, banStep, bansComplete, bansOpen, closeBans, confirmBans, draftOpen, extendBans, normalizeBans, timeoutBans, toggleBan, emptyState, normalizeDraft, normalizeState, normalizeVisibility, project,
 } from '../js/live-visibility.js';
 
 export const API_PREFIX = '/lottery/live-api';
@@ -810,6 +810,7 @@ export function createLiveServer({
       const bans = room.state.bans;
       if (!bans || bans.round !== body.round) return reply(res, 409, { error: 'no-bans' });
       if (['pick', 'confirm'].includes(action) && !['survivor', 'hunter'].includes(body.side)) return reply(res, 400, { error: 'invalid-side' });
+      if (['pick', 'confirm'].includes(action) && body.step !== banStep(bans, body.side)) return reply(res, 409, { error: 'ban-step-changed' });
       let next;
       try {
         if (action === 'pick') next = toggleBan(bans, body.side, body.char);
@@ -853,6 +854,7 @@ export function createLiveServer({
         const own = room.seats[hash].position;
         if (!SURVIVOR_POSITIONS.includes(own) || positionHolder(room, own) !== hash) return reply(res, 403, { error: 'not-your-seat' });
       }
+      if (body.step !== banStep(bans, view)) return reply(res, 409, { error: 'ban-step-changed' });
       let next;
       try {
         next = action === 'pick' ? toggleBan(bans, view, body.char) : confirmBans(bans, view, now());

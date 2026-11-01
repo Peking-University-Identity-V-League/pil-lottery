@@ -278,6 +278,8 @@ export function normalizeBans(raw) {
 
 const stageKindOf = (bans, side) => banStageKind(side, bans.stage);
 const banUsed = (bans, side, kind) => bans.picks[side][kind].length + bans.passed[side][kind];
+/** 绑定这一方当前环节和已完成的手数，跨阶段或跨手的旧请求不能再生效。 */
+export const banStep = (bans, side) => `${bans.stage}:${banUsed(bans, side, stageKindOf(bans, side))}`;
 /** 这一方现在总共还能选几张：轮流禁用时每手一张。 */
 function banRoom(bans, side) {
   const kind = stageKindOf(bans, side);

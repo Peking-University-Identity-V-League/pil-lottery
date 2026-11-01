@@ -263,3 +263,30 @@ test('the request deadline includes a response body that stalls after successful
   const live=createLiveHost({requestTimeoutMs:10});
   await assert.rejects(live.create(),error=>error.name==='TimeoutError');assert.equal(live.room,null);
 });
+
+
+test('initialization waits for acknowledgement and discards an older queued result', async t => {
+  const { live, writes } = setup(t);await live.create();
+  const visibility = live.setVisibility({ ...live.room.visibility, hunterSeesChar: 'hide' });await tick();
+  live.push({ round: 99, phase: 'done', slots: [] });
+  const original = globalThis.fetch, sent = [];let acknowledge;
+  t.mock.method(globalThis, 'fetch', (url, options) => {
+    if (url.endsWith('/state')) { sent.push(JSON.parse(options.body));return new Promise(resolve => { acknowledge = () => resolve({ ok: true, status: 200, json: async () => ({}) }); }); }
+    return original(url, options);
+  });
+  let confirmed = false;const pending = live.initialize().then(() => { confirmed = true; });await tick();
+  assert.equal(confirmed, false);assert.equal(sent.length, 1);assert.deepEqual(sent[0].state, { round: 0, phase: 'idle', slots: [] });
+  acknowledge();await pending;assert.equal(confirmed, true);
+  writes[0].finish(200);await visibility;await tick();assert.equal(sent.length, 1);
+});
+
+test('initialization rejects failures and stale acknowledgements, then permits retry', async t => {
+  const { live } = setup(t);await live.create();const original = globalThis.fetch;let attempt = 0;
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (!url.endsWith('/state')) return original(url, options);
+    attempt++;return { ok: attempt !== 1, status: attempt === 1 ? 503 : 200, json: async () => attempt === 2 ? { stale: true } : {} };
+  });
+  await assert.rejects(live.initialize(), /HTTP 503/);
+  await assert.rejects(live.initialize(), /state-changed/);
+  await live.initialize();assert.equal(attempt, 3);
+});

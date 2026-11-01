@@ -3,7 +3,7 @@ import { after, before, test } from 'node:test';
 import { DRAFT_DEFAULTS, banNeeds, bansEnabled, dealDraft, draftEnabled, draftNeeds, normalizeDraftSettings } from '../js/rules.js';
 import { banModel } from '../js/ban-ui.js';
 import {
-  ALL_HIDDEN, ALL_VISIBLE, applyDraftPick, bannedChars, bansComplete, bansOpen, closeBans, confirmBans, draftComplete, emptyState, extendBans, normalizeBans, normalizeDraft, normalizeState, project, timeoutBans, toggleBan,
+  ALL_HIDDEN, ALL_VISIBLE, applyDraftPick, banStep, bannedChars, bansComplete, bansOpen, closeBans, confirmBans, draftComplete, emptyState, extendBans, normalizeBans, normalizeDraft, normalizeState, project, timeoutBans, toggleBan,
 } from '../js/live-visibility.js';
 import { createLiveServer } from '../server/live-server.mjs';
 
@@ -401,7 +401,10 @@ test('房间禁用流程：按环节操作，时间到由裁判触发，结束�
   assert.equal(started.status, 200);
   const { bans: fresh } = await started.json();
   assert.deepEqual([fresh.picks.survivor.hunter, fresh.closed, fresh.stage], [[], false, 'own']); // 客户端不能预填结果
-  const act = (action, session, extra) => send(`${room}/bans/${action}`, 'POST', { session, round: 7, ...extra });
+  const act = async (action, session, extra) => {
+    const current = (await (await send(`${room}/draft`, 'GET', null, hostToken)).json()).bans;
+    return send(`${room}/bans/${action}`, 'POST', { session, round: 7, step: banStep(current, session === hunter ? 'hunter' : 'survivor'), ...extra });
+  };
   assert.equal((await act('pick', watcher, { char: 's0' })).status, 403);
   assert.equal((await act('pick', survivor, { char: 'h0' })).status, 400); // 还不能禁对方
   assert.equal((await act('pick', survivor, { char: 's0' })).status, 200);
@@ -429,7 +432,7 @@ test('房间倒计时结束：选中的自动锁定，未到时间不处理', as
   const survivor = (await (await send(`${room}/join`, 'POST', { view: 'survivor' })).json()).session;
   const res = await send(`${room}/bans`, 'PUT', { seq: 10, bans: banBody({ seconds: 1, quota: banQuota(1, 1, 0, 0) }) }, hostToken);
   assert.equal(res.status, 200);
-  assert.equal((await send(`${room}/bans/pick`, 'POST', { session: survivor, round: 7, char: 's2' })).status, 200);
+  assert.equal((await send(`${room}/bans/pick`, 'POST', { session: survivor, round: 7, step: 'own:0', char: 's2' })).status, 200);
   const early = await (await send(`${room}/bans/timeout`, 'POST', { round: 7 }, hostToken)).json();
   assert.deepEqual(early.bans.picks.survivor.survivor, []);
   clock += 1100;
@@ -455,4 +458,36 @@ test('选手只看到自己这一方和当前环节；裁判和观众看双方',
   assert.equal(enemyStage.columns[0].groups[1].ids.length, 4);
   const shown = banModel(projected(closeBans(bans, 0), 'hunter'), { view: 'hunter' });
   assert.deepEqual(shown.allColumns[0].groups[0].picks, ['s0']); // 揭晓时双方都能拿到结果
+});
+
+
+test('同阶段的并发确认只生效一次，不会消耗下一阶段的禁用次数', async () => {
+  const { roomId, hostToken } = await (await send('', 'POST')).json();const room = `/${roomId}`;
+  const body = banBody({ quota: banQuota(1, 1, 0, 0) });
+  await send(`${room}/bans`, 'PUT', { seq: 10, bans: body }, hostToken);
+  const session = (await (await send(`${room}/join`, 'POST', { view: 'survivor' })).json()).session;
+  await send(`${room}/bans/pick`, 'POST', { session, round: 7, step: 'own:0', char: 's0' });
+  const responses = await Promise.all([1, 2].map(() => send(`${room}/bans/confirm`, 'POST', { session, round: 7, step: 'own:0' })));
+  assert.deepEqual(responses.map(res => res.status).sort(), [200, 409]);
+  assert.equal((await responses.find(res => res.status === 409).json()).error, 'ban-step-changed');
+  const current = (await (await send(`${room}/draft`, 'GET', null, hostToken)).json()).bans;
+  assert.equal(current.stage, 'enemy');assert.equal(current.passed.survivor.hunter, 0);assert.equal(bansComplete(current), false);
+  assert.equal((await send(`${room}/bans/confirm`, 'POST', { session, round: 7, step: banStep(current, 'survivor') })).status, 200);
+});
+
+test('轮流禁用每手都校验标识，裁判和选手的旧请求及无标识请求均拒绝', async () => {
+  const { roomId, hostToken } = await (await send('', 'POST')).json();const room = `/${roomId}`;
+  await send(`${room}/bans`, 'PUT', { seq: 10, bans: banBody({ order: 'survivor', quota: banQuota(2, 0, 0, 0) }) }, hostToken);
+  const session = (await (await send(`${room}/join`, 'POST', { view: 'survivor' })).json()).session;
+  assert.equal((await send(`${room}/bans/host-confirm`, 'POST', { round: 7, side: 'survivor', step: 'own:0' }, hostToken)).status, 200);
+  for (const [path, body, token] of [
+    ['host-confirm', { side: 'survivor', step: 'own:0' }, hostToken],
+    ['host-pick', { side: 'survivor', step: 'own:0', char: 's0' }, hostToken],
+    ['confirm', { session, step: 'own:0' }],
+    ['pick', { session, step: 'own:0', char: 's0' }],
+    ['confirm', { session }],
+  ]) assert.equal((await send(`${room}/bans/${path}`, 'POST', { round: 7, ...body }, token)).status, 409);
+  const current = (await (await send(`${room}/draft`, 'GET', null, hostToken)).json()).bans;
+  assert.equal(current.passed.survivor.survivor, 1);assert.equal(banStep(normalizeBans(current), 'survivor'), 'own:1');
+  assert.equal((await send(`${room}/bans/host-pick`, 'POST', { round: 7, side: 'survivor', step: 'own:1', char: 's0' }, hostToken)).status, 200);
 });
