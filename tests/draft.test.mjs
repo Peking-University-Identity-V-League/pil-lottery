@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { DRAFT_DEFAULTS, dealDraft, draftEnabled, draftNeeds, normalizeDraftSettings } from '../js/rules.js';
+import { DRAFT_DEFAULTS, banNeeds, bansEnabled, dealDraft, draftEnabled, draftNeeds, normalizeDraftSettings } from '../js/rules.js';
+import { banModel } from '../js/ban-ui.js';
 import {
-  ALL_HIDDEN, ALL_VISIBLE, applyDraftPick, draftComplete, normalizeDraft, normalizeState, project,
+  ALL_HIDDEN, ALL_VISIBLE, applyDraftPick, bannedChars, bansComplete, bansOpen, closeBans, confirmBans, draftComplete, emptyState, extendBans, normalizeBans, normalizeDraft, normalizeState, project, timeoutBans, toggleBan,
 } from '../js/live-visibility.js';
 import { createLiveServer } from '../server/live-server.mjs';
 
@@ -263,4 +264,195 @@ test('长时间断线后重连仍使用原号位，不能操作其他人的号�
     assert.equal((await send(`${room}/draft/lock`, 'POST', { session: old, round, position: 1, char: 's2' })).status, 403);
     assert.equal((await send(`${room}/draft/lock`, 'POST', { session: other.session, round, position: 1, char: 's2' })).status, 200);
   } finally { await stream.body.cancel(); }
+});
+
+/* ---------------- 禁用阶段 ---------------- */
+
+const banQuota = (ownS = 0, enemyS = 1, ownH = 0, enemyH = 2) => ({ survivor: { survivor: ownS, hunter: enemyS }, hunter: { hunter: ownH, survivor: enemyH } });
+const banBody = (over = {}) => ({
+  round: 7, order: 'simultaneous', onTimeout: 'skip', seconds: null, deadline: null,
+  quota: banQuota(),
+  targets: { survivor: ['s0', 's1', 's2', 's3', 's4', 's5', 's6', 's7'], hunter: ['h0', 'h1', 'h2', 'h3'] },
+  needs: { survivor: 4, hunter: 1 },
+  ...over,
+});
+const banPicks = (survivorSide = [], hunterSide = []) => ({
+  survivor: { survivor: survivorSide.filter((id) => id[0] === 's'), hunter: survivorSide.filter((id) => id[0] === 'h') },
+  hunter: { survivor: hunterSide.filter((id) => id[0] === 's'), hunter: hunterSide.filter((id) => id[0] === 'h') },
+});
+const projected = (bans, view) => project({ ...emptyState(), bans }, view, ALL_VISIBLE).bans;
+
+test('双方的禁用都算上后每个卡池要留够角色，否则拒绝', () => {
+  assert.throws(() => normalizeBans(banBody({ quota: banQuota(0, 2, 2, 0) })), /invalid-bans/);
+  assert.throws(() => normalizeBans(banBody({ quota: banQuota(3, 0, 0, 2) })), /invalid-bans/);
+  assert.throws(() => normalizeBans(banBody({ quota: banQuota(0, 0, 0, 0) })), /invalid-bans/);
+  const settings = normalizeDraftSettings({ survivorSelfBans: 1, survivorBans: 2, hunterSelfBans: 1, hunterBans: 3, banOrder: 'bad', banSeconds: 7, banTimeout: 'random' });
+  assert.deepEqual([settings.banOrder, settings.banSeconds, settings.banTimeout], ['simultaneous', 60, 'random']);
+  assert.deepEqual(banNeeds(settings), { survivor: 8, hunter: 4 });
+  assert.equal(bansEnabled(DRAFT_DEFAULTS), false);
+  assert.equal(bansEnabled({ ...DRAFT_DEFAULTS, hunterSelfBans: 1 }), true);
+});
+
+test('先禁己方再禁对方，各环节单独计时', () => {
+  let bans = normalizeBans(banBody({ quota: banQuota(2, 1, 1, 1), seconds: 30, deadline: 1000 }));
+  assert.equal(bans.stage, 'own');
+  assert.throws(() => toggleBan(bans, 'survivor', 'h0'), /invalid-char/); // 还没到禁对方的环节
+  bans = toggleBan(toggleBan(bans, 'survivor', 's0'), 'survivor', 's1');
+  assert.throws(() => toggleBan(bans, 'survivor', 's2'), /bans-full/);
+  bans = confirmBans(bans, 'survivor', 2000);
+  assert.deepEqual([bans.stage, bans.deadline], ['own', 1000]); // 对方还没确认，不换环节
+  bans = confirmBans(toggleBan(bans, 'hunter', 'h1'), 'hunter', 5000);
+  assert.deepEqual([bans.stage, bans.deadline, bans.done.survivor, bans.done.hunter], ['enemy', 35000, false, false]);
+  assert.throws(() => toggleBan(bans, 'survivor', 's2'), /invalid-char/);
+  bans = confirmBans(toggleBan(bans, 'survivor', 'h0'), 'survivor', 6000);
+  assert.equal(bansComplete(bans), false);
+  bans = confirmBans(toggleBan(bans, 'hunter', 's3'), 'hunter', 7000);
+  assert.equal(bansComplete(bans), true);
+  assert.deepEqual(bannedChars(bans), { survivor: ['s0', 's1', 's3'], hunter: ['h0', 'h1'] });
+});
+
+test('没设次数的环节直接跳过，一方没有次数时只等另一方', () => {
+  assert.equal(normalizeBans(banBody({ quota: banQuota(0, 1, 0, 1) })).stage, 'enemy');
+  let bans = normalizeBans(banBody({ quota: banQuota(1, 0, 0, 0) }));
+  assert.deepEqual([bans.stage, bans.done.hunter], ['own', true]);
+  bans = confirmBans(toggleBan(bans, 'survivor', 's0'), 'survivor', 0);
+  assert.equal(bansComplete(bans), true); // 没有禁对方的环节
+  const oneSide = normalizeBans(banBody({ order: 'hunter', quota: banQuota(1, 0, 0, 1) }));
+  assert.equal(oneSide.turn, 'survivor'); // 先手这个环节没有次数，由另一方开始
+});
+
+test('同时暗禁：全部结束前敌方看不到内容，选手只看到自己能禁的范围', () => {
+  let bans = normalizeBans(banBody({ quota: banQuota(1, 1, 1, 2) }));
+  assert.deepEqual(Object.keys(normalizeBans(banBody({ quota: banQuota(1, 0, 1, 0) })).targets).length, 2);
+  assert.deepEqual(Object.keys(projected(normalizeBans(banBody({ quota: banQuota(1, 0, 1, 0) })), 'survivor').targets), ['survivor']);
+  bans = toggleBan(bans, 'survivor', 's0');
+  assert.deepEqual(projected(bans, 'hunter').pending.survivor, { survivor: [], hunter: [] });
+  bans = confirmBans(bans, 'survivor', 0);
+  assert.deepEqual(projected(bans, 'hunter').picks.survivor, { survivor: [], hunter: [] });
+  bans = confirmBans(toggleBan(bans, 'hunter', 'h0'), 'hunter', 0);
+  assert.equal(bans.stage, 'enemy');
+  assert.deepEqual(projected(bans, 'hunter').picks.survivor, { survivor: [], hunter: [] }); // 换环节也不公开
+  bans = confirmBans(toggleBan(bans, 'survivor', 'h1'), 'survivor', 0);
+  bans = confirmBans(toggleBan(bans, 'hunter', 's1'), 'hunter', 0); // 只用了一次，另一次作废
+  assert.equal(bans.passed.hunter.survivor, 1);
+  assert.equal(bansComplete(bans), true);
+  assert.deepEqual(projected(bans, 'hunter').picks.survivor, { survivor: ['s0'], hunter: ['h1'] });
+});
+
+test('轮流禁用：每个环节按回合交替，已公开的角色不能再禁，每手重新计时', () => {
+  let bans = normalizeBans(banBody({ order: 'hunter', seconds: 30, deadline: 1000, quota: banQuota(1, 1, 1, 1) }));
+  assert.deepEqual([bans.stage, bans.turn], ['own', 'hunter']);
+  assert.throws(() => toggleBan(bans, 'survivor', 's0'), /not-your-turn/);
+  bans = toggleBan(bans, 'hunter', 'h0');
+  bans = toggleBan(bans, 'hunter', 'h1'); // 每手一张，再点就是换选
+  assert.deepEqual(bans.pending.hunter.hunter, ['h1']);
+  bans = confirmBans(bans, 'hunter', 5000);
+  assert.deepEqual([bans.turn, bans.deadline], ['survivor', 35000]);
+  assert.deepEqual(projected(bans, 'survivor').picks.hunter.hunter, ['h1']);
+  bans = confirmBans(bans, 'survivor', 6000); // 放弃这一手
+  assert.deepEqual([bans.passed.survivor.survivor, bans.stage, bans.turn, bans.deadline], [1, 'enemy', 'hunter', 36000]);
+  bans = confirmBans(toggleBan(bans, 'hunter', 's2'), 'hunter', 7000);
+  assert.throws(() => toggleBan(bans, 'survivor', 'h1'), /invalid-char/); // 对方已经公开禁用
+  assert.throws(() => toggleBan(bans, 'hunter', 's3'), /already-locked|not-your-turn/);
+  bans = confirmBans(toggleBan(bans, 'survivor', 'h0'), 'survivor', 8000);
+  assert.equal(bansComplete(bans), true);
+  assert.equal(bans.turn, null);
+});
+
+test('时间到：已选中的自动锁定，其余次数按设置处理', () => {
+  const rng = () => 0;
+  const selected = (onTimeout) => toggleBan(normalizeBans(banBody({ onTimeout, seconds: 30, deadline: 1000, quota: banQuota(2, 1, 0, 0) })), 'survivor', 's3');
+  const skipped = timeoutBans(selected('skip'), 2000, rng);
+  assert.deepEqual([skipped.picks.survivor.survivor, skipped.passed.survivor.survivor, skipped.stage, skipped.deadline], [['s3'], 1, 'enemy', 32000]);
+  const random = timeoutBans(selected('random'), 2000, rng);
+  assert.equal(random.picks.survivor.survivor.length, 2);
+  assert.ok(random.picks.survivor.survivor.includes('s3'));
+  assert.equal(new Set(random.picks.survivor.survivor).size, 2);
+  const waiting = timeoutBans(selected('wait'), 2000, rng);
+  assert.deepEqual([waiting.picks.survivor.survivor, waiting.pending.survivor.survivor, waiting.stage, waiting.expired, waiting.deadline], [['s3'], [], 'own', true, null]);
+  assert.equal(bansOpen(waiting, 2000), false); // 选手不能再操作
+  const resumed = extendBans(waiting, 30, 3000);
+  assert.deepEqual([resumed.expired, resumed.deadline, bansOpen(resumed, 3000)], [false, 33000, true]);
+  // 选满时等裁判也不用等，直接进入下一环节
+  const full = toggleBan(selected('wait'), 'survivor', 's4');
+  const moved = timeoutBans(full, 2000, rng);
+  assert.deepEqual([moved.stage, moved.expired, moved.picks.survivor.survivor], ['enemy', false, ['s3', 's4']]);
+  const turn = timeoutBans(normalizeBans(banBody({ order: 'survivor', quota: banQuota(0, 1, 0, 1) })), 0, rng);
+  assert.deepEqual([turn.done.survivor, turn.turn, turn.passed.survivor.hunter], [true, 'hunter', 1]);
+});
+
+test('结束禁用：已选的算数，还没开始的环节不再进行，保存后能读回来', () => {
+  const closed = closeBans(toggleBan(normalizeBans(banBody({ quota: banQuota(1, 1, 1, 1) })), 'survivor', 's1'), 0);
+  assert.equal(closed.closed, true);
+  assert.deepEqual(closed.picks, banPicks(['s1']));
+  assert.deepEqual(normalizeBans(closed), closed);
+  assert.equal(normalizeState({ ...emptyState(), bans: closed }).bans.closed, true);
+});
+
+test('房间禁用流程：按环节操作，时间到由裁判触发，结束后跟到下一步', async () => {
+  const { roomId, hostToken } = await (await send('', 'POST')).json();
+  const room = `/${roomId}`;
+  const join = async (view) => (await (await send(`${room}/join`, 'POST', { view })).json()).session;
+  const [survivor, hunter, watcher] = [await join('survivor'), await join('hunter'), await join('spectator')];
+  const body = banBody({ quota: banQuota(1, 1, 1, 1) });
+  assert.equal((await send(`${room}/bans`, 'PUT', { seq: 10, bans: body })).status, 403);
+  assert.equal((await send(`${room}/bans`, 'PUT', { seq: 10, bans: banBody({ quota: banQuota(0, 9, 0, 0) }) }, hostToken)).status, 400);
+  const started = await send(`${room}/bans`, 'PUT', { seq: 10, bans: { ...body, picks: banPicks(['h0']), stage: 'enemy', closed: true } }, hostToken);
+  assert.equal(started.status, 200);
+  const { bans: fresh } = await started.json();
+  assert.deepEqual([fresh.picks.survivor.hunter, fresh.closed, fresh.stage], [[], false, 'own']); // 客户端不能预填结果
+  const act = (action, session, extra) => send(`${room}/bans/${action}`, 'POST', { session, round: 7, ...extra });
+  assert.equal((await act('pick', watcher, { char: 's0' })).status, 403);
+  assert.equal((await act('pick', survivor, { char: 'h0' })).status, 400); // 还不能禁对方
+  assert.equal((await act('pick', survivor, { char: 's0' })).status, 200);
+  assert.equal((await act('confirm', survivor, {})).status, 200);
+  assert.equal((await act('pick', survivor, { char: 's1' })).status, 409);
+  assert.equal((await act('pick', hunter, { char: 'h2' })).status, 200);
+  assert.equal((await act('confirm', hunter, {})).status, 200);
+  assert.equal((await act('pick', survivor, { char: 'h0' })).status, 200); // 进入禁对方的环节
+  const host = (action, extra) => send(`${room}/bans/${action}`, 'POST', { round: 7, ...extra }, hostToken);
+  assert.equal((await (await host('timeout', {})).json()).bans.closed, false); // 不限时，不会被提前结束
+  const closed = await (await host('close', {})).json();
+  assert.equal(closed.bans.closed, true);
+  assert.deepEqual(closed.bans.picks, banPicks(['s0', 'h0'], ['h2']));
+  assert.equal((await act('pick', hunter, { char: 's1' })).status, 409);
+  const state = (seq, banRound) => send(`${room}/state`, 'PUT', { seq, state: { round: 8, phase: 'idle', slots: [], ...(banRound ? { banRound } : {}) } }, hostToken);
+  assert.equal((await state(20, 7)).status, 200);
+  assert.equal((await (await send(`${room}/draft`, 'GET', undefined, hostToken)).json()).bans?.round, 7);
+  assert.equal((await state(21)).status, 200);
+  assert.equal((await (await send(`${room}/draft`, 'GET', undefined, hostToken)).json()).bans, null);
+});
+
+test('房间倒计时结束：选中的自动锁定，未到时间不处理', async () => {
+  const { roomId, hostToken } = await (await send('', 'POST')).json();
+  const room = `/${roomId}`;
+  const survivor = (await (await send(`${room}/join`, 'POST', { view: 'survivor' })).json()).session;
+  const res = await send(`${room}/bans`, 'PUT', { seq: 10, bans: banBody({ seconds: 1, quota: banQuota(1, 1, 0, 0) }) }, hostToken);
+  assert.equal(res.status, 200);
+  assert.equal((await send(`${room}/bans/pick`, 'POST', { session: survivor, round: 7, char: 's2' })).status, 200);
+  const early = await (await send(`${room}/bans/timeout`, 'POST', { round: 7 }, hostToken)).json();
+  assert.deepEqual(early.bans.picks.survivor.survivor, []);
+  clock += 1100;
+  const late = await (await send(`${room}/bans/timeout`, 'POST', { round: 7 }, hostToken)).json();
+  assert.deepEqual([late.bans.picks.survivor.survivor, late.bans.stage], [['s2'], 'enemy']);
+  assert.equal(late.bans.deadline, clock + 1000);
+});
+
+test('选手只看到自己这一方和当前环节；裁判和观众看双方', () => {
+  let bans = normalizeBans(banBody({ quota: banQuota(1, 1, 1, 1) }));
+  const kinds = (model) => model.columns.map((column) => [column.side, column.groups.map((group) => group.kind)]);
+  assert.deepEqual(kinds(banModel(projected(bans, 'survivor'), { view: 'survivor', myPosition: 0 })), [['survivor', ['survivor']]]);
+  assert.deepEqual(kinds(banModel(bans, { host: true })), [['survivor', ['survivor']], ['hunter', ['hunter']]]);
+  assert.equal(banModel(projected(bans, 'spectator')).columns.length, 2);
+  bans = confirmBans(toggleBan(bans, 'survivor', 's0'), 'survivor', 0);
+  const waiting = banModel(projected(bans, 'survivor'), { view: 'survivor', myPosition: 0 });
+  assert.deepEqual(waiting.columns[0].groups[0].ids, ['s0']);
+  assert.equal(waiting.mine.canPick, false);
+  bans = confirmBans(bans, 'hunter', 0);
+  const enemyStage = banModel(projected(bans, 'survivor'), { view: 'survivor', myPosition: 0 });
+  assert.deepEqual(enemyStage.columns[0].groups.map((group) => [group.kind, group.current]), [['survivor', false], ['hunter', true]]);
+  assert.equal(enemyStage.mine.canPick, true);
+  assert.equal(enemyStage.columns[0].groups[1].ids.length, 4);
+  const shown = banModel(projected(closeBans(bans, 0), 'hunter'), { view: 'hunter' });
+  assert.deepEqual(shown.allColumns[0].groups[0].picks, ['s0']); // 揭晓时双方都能拿到结果
 });

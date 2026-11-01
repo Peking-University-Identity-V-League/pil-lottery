@@ -9,6 +9,7 @@ import {
   applyPortraitView, asset, cleanDescription, despairItem, el, renderWeb, showTreeDialog, talentItems,
 } from './shared-ui.js';
 import { createSeatTabs } from './seat-tabs.js';
+import { banModel, createBanUI } from './ban-ui.js';
 import { createDraftUI, draftModel, setLeftoverLine, setRejectedLine } from './draft-ui.js';
 import { applyI18n, bindLanguageSelect, charName, roleName, t, talentName, traitName } from './i18n.js';
 
@@ -39,6 +40,8 @@ let instantFrame = 0;
 let shuffleRun = 0;
 const shuffleAnimations = new Set();
 let draftUI = null;
+let banUI = null;
+let revealedBans = null;
 let seatTabs = null;
 let myPosition = null;
 const DRAFT_ERRORS = {
@@ -71,6 +74,32 @@ async function draftRequest(action, body) {
     if (res.ok) return;
     const { error } = await res.json().catch(() => ({}));
     toast(t(DRAFT_ERRORS[error] || '操作没有成功，请重试。'));
+  } catch {
+    toast(t('操作没有成功，请重试。'));
+  }
+}
+
+const BAN_ERRORS = {
+  'already-locked': '这一方已经确认了。',
+  'bans-closed': '禁用已结束。',
+  'bans-full': '已经选满了，先取消一个。',
+  'no-bans': '禁用已结束。',
+  'not-your-seat': '这个座位不归你操作。',
+  'not-your-turn': '还没轮到这一方。',
+};
+
+async function banRequest(action, body) {
+  if (!connection || !latestState?.bans) return;
+  sfx.unlock();
+  try {
+    const res = await fetch(`${API}/${entry.room}/bans/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session: connection.session, round: latestState.bans.round, ...body }),
+    });
+    if (res.ok) return;
+    const { error } = await res.json().catch(() => ({}));
+    toast(t(BAN_ERRORS[error] || '操作没有成功，请重试。'));
   } catch {
     toast(t('操作没有成功，请重试。'));
   }
@@ -223,6 +252,13 @@ function buildTable() {
     },
     motion: () => !document.hidden && !reduceMotion.matches,
   });
+  banUI = createBanUI({
+    table: $('#table'),
+    lookup: (side, id) => (side === 'survivor' ? data.survivors : data.hunters).get(id),
+    onPick: (side, char) => banRequest('pick', { char }),
+    onConfirm: () => banRequest('confirm', {}),
+    motion: () => !reduceMotion.matches,
+  });
   seatTabs = createSeatTabs({ slots, table: $('#table'), defaultSeat: mySeat });
 }
 
@@ -244,6 +280,18 @@ function syncDraft(state, animate, before) {
   const model = draftModel(state.draft, { view: state.view, myPosition, claimed: state.draft.claimed });
   $('#live-phase').textContent = t('选手正在选角');
   draftUI.show(model, { animate, before });
+}
+
+function syncBans(state) {
+  const model = state.bans ? banModel(state.bans, { view: state.view, myPosition }) : null;
+  // 下一步已经开始时不留遮罩；中途进入或切回页面时不补播，直接看结果行
+  if (!state.bans || state.round !== state.bans.round) banUI.endReveal();
+  banUI.show(model);
+  if (state.bans && !state.bans.closed) $('#live-phase').textContent = t('选手正在禁用');
+  if (state.bans?.closed && revealedBans !== state.bans.round) {
+    revealedBans = state.bans.round;
+    if (!firstState && !document.hidden && state.round === state.bans.round) banUI.reveal(model);
+  }
 }
 
 /** 揭晓后显示己方没选的候选。 */
@@ -547,6 +595,7 @@ function applyState(state) {
     else { stopTraitRoll(hunter); hunter.traitName.textContent = t('抽取中'); }
   } else stopTraitRoll(hunter);
   syncDraft(state, animate, dealBefore);
+  syncBans(state);
   syncRejected(state);
   seatTabs.syncDefault();
   if (state.phase === 'done' && (previousPhase !== 'done' || restart)) seatTabs.settle();
@@ -701,6 +750,7 @@ function leaveRoom(message, { kept = false } = {}) {
   if (!kept) playerSessions.forget(entry.room, leavingSession);
   stopLiveMotion();
   draftUI?.clear();
+  banUI?.clear();
   myPosition = null;
   latestState = null;
   shownRound = null;
@@ -948,7 +998,12 @@ function connect(url, checkUrl) {
     applyState(JSON.parse(e.data));
   });
   source.addEventListener('ping', () => { if (isCurrent()) markAlive(); });
-  source.addEventListener('clock', (e) => { if (isCurrent()) draftUI.setClockOffset(JSON.parse(e.data).now - Date.now()); });
+  source.addEventListener('clock', (e) => {
+    if (!isCurrent()) return;
+    const offset = JSON.parse(e.data).now - Date.now();
+    draftUI.setClockOffset(offset);
+    banUI.setClockOffset(offset);
+  });
   source.addEventListener('position', (e) => {
     if (!isCurrent()) return;
     const position = JSON.parse(e.data).position;
@@ -958,6 +1013,7 @@ function connect(url, checkUrl) {
     // 拿到新号位时切到自己，之前点过的标签不再算数；断线重连号位不变，就留在原来看的座位
     if (changed) seatTabs.reset(); else seatTabs.syncDefault();
     if (latestState?.draft) syncDraft(latestState, false, null);
+    if (latestState?.bans) syncBans(latestState);
   });
   source.addEventListener('closed', (e) => {
     if (!isCurrent()) return;

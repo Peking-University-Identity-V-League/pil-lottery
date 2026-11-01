@@ -4,7 +4,7 @@
   const events = new Set([
     'lottery_draw', 'lottery_reroll', 'lottery_copy', 'lottery_tree_open',
     'lottery_pool_open', 'lottery_pool_change', 'lottery_settings_change',
-    'lottery_skip_animation', 'lottery_draft', 'lottery_advanced_open', 'sponsor_afdian_open',
+    'lottery_skip_animation', 'lottery_draft', 'lottery_bans', 'lottery_advanced_open', 'sponsor_afdian_open',
   ]);
   const categories = {
     side: ['survivor', 'hunter', 'trait'],
@@ -12,7 +12,8 @@
     format: ['full', 'brief', 'tree_image'],
     outcome: ['copied', 'downloaded', 'failed'],
     setting: ['survivor_ultimate', 'hunter_ultimate', 'despair', 'draw_trait', 'sound',
-      'draft_survivor', 'draft_survivorCount', 'draft_sharedSize', 'draft_hunter', 'draft_hunterCount', 'draft_seconds', 'draft_onTimeout'],
+      'draft_survivor', 'draft_survivorCount', 'draft_sharedSize', 'draft_hunter', 'draft_hunterCount', 'draft_seconds', 'draft_onTimeout',
+      'draft_survivorSelfBans', 'draft_survivorBans', 'draft_hunterSelfBans', 'draft_hunterBans', 'draft_banOrder', 'draft_banSeconds', 'draft_banTimeout'],
     survivor_ult: ['random', 0, 1, 2],
     hunter_ult: ['random', 0, 1, 2],
     value: ['random', 0, 1, 2, true, false, 3, 4, 5, 6, 30, 60, 90, 'direct', 'personal', 'shared', 'pick', 'wait'],

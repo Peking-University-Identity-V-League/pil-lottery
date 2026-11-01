@@ -191,10 +191,17 @@ export const DRAFT_DEFAULTS = {
   sharedSize: 6,
   hunter: 'direct', // direct | pick
   hunterCount: 3,
-  seconds: 60, // 0 表示不限时
+  seconds: 30, // 0 表示不限时
   onTimeout: 'random', // random | wait
+  survivorSelfBans: 0, // 求生者方可以禁用的己方角色数；四个数都是 0 时没有禁用阶段
+  survivorBans: 0, // 求生者方可以禁用的监管者数
+  hunterSelfBans: 0, // 监管者方可以禁用的己方角色数
+  hunterBans: 0, // 监管者方可以禁用的求生者数
+  banOrder: 'simultaneous', // simultaneous | survivor | hunter（后两者是轮流禁用时的先手）
+  banSeconds: 60, // 0 表示不限时；轮流禁用时是每一手的时限
+  banTimeout: 'skip', // skip | random | wait
 };
-export const DRAFT_LIMITS = { survivorCount: [2, 6], sharedSize: [4, 36], hunterCount: [2, 12] };
+export const DRAFT_LIMITS = { survivorCount: [2, 6], sharedSize: [4, 36], hunterCount: [2, 12], survivorSelfBans: [0, 12], survivorBans: [0, 12], hunterSelfBans: [0, 12], hunterBans: [0, 12] };
 export const DRAFT_SECONDS = [30, 60, 90, 0];
 
 /** 补齐并修正保存过的设置，无效的值恢复默认。 */
@@ -207,6 +214,9 @@ export function normalizeDraftSettings(raw) {
   }
   if (DRAFT_SECONDS.includes(raw?.seconds)) out.seconds = raw.seconds;
   if (['random', 'wait'].includes(raw?.onTimeout)) out.onTimeout = raw.onTimeout;
+  if (['simultaneous', 'survivor', 'hunter'].includes(raw?.banOrder)) out.banOrder = raw.banOrder;
+  if (DRAFT_SECONDS.includes(raw?.banSeconds)) out.banSeconds = raw.banSeconds;
+  if (['skip', 'random', 'wait'].includes(raw?.banTimeout)) out.banTimeout = raw.banTimeout;
   return out;
 }
 
@@ -218,6 +228,14 @@ export function draftNeeds(draft) {
     survivor: draft.survivor === 'personal' ? draft.survivorCount * 4 : draft.survivor === 'shared' ? draft.sharedSize : 4,
     hunter: draft.hunter === 'pick' ? draft.hunterCount : 1,
   };
+}
+
+export const bansEnabled = (draft) => draft.survivorSelfBans > 0 || draft.survivorBans > 0 || draft.hunterSelfBans > 0 || draft.hunterBans > 0;
+
+/** 算上双方的禁用后，两个卡池至少要有多少个角色。 */
+export function banNeeds(draft) {
+  const needs = draftNeeds(draft);
+  return { survivor: needs.survivor + draft.survivorSelfBans + draft.hunterBans, hunter: needs.hunter + draft.hunterSelfBans + draft.survivorBans };
 }
 
 /** 发候选：各自候选互不重复；直接抽取的一方不发，等全部选定后再抽。 */

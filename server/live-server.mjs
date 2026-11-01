@@ -6,7 +6,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { openWorkerRoomStore, PERMANENT_SEAT_EXPIRY } from './room-store.mjs';
 import { createSseWriter } from './sse-writer.mjs';
 import {
-  DEFAULT_VISIBILITY, LIVE_VIEWS, applyDraftPick, draftOpen, emptyState, normalizeDraft, normalizeState, normalizeVisibility, project,
+  DEFAULT_VISIBILITY, LIVE_VIEWS, applyDraftPick, bansComplete, bansOpen, closeBans, confirmBans, draftOpen, extendBans, normalizeBans, timeoutBans, toggleBan, emptyState, normalizeDraft, normalizeState, normalizeVisibility, project,
 } from '../js/live-visibility.js';
 
 export const API_PREFIX = '/lottery/live-api';
@@ -169,7 +169,7 @@ export function createLiveServer({
     if (text === client.last) return;
     client.last = text;
     // 倒计时用服务器时间，避免各设备时钟不一致
-    if (room.state.draft) client.send('clock', { now: now() });
+    if (room.state.draft || room.state.bans) client.send('clock', { now: now() });
     client.send('state', text, true);
   }
 
@@ -504,7 +504,10 @@ export function createLiveServer({
         }
         // 选手的选择只由选角接口修改；开始新一轮时选角自然结束
         delete state.draft;
+        delete state.bans;
         if (room.state.draft?.round === state.round) state.draft = room.state.draft;
+        const bans = keptBans(room, body.state.banRound);
+        if (bans) state.bans = bans;
         await updateRoom(room, { state, seq: body.seq });
         broadcast(room);
         return reply(res, 200, { viewers: viewers(room) });
@@ -648,7 +651,9 @@ export function createLiveServer({
     if (['invalid-position', 'invalid-char'].includes(error.message)) return reply(res, 400, { error: error.message });
     throw error;
   };
-  const hostDraftView = (room) => ({ draft: room.state.draft || null, claimed: claimedPositions(room), now: now() });
+  const hostDraftView = (room) => ({ draft: room.state.draft || null, bans: room.state.bans || null, round: room.state.round, claimed: claimedPositions(room), now: now() });
+  /** 结束的禁用跟着这一局的后续状态走；裁判不再提到它时，它就不再显示。 */
+  const keptBans = (room, banRound) => (room.state.bans?.closed && room.state.bans.round === banRound ? room.state.bans : null);
 
   /** 裁判发放候选：开始新一轮，旧结果同时撤下。 */
   async function hostStartDraft(req, res, room) {
@@ -673,7 +678,8 @@ export function createLiveServer({
       } catch (error) {
         return reply(res, 400, { error: error.message });
       }
-      await updateRoom(room, { state: { ...emptyState(), round: draft.round, phase: 'drawing', draft }, seq: body.seq });
+      const bans = keptBans(room, body.banRound);
+      await updateRoom(room, { state: { ...emptyState(), round: draft.round, phase: 'drawing', draft, ...(bans ? { bans } : {}) }, seq: body.seq });
       room.claimKey = JSON.stringify(claimedPositions(room));
       broadcast(room);
       return reply(res, 200, hostDraftView(room));
@@ -744,6 +750,120 @@ export function createLiveServer({
     });
   }
 
+  async function saveBans(room, bans) {
+    assertCurrent(room);
+    const state = { ...room.state, bans };
+    await store.put(persistedRoom({ ...room, state }));
+    room.state = state;
+    room.projectionCache.clear();
+    broadcast(room);
+  }
+
+  const BAN_CONFLICTS = new Set(['already-locked', 'bans-closed', 'bans-full', 'not-your-turn']);
+  const banError = (res, error) => {
+    if (BAN_CONFLICTS.has(error.message)) return reply(res, 409, { error: error.message });
+    if (error.message === 'invalid-char') return reply(res, 400, { error: error.message });
+    throw error;
+  };
+
+  /** 裁判开始禁用：开始新一轮，旧结果同时撤下。 */
+  async function hostStartBans(req, res, room) {
+    const generation = room.generation;
+    let body;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      return reply(res, error.message === 'too-large' ? 413 : 400, { error: error.message });
+    }
+    return commit(async () => {
+      if (!isCurrent(room)) return reply(res, 404, { error: 'room-not-found' });
+      if (generation !== room.generation) return reply(res, 409, { error: 'room-changed' });
+      if (!Number.isSafeInteger(body.seq) || body.seq < 0) return reply(res, 400, { error: 'invalid-seq' });
+      if (body.seq <= room.seq) return reply(res, 200, { stale: true });
+      const seconds = body.bans?.seconds ?? null;
+      if (seconds !== null && (!Number.isInteger(seconds) || seconds < 1 || seconds > MAX_DRAFT_SECONDS)) return reply(res, 400, { error: 'invalid-seconds' });
+      let bans;
+      try {
+        const { picks, pending, passed, done, turn, closed, ...fresh } = body.bans || {};
+        bans = normalizeBans({ ...fresh, seconds, deadline: seconds === null ? null : now() + seconds * 1000 });
+      } catch (error) {
+        return reply(res, 400, { error: error.message });
+      }
+      await updateRoom(room, { state: { ...emptyState(), round: bans.round, phase: 'drawing', bans }, seq: body.seq });
+      broadcast(room);
+      return reply(res, 200, hostDraftView(room));
+    });
+  }
+
+  /** 裁判代选、确认、延时、超时处理和结束禁用。 */
+  async function hostBanAction(req, res, room, action) {
+    const generation = room.generation;
+    let body;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      return reply(res, error.message === 'too-large' ? 413 : 400, { error: error.message });
+    }
+    return commit(async () => {
+      if (!isCurrent(room)) return reply(res, 404, { error: 'room-not-found' });
+      if (generation !== room.generation) return reply(res, 409, { error: 'room-changed' });
+      const bans = room.state.bans;
+      if (!bans || bans.round !== body.round) return reply(res, 409, { error: 'no-bans' });
+      if (['pick', 'confirm'].includes(action) && !['survivor', 'hunter'].includes(body.side)) return reply(res, 400, { error: 'invalid-side' });
+      let next;
+      try {
+        if (action === 'pick') next = toggleBan(bans, body.side, body.char);
+        else if (action === 'confirm') next = confirmBans(bans, body.side, now());
+        else if (action === 'extend') {
+          if ((bans.deadline === null && !bans.expired) || !Number.isInteger(body.seconds) || body.seconds < 1 || body.seconds > MAX_DRAFT_SECONDS) return reply(res, 400, { error: 'invalid-seconds' });
+          next = extendBans(bans, body.seconds, now());
+        } else if (action === 'timeout') {
+          // 裁判的时钟可能偏快，以服务器时间为准；已经结束或还没到点时不改动
+          if (bans.closed || bansComplete(bans) || bans.deadline === null || now() < bans.deadline) return reply(res, 200, hostDraftView(room));
+          next = timeoutBans(bans, now(), Math.random);
+        } else {
+          if (bans.closed) return reply(res, 200, hostDraftView(room));
+          next = closeBans(bans, now());
+        }
+      } catch (error) {
+        return banError(res, error);
+      }
+      await saveBans(room, next);
+      return reply(res, 200, hostDraftView(room));
+    });
+  }
+
+  /** 选手禁用：同一方的人共用一份选择，谁都可以改，也都可以确认。 */
+  async function playerBanAction(req, res, room, action) {
+    let body;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      return reply(res, error.message === 'too-large' ? 413 : 400, { error: error.message });
+    }
+    return commit(async () => {
+      if (!isCurrent(room)) return reply(res, 404, { error: 'room-not-found' });
+      const { hash, view, status, error } = sessionStatus(room, body.session);
+      if (error) return reply(res, status, { error });
+      const bans = room.state.bans;
+      if (!bans || bans.round !== body.round) return reply(res, 409, { error: 'no-bans' });
+      if (bans.closed || !bansOpen(bans, now())) return reply(res, 409, { error: 'bans-closed' });
+      if (!holdsSeat(room, hash) || !['survivor', 'hunter'].includes(view)) return reply(res, 403, { error: 'not-your-seat' });
+      if (view === 'survivor') {
+        const own = room.seats[hash].position;
+        if (!SURVIVOR_POSITIONS.includes(own) || positionHolder(room, own) !== hash) return reply(res, 403, { error: 'not-your-seat' });
+      }
+      let next;
+      try {
+        next = action === 'pick' ? toggleBan(bans, view, body.char) : confirmBans(bans, view, now());
+      } catch (err) {
+        return banError(res, err);
+      }
+      await saveBans(room, next);
+      return reply(res, 200, {});
+    });
+  }
+
   const hostAuthorized = (req, room) => sameToken((req.headers.authorization || '').replace(/^Bearer /, ''), room.hostToken);
 
   async function handle(req, res) {
@@ -787,6 +907,7 @@ export function createLiveServer({
     if (req.method === 'POST' && action === 'leave') return leaveRoomSeat(req, res, room);
     if (req.method === 'GET' && action === 'events') return subscribe(req, res, room, session);
     if (req.method === 'POST' && ['draft/pick', 'draft/lock'].includes(action)) return playerDraftAction(req, res, room, action.slice(6));
+    if (req.method === 'POST' && ['bans/pick', 'bans/confirm'].includes(action)) return playerBanAction(req, res, room, action.slice(5));
     if (req.method === 'GET' && action === 'check') {
       const { hash, view, status, error } = sessionStatus(room, session);
       return error ? reply(res, status, { error }) : reply(res, 200, { ok: true, view, connectionError: connectionError(room, hash, view) });
@@ -801,6 +922,8 @@ export function createLiveServer({
     if (req.method === 'PUT' && action === 'draft') return hostStartDraft(req, res, room);
     if (req.method === 'GET' && action === 'draft') return reply(res, 200, hostDraftView(room));
     if (req.method === 'POST' && ['draft/host-pick', 'draft/extend', 'draft/close'].includes(action)) return hostDraftAction(req, res, room, action.slice(6).replace('host-', ''));
+    if (req.method === 'PUT' && action === 'bans') return hostStartBans(req, res, room);
+    if (req.method === 'POST' && ['bans/host-pick', 'bans/host-confirm', 'bans/extend', 'bans/timeout', 'bans/close'].includes(action)) return hostBanAction(req, res, room, action.slice(5).replace('host-', ''));
     if (req.method === 'POST' && action === 'seats/clear') return clearSeats(req, res, room);
     if (req.method === 'POST' && action === 'seats/kick') return kickPosition(req, res, room);
     if (req.method === 'POST' && action === 'reset') return resetRoom(req, res, room);

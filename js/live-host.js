@@ -148,13 +148,28 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
       return saving;
     },
     /** 发放候选。旧状态序号更小，还在路上也不会盖掉这一轮。 */
-    startDraft(draft, seconds) {
+    startDraft(draft, seconds, banRound = null) {
       const context = current;
       if (!context) return Promise.reject(new Error('room-lost'));
       context.pending = null;
       clearTimeout(context.retryTimer);
       context.seq = Math.max(context.seq + 1, Date.now());
-      return call(context, 'PUT', '/draft', { seq: context.seq, draft, seconds });
+      return call(context, 'PUT', '/draft', { seq: context.seq, draft, seconds, banRound });
+    },
+    /** 开始禁用阶段。和发放候选一样，序号前移后旧状态不会盖掉这一轮。 */
+    startBans(bans) {
+      const context = current;
+      if (!context) return Promise.reject(new Error('room-lost'));
+      context.pending = null;
+      clearTimeout(context.retryTimer);
+      context.seq = Math.max(context.seq + 1, Date.now());
+      return call(context, 'PUT', '/bans', { seq: context.seq, bans });
+    },
+    /** action：host-pick、host-confirm 代选，extend 延时，timeout 超时处理，close 结束禁用。 */
+    banAction(action, body) {
+      const context = current;
+      if (!context) return Promise.reject(new Error('room-lost'));
+      return call(context, 'POST', '/bans/' + action, body);
     },
     draftStatus() {
       const context = current;
