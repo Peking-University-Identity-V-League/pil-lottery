@@ -124,11 +124,82 @@ function normalizeTrait(raw) {
   throw new Error('invalid-trait');
 }
 
+const MAX_DRAFT_PERSONAL = 6;
+const MAX_DRAFT_HUNTER = 12;
+const MAX_DRAFT_POOL = 36;
+
+function normalizeIdList(raw, min, max) {
+  if (!Array.isArray(raw) || raw.length < min || raw.length > max || !raw.every(validId) || new Set(raw).size !== raw.length) throw new Error('invalid-draft');
+  return [...raw];
+}
+
+/** 选角数据只保留已知字段；直接抽取的座位一开始就算锁定，它的角色要到揭晓前才抽。 */
+export function normalizeDraft(raw) {
+  if (!raw || !Number.isSafeInteger(raw.round) || raw.round < 0) throw new Error('invalid-draft');
+  const mode = raw.survivor?.mode;
+  const hunterMode = raw.hunter?.mode;
+  if (!['direct', 'personal', 'shared'].includes(mode) || !['direct', 'pick'].includes(hunterMode)) throw new Error('invalid-draft');
+  if (mode === 'direct' && hunterMode === 'direct') throw new Error('invalid-draft');
+  if (raw.deadline !== null && !Number.isSafeInteger(raw.deadline)) throw new Error('invalid-draft');
+  if (!['random', 'wait'].includes(raw.onTimeout)) throw new Error('invalid-draft');
+  const survivor = { mode };
+  if (mode === 'personal') {
+    if (!Array.isArray(raw.survivor.cands) || raw.survivor.cands.length !== 4) throw new Error('invalid-draft');
+    survivor.cands = raw.survivor.cands.map((list) => normalizeIdList(list, 2, MAX_DRAFT_PERSONAL));
+    if (new Set(survivor.cands.flat()).size !== survivor.cands.flat().length) throw new Error('invalid-draft');
+  } else if (mode === 'shared') {
+    survivor.pool = normalizeIdList(raw.survivor.pool, 4, MAX_DRAFT_POOL);
+  }
+  const hunter = { mode: hunterMode };
+  if (hunterMode === 'pick') hunter.cands = normalizeIdList(raw.hunter.cands, 2, MAX_DRAFT_HUNTER);
+  const out = { round: raw.round, survivor, hunter, deadline: raw.deadline, onTimeout: raw.onTimeout, closed: raw.closed === true };
+  const blank = () => [0, 1, 2, 3, 4].map((i) => ({ sel: null, locked: i < 4 ? mode === 'direct' : hunterMode === 'direct' }));
+  if (raw.seats === undefined) { out.seats = blank(); return out; }
+  if (!Array.isArray(raw.seats) || raw.seats.length !== SLOT_COUNT) throw new Error('invalid-draft');
+  out.seats = raw.seats.map((seat, i) => {
+    const allowed = draftCandidates(out, i);
+    if (seat?.sel !== null && !allowed.includes(seat?.sel)) throw new Error('invalid-draft');
+    if (seat.locked && !seat.sel && allowed.length) throw new Error('invalid-draft');
+    return { sel: seat.sel, locked: seat.locked === true };
+  });
+  return out;
+}
+
+/** 这个座位可以选的牌；直接抽取的座位没有。 */
+export function draftCandidates(draft, position) {
+  if (position === 4) return draft.hunter.cands || [];
+  return draft.survivor.pool || draft.survivor.cands?.[position] || [];
+}
+
+/**
+ * 预选、放回或锁定，返回新的选角数据；不合法时抛出带错误码的 Error。
+ * char 为 undefined 表示保持当前预选，null 表示放回。
+ */
+export function applyDraftPick(draft, position, char, lock = false) {
+  if (!Number.isInteger(position) || position < 0 || position >= SLOT_COUNT) throw new Error('invalid-position');
+  const seat = draft.seats[position];
+  const allowed = draftCandidates(draft, position);
+  if (!allowed.length) throw new Error('invalid-position');
+  if (seat.locked) throw new Error('already-locked');
+  const sel = char === undefined ? seat.sel : char;
+  if (sel !== null && !allowed.includes(sel)) throw new Error('invalid-char');
+  // 共享卡池里每张牌只能属于一个号位
+  if (sel !== null && draft.survivor.pool && position < 4 && draft.seats.some((other, i) => i !== position && i < 4 && other.sel === sel)) throw new Error('card-taken');
+  if (lock && sel === null) throw new Error('nothing-selected');
+  return { ...draft, seats: draft.seats.map((other, i) => (i === position ? { sel, locked: lock } : other)) };
+}
+
+/** 全部座位都锁定后才能揭晓。 */
+export const draftComplete = (draft) => draft.seats.every((seat) => seat.locked);
+
+/** 选角期间是否还接受选手操作。裁判代选不受影响。 */
+export const draftOpen = (draft, time) => !draft.closed && (draft.deadline === null || time < draft.deadline);
+
 /** 只保留已知字段，其他内容不会进入房间状态。无效时抛出错误。 */
 export function normalizeState(raw) {
   if (!raw || !PHASES.has(raw.phase) || !Number.isSafeInteger(raw.round) || raw.round < 0) throw new Error('invalid-state');
   if (!Array.isArray(raw.slots) || (raw.slots.length !== 0 && raw.slots.length !== SLOT_COUNT)) throw new Error('invalid-state');
-  return {
+  const out = {
     round: raw.round,
     phase: raw.phase,
     slots: raw.slots.map((slot, index) => {
@@ -136,9 +207,13 @@ export function normalizeState(raw) {
       const out = { side: index < 4 ? 'survivor' : 'hunter', char: slot.char, build: normalizeBuild(slot.build) };
       if (out.side === 'hunter') out.trait = normalizeTrait(slot.trait);
       else if (slot.despair === true && out.build) out.despair = true;
+      if (slot.rejected !== undefined) out.rejected = normalizeIdList(slot.rejected, 1, MAX_DRAFT_HUNTER - 1);
       return out;
     }),
   };
+  if (raw.leftover !== undefined) out.leftover = normalizeIdList(raw.leftover, 1, MAX_DRAFT_POOL - 4);
+  if (raw.draft !== undefined) out.draft = normalizeDraft(raw.draft);
+  return out;
 }
 
 export const emptyState = () => ({ round: 0, phase: 'idle', slots: [] });
@@ -161,9 +236,31 @@ function projectTrait(trait, own, visibility) {
   return { status: 'shown', name: trait.name };
 }
 
+/** 敌方只能知道每个座位是否已锁定，收不到候选牌，也收不到选了哪张。 */
+function projectDraft(draft, view) {
+  const seesSurvivor = view === 'survivor' || view === 'spectator';
+  const seesHunter = view === 'hunter' || view === 'spectator';
+  const survivor = { mode: draft.survivor.mode };
+  if (seesSurvivor && draft.survivor.cands) survivor.cands = draft.survivor.cands;
+  if (seesSurvivor && draft.survivor.pool) survivor.pool = draft.survivor.pool;
+  const hunter = { mode: draft.hunter.mode };
+  if (seesHunter && draft.hunter.cands) hunter.cands = draft.hunter.cands;
+  return {
+    round: draft.round,
+    deadline: draft.deadline,
+    onTimeout: draft.onTimeout,
+    closed: draft.closed,
+    survivor,
+    hunter,
+    seats: draft.seats.map((seat, i) => ((i < 4 ? seesSurvivor : seesHunter)
+      ? { sel: seat.sel, locked: seat.locked }
+      : { locked: seat.locked })),
+  };
+}
+
 /** 计算某个视角能收到的数据；未揭晓和被隐藏的字段都不会出现在结果里。 */
 export function project(state, view, visibility) {
-  return {
+  const projected = {
     view,
     round: state.round,
     phase: state.phase,
@@ -182,7 +279,12 @@ export function project(state, view, visibility) {
       if (slot.char) char = own || seesChar === 'show' ? { status: 'shown', id: slot.char } : { status: 'hidden' };
       const out = { side: slot.side, char, build: projectBuild(slot, own, seesTalents, despairVisible) };
       if (slot.side === 'hunter') out.trait = projectTrait(slot.trait, own, visibility);
+      // 没选的候选只有己方和观众能看到
+      if (own && slot.rejected) out.rejected = slot.rejected;
       return out;
     }),
   };
+  if (state.leftover && view !== 'hunter') projected.leftover = state.leftover;
+  if (state.draft) projected.draft = projectDraft(state.draft, view);
+  return projected;
 }

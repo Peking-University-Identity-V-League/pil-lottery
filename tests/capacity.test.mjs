@@ -64,6 +64,7 @@ test('concurrent joins and reconnects never oversubscribe a single seat', async 
 
 test('one broadcast serializes once per view and permission changes invalidate the cache', async t => {
   const api=await start(t),room=await api.create();
+  for(const view of ['hunter','survivor'])await api.host(room,'PUT','/access',{view,limit:null});
   for(const view of ['hunter','survivor','spectator'])for(let i=0;i<4;i++)assert.equal((await api.connect(room,await api.enter(room,view))).status,200);
   const before=api.server.metrics().projections;
   await api.host(room,'PUT','/state',{seq:1,state:state(1)});
@@ -97,7 +98,7 @@ test('SQLite lock waits in the worker do not block HTTP status or main-thread ti
   }
 });
 
-test('batch lease renewal commits together, preserves results and survives restart', async t => {
+test('heartbeats leave permanent reservations and results untouched across restart', async t => {
   const dir=await mkdtemp(join(tmpdir(),'pil-lease-batch-')), dbPath=join(dir,'rooms.sqlite');
   let time=1000000;
   const api=await start(t,{dbPath,now:()=>time,pingIntervalMs:100000});
@@ -105,17 +106,17 @@ test('batch lease renewal commits together, preserves results and survives resta
   for(let i=0;i<3;i++){
     const room=await api.create();ids.push(room.roomId);
     await api.host(room,'PUT','/state',{seq:1,state:state(i+1)});
-    // 保留响应对象：未被引用的 fetch 响应可能被 GC 回收并断开连接，房间就不会续期
+    // 保留响应对象，确保测试期间的连接没有被 GC 回收。
     streams.push(await api.connect(room,await api.enter(room,'hunter')));
     assert.equal(streams[i].status,200);
   }
-  time+=60000;
-  await api.server.heartbeat();assert.equal(api.server.metrics().leaseBatches,1);
+  time+=3600000;
+  await api.server.heartbeat();assert.equal(api.server.metrics().leaseBatches,0);
   const db=new DatabaseSync(dbPath,{readOnly:true});
   for(const row of db.prepare('SELECT * FROM rooms_v2').all()){
     assert.equal(row.touched_at,1000000);assert.equal(row.seq,1);
     assert.equal(JSON.parse(row.state).round,ids.indexOf(row.id)+1);
-    assert.equal(Object.values(JSON.parse(row.seats))[0].expiresAt,time+120000);
+    assert.equal(Object.values(JSON.parse(row.seats))[0].expiresAt,Number.MAX_SAFE_INTEGER);
   }
   db.close();await Promise.all(streams.map(stream=>stream.body.cancel()));await api.server.shutdown();
   const restarted=await start(t,{dbPath,now:()=>time,pingIntervalMs:100000});

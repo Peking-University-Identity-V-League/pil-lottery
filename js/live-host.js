@@ -55,7 +55,7 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
         onLost();
         throw new Error('room-lost');
       }
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) throw Object.assign(new Error('HTTP ' + res.status), { code: (await res.json().catch(() => ({}))).error });
       const result = await res.json();
       assertActive(context);
       return result;
@@ -147,6 +147,26 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
       context.visibilityQueue = saving;
       return saving;
     },
+    /** 发放候选。旧状态序号更小，还在路上也不会盖掉这一轮。 */
+    startDraft(draft, seconds) {
+      const context = current;
+      if (!context) return Promise.reject(new Error('room-lost'));
+      context.pending = null;
+      clearTimeout(context.retryTimer);
+      context.seq = Math.max(context.seq + 1, Date.now());
+      return call(context, 'PUT', '/draft', { seq: context.seq, draft, seconds });
+    },
+    draftStatus() {
+      const context = current;
+      if (!context) return Promise.reject(new Error('room-lost'));
+      return call(context, 'GET', '/draft');
+    },
+    /** action：host-pick 代选、extend 延时、close 结束选角。 */
+    draftAction(action, body) {
+      const context = current;
+      if (!context) return Promise.reject(new Error('room-lost'));
+      return call(context, 'POST', '/draft/' + action, body);
+    },
     /** 改某个身份的密码或人数上限；password 为 null 表示取消密码。明文只留在裁判自己的浏览器，用于回填密码框。 */
     setAccess(view, changes) {
       const context = current;
@@ -180,6 +200,23 @@ export function createLiveHost({ onFail = () => {}, onRecover = () => {}, onLost
       });
       context.accessQueue = clearing;
       return clearing;
+    },
+    /** 踢出某个号位上的求生者。 */
+    kickPosition(position) {
+      const context = current;
+      if (!context) return Promise.reject(new Error('room-lost'));
+      context.accessPending++;
+      context.accessVersion++;
+      const kicking = context.accessQueue.catch(() => {}).then(async () => {
+        try {
+          const res = await call(context, 'POST', '/seats/kick', { position });
+          context.room.access = res.access;
+          persist();
+          return res;
+        } finally { context.accessPending--; }
+      });
+      context.accessQueue = kicking;
+      return kicking;
     },
     /** 重置房间：丢弃还没发出的状态，序号前移，防止上一场结果被写回。 */
     async reset({ clearPasswords = false } = {}) {

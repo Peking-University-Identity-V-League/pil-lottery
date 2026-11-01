@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/tree-detail.css">
   <link rel="stylesheet" href="../css/live.css">
+  <link rel="stylesheet" href="../css/draft.css">
+  <link rel="stylesheet" href="../css/seat-tabs.css">
   <script src="../js/i18n-boot.js"></script>
   <script defer src="../js/telemetry.js"></script>
 </head>
@@ -53,6 +55,8 @@
   <main class="table" id="table" hidden>
     <p class="notice" id="notice">正在整理庄园的信件…</p>
   </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <dialog class="sheet sheet-wide" id="dlg-tree" aria-labelledby="tree-title">
     <form method="dialog" class="sheet-inner">

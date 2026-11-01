@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="css/tree-detail.css">
   <link rel="stylesheet" href="css/fit-settings.css">
   <link rel="stylesheet" href="css/live.css">
+  <link rel="stylesheet" href="css/draft.css">
+  <link rel="stylesheet" href="css/seat-tabs.css">
   <script src="js/i18n-boot.js"></script>
   <script defer src="js/telemetry.js"></script>
 </head>
@@ -38,6 +40,7 @@
     <div class="masthead-tools">
       <button type="button" class="btn btn-quiet" id="btn-pool">卡池设置</button>
       <button type="button" class="btn btn-quiet" id="btn-fit" disabled>适配设置</button>
+      <button type="button" class="btn btn-quiet" id="btn-advanced">高级玩法</button>
       <button type="button" class="btn btn-quiet" id="btn-live" aria-pressed="false">房间设置</button>
       <button type="button" class="btn btn-quiet" id="btn-sound" aria-pressed="true">音效</button>
     </div>
@@ -96,6 +99,8 @@
 
     <div class="actions">
       <button type="button" class="btn btn-wax" id="btn-draw" disabled>抽取结果</button>
+      <button type="button" class="btn btn-quiet" id="btn-draft-extend" hidden>延时 30 秒</button>
+      <button type="button" class="btn btn-quiet" id="btn-draft-redeal" hidden>重发候选</button>
       <button type="button" class="btn btn-quiet" id="btn-copy" disabled>复制结果</button>
       <button type="button" class="btn btn-quiet" id="btn-copy-brief" disabled>复制简略结果</button>
     </div>
@@ -155,6 +160,39 @@
         <span class="pool-count" id="fit-count"></span>
         <button type="button" class="btn btn-quiet" id="fit-reset-all">全部重置</button>
         <button class="btn btn-wax" id="fit-done" value="close">完成</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="sheet sheet-wide" id="dlg-advanced" aria-labelledby="advanced-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="advanced-title">高级玩法</h2>
+        <p>设置保存在这个浏览器里，从下一次抽取开始生效。全部选择直接抽取时，流程和普通抽取一样。</p>
+      </header>
+      <div class="adv-body">
+        <section class="adv-box side-survivor">
+          <h3>求生者</h3>
+          <div class="adv-opt"><span id="lbl-adv-survivor">抽取方式</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-adv-survivor" data-draft="survivor"><button type="button" role="radio" data-value="direct">直接抽取</button><button type="button" role="radio" data-value="personal">独立卡池</button><button type="button" role="radio" data-value="shared">共享卡池</button></div></div>
+          <div class="adv-opt" data-draft-for="personal"><span id="lbl-adv-scount">每人候选数</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-adv-scount" data-draft="survivorCount" data-number><button type="button" role="radio" data-value="2">2 张</button><button type="button" role="radio" data-value="3">3 张</button><button type="button" role="radio" data-value="4">4 张</button><button type="button" role="radio" data-value="5">5 张</button><button type="button" role="radio" data-value="6">6 张</button></div></div>
+          <div class="adv-opt" data-draft-for="shared"><label for="adv-shared">共享候选数</label><input class="adv-number" id="adv-shared" type="number" min="4" max="36" step="1" inputmode="numeric" data-draft-input="sharedSize"></div>
+          <p class="adv-hint" id="adv-hint-survivor"></p>
+        </section>
+        <section class="adv-box side-hunter">
+          <h3>监管者</h3>
+          <div class="adv-opt"><span id="lbl-adv-hunter">抽取方式</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-adv-hunter" data-draft="hunter"><button type="button" role="radio" data-value="direct">直接抽取</button><button type="button" role="radio" data-value="pick">候选选择</button></div></div>
+          <div class="adv-opt" data-draft-for="pick"><label for="adv-hunter-count">候选数</label><input class="adv-number" id="adv-hunter-count" type="number" min="2" max="12" step="1" inputmode="numeric" data-draft-input="hunterCount"></div>
+          <p class="adv-hint" id="adv-hint-hunter"></p>
+        </section>
+        <section class="adv-box">
+          <h3>选角规则</h3>
+          <div class="adv-opt"><span id="lbl-adv-seconds">选择时限</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-adv-seconds" data-draft="seconds" data-number><button type="button" role="radio" data-value="30">30 秒</button><button type="button" role="radio" data-value="60">60 秒</button><button type="button" role="radio" data-value="90">90 秒</button><button type="button" role="radio" data-value="0">不限</button></div></div>
+          <div class="adv-opt"><span id="lbl-adv-timeout">超时后</span><div class="segmented" role="radiogroup" aria-labelledby="lbl-adv-timeout" data-draft="onTimeout"><button type="button" role="radio" data-value="random">随机选定</button><button type="button" role="radio" data-value="wait">等裁判处理</button></div></div>
+        </section>
+      </div>
+      <footer class="sheet-foot">
+        <button type="button" class="btn btn-quiet" id="adv-reset">恢复默认</button>
+        <button class="btn btn-wax" value="close">完成</button>
       </footer>
     </form>
   </dialog>
@@ -229,6 +267,7 @@
                 <button type="button" class="btn btn-mini access-clear">清空名额</button>
               </div>
             </div>
+            <div class="live-positions" id="live-positions"></div>
           </section>
         </div>
       </div>

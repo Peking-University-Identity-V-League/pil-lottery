@@ -8,6 +8,8 @@ import { LIVE_VIEW_NAMES } from './live-visibility.js';
 import {
   applyPortraitView, asset, cleanDescription, despairItem, el, renderWeb, showTreeDialog, talentItems,
 } from './shared-ui.js';
+import { createSeatTabs } from './seat-tabs.js';
+import { createDraftUI, draftModel, setLeftoverLine, setRejectedLine } from './draft-ui.js';
 import { applyI18n, bindLanguageSelect, charName, roleName, t, talentName, traitName } from './i18n.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -36,6 +38,43 @@ let latestState = null;
 let instantFrame = 0;
 let shuffleRun = 0;
 const shuffleAnimations = new Set();
+let draftUI = null;
+let seatTabs = null;
+let myPosition = null;
+const DRAFT_ERRORS = {
+  'already-locked': '这个座位已经锁定了。',
+  'card-taken': '这张牌已被其他号位占用。',
+  'draft-closed': '选角时间已结束。',
+  'no-draft': '选角已结束。',
+  'not-your-seat': '这个座位不归你操作。',
+  'nothing-selected': '先选一张牌，再锁定。',
+};
+let toastTimer = 0;
+
+function toast(message) {
+  const node = $('#toast');
+  node.textContent = message;
+  node.classList.add('is-on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => node.classList.remove('is-on'), 2600);
+}
+
+async function draftRequest(action, body) {
+  if (!connection || !latestState?.draft) return;
+  sfx.unlock();
+  try {
+    const res = await fetch(`${API}/${entry.room}/draft/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session: connection.session, round: latestState.draft.round, ...body }),
+    });
+    if (res.ok) return;
+    const { error } = await res.json().catch(() => ({}));
+    toast(t(DRAFT_ERRORS[error] || '操作没有成功，请重试。'));
+  } catch {
+    toast(t('操作没有成功，请重试。'));
+  }
+}
 
 async function getJSON(path) {
   const res = await fetch(asset(path));
@@ -170,9 +209,58 @@ function buildTable() {
     resetSlot(slot);
   }
   $('#table').replaceChildren(survivorSide, divider, hunterSide);
+  draftUI = createDraftUI({
+    slots, table: $('#table'), toast,
+    lookup: (side, id) => (side === 'survivor' ? data.survivors : data.hunters).get(id),
+    onPick: (position, char) => draftRequest('pick', { position, char }),
+    onLock: (position) => draftRequest('lock', { position }),
+    onExpire: () => {
+      const draft = latestState?.draft;
+      if (!draft || draft.onTimeout !== 'random') return;
+      // 只是过渡动画：结果由裁判决定，新一轮开始时自动结束
+      const waiting = draftModel(draft, { view: latestState.view, myPosition, claimed: draft.claimed }).seats.filter((seat) => seat.own && !seat.locked && !seat.sel && !seat.direct);
+      if (waiting.length) draftUI.hop(waiting.map((seat) => seat.position));
+    },
+    motion: () => !document.hidden && !reduceMotion.matches,
+  });
+  seatTabs = createSeatTabs({ slots, table: $('#table'), defaultSeat: mySeat });
 }
 
-function resetSlot(slot) {
+/** 窄屏默认显示的座位：监管者看自己，求生者看自己的号位，其他人从 1 号位开始。 */
+function mySeat() {
+  const view = latestState?.view ?? connection?.view;
+  if (view === 'hunter') return 4;
+  return view === 'survivor' && myPosition !== null ? myPosition : 0;
+}
+
+/** 视角名称；求生者同时显示自己的固定号位。 */
+function syncViewLabel(view) {
+  const name = t(`${LIVE_VIEW_NAMES[view]}视角`);
+  $('#live-view').textContent = view === 'survivor' && myPosition !== null ? `${name} · ${t('{position} 号位', { position: myPosition + 1 })}` : name;
+}
+
+function syncDraft(state, animate, before) {
+  if (!state.draft) { if (animate) draftUI.leave(); else draftUI.clear(); return; }
+  const model = draftModel(state.draft, { view: state.view, myPosition, claimed: state.draft.claimed });
+  $('#live-phase').textContent = t('选手正在选角');
+  draftUI.show(model, { animate, before });
+}
+
+/** 揭晓后显示己方没选的候选。 */
+function syncRejected(state) {
+  state.slots.forEach((entry, i) => {
+    const names = entry.char.status === 'shown' && entry.rejected
+      ? entry.rejected.map((id) => (slots[i].side === 'survivor' ? data.survivors : data.hunters).get(id)).filter(Boolean).map(charName)
+      : [];
+    setRejectedLine(slots[i], names);
+  });
+  if (!state.slots.length) slots.forEach((slot) => setRejectedLine(slot, []));
+  setLeftoverLine($('.lineup-survivor'), state.phase === 'done' && state.leftover ? state.leftover.map((id) => data.survivors.get(id)).filter(Boolean).map(charName) : []);
+}
+
+/** keep 为选角时已翻开的角色：牌留在原地，揭晓时不再翻一次。 */
+function resetSlot(slot, keep = null) {
+  slot.keptChar = keep;
   slot.charRun++;
   slot.rerolling = false;
   slot.charReady = Promise.resolve();
@@ -181,13 +269,16 @@ function resetSlot(slot) {
   stopTraitRoll(slot);
   slot.charName = '';
   slot.seen = { char: '', build: '', trait: '' };
-  slot.card.classList.remove('is-open', 'is-charging', 'live-rerolling');
+  slot.card.classList.remove('is-charging', 'live-rerolling');
   slot.sealHalves.forEach((half) => half.getAnimations().forEach((a) => a.cancel()));
   slot.address.textContent = slot.defaultAddress;
-  slot.name.textContent = '';
-  slot.portrait.removeAttribute('src');
-  slot.portrait.alt = '';
-  slot.roles.replaceChildren();
+  if (!keep) {
+    slot.card.classList.remove('is-open');
+    slot.name.textContent = '';
+    slot.portrait.removeAttribute('src');
+    slot.portrait.alt = '';
+    slot.roles.replaceChildren();
+  }
   applyBuild(slot, { status: 'pending' }, false);
   if (slot.traitBox) applyTrait(slot, { status: 'pending' }, false);
 }
@@ -214,6 +305,9 @@ function applyChar(slot, char, animate) {
 
 async function revealChar(slot, char, animate, run) {
   const wasOpen = slot.card.classList.contains('is-open');
+  if (char.status === 'pending' && slot.keptChar) return;
+  if (char.status === 'shown' && slot.keptChar === char.id) animate = false;
+  slot.keptChar = null;
   if (char.status !== 'shown') {
     slot.card.classList.remove('is-open');
     slot.address.textContent = char.status === 'hidden' ? t('角色未公开') : slot.defaultAddress;
@@ -345,8 +439,9 @@ async function shuffleAndDeal() {
   stopShuffle();
   const run = shuffleRun;
   const rects = slots.map(slot => slot.card.getBoundingClientRect());
-  const cx = (Math.min(...rects.map(r => r.left)) + Math.max(...rects.map(r => r.right))) / 2;
-  const cy = (Math.max(0, Math.min(...rects.map(r => r.top))) + Math.min(innerHeight, Math.max(...rects.map(r => r.bottom)))) / 2;
+  const shown = rects.filter(r => r.width); // 窄屏只显示一个座位
+  const cx = (Math.min(...shown.map(r => r.left)) + Math.max(...shown.map(r => r.right))) / 2;
+  const cy = (Math.max(0, Math.min(...shown.map(r => r.top))) + Math.min(innerHeight, Math.max(...shown.map(r => r.bottom)))) / 2;
   const poses = rects.map((r, i) => ({ x: cx - r.left - r.width / 2, y: cy - r.top - r.height / 2, angle: (i - 2) * 3.5 }));
   const at = (i, shift = 0) => `translate(${poses[i].x + shift}px, ${poses[i].y}px) rotate(${poses[i].angle + shift / 9}deg)`;
   const move = async (i, transforms, options) => {
@@ -407,6 +502,9 @@ function stopLiveMotion() {
 }
 
 function applyState(state) {
+  const previousDraft = latestState?.draft;
+  const previousPhase = latestState?.phase;
+  const fromDraft = Boolean(previousDraft) && !state.draft;
   latestState = state;
   const animate = !firstState && !document.hidden && !reduceMotion.matches;
   const activeMotion = !document.hidden && !reduceMotion.matches;
@@ -416,15 +514,20 @@ function applyState(state) {
   document.body.classList.toggle('instant', !animate);
   if (restart) {
     stopLiveMotion();
+    if (newRound && !firstState) seatTabs.reset();
     shownRound = state.round;
-    slots.forEach(resetSlot);
+    slots.forEach((slot, i) => resetSlot(slot, fromDraft && animate && slot.card.classList.contains('is-open') ? previousDraft.seats[i].sel : null));
     if ($('#dlg-tree').open) $('#dlg-tree').close();
   }
   const allPending = state.slots.length === 5 && state.slots.every(entry => entry.char.status === 'pending');
-  if (state.phase !== 'drawing' || !allPending || !activeMotion) stopShuffle();
-  else if (restart) void shuffleAndDeal();
+  let dealBefore = null;
+  if (state.draft) {
+    if (!activeMotion) stopShuffle();
+    else if (newRound && animate) dealBefore = shuffleAndDeal();
+  } else if (state.phase !== 'drawing' || !allPending || !activeMotion) stopShuffle();
+  else if (restart && !fromDraft) void shuffleAndDeal(); // 选角后的信封已经发好，不再洗牌
 
-  $('#live-view').textContent = t(`${LIVE_VIEW_NAMES[state.view]}视角`);
+  syncViewLabel(state.view);
   $('#live-phase').textContent = t(PHASE_TEXT[state.phase]);
   if (!state.slots.length) {
     slots.forEach(slot => queueBuild(slot, state.limited[slot.side] ? { status: 'pending', limited: true } : { status: 'pending' }, false));
@@ -443,6 +546,10 @@ function applyState(state) {
     if (activeMotion) startTraitRoll(hunter);
     else { stopTraitRoll(hunter); hunter.traitName.textContent = t('抽取中'); }
   } else stopTraitRoll(hunter);
+  syncDraft(state, animate, dealBefore);
+  syncRejected(state);
+  seatTabs.syncDefault();
+  if (state.phase === 'done' && (previousPhase !== 'done' || restart)) seatTabs.settle();
   firstState = false;
   if (!animate) {
     // 强制提交无动画的快照，再恢复之后的新事件动画。
@@ -537,6 +644,7 @@ const LEAVE_MESSAGES = {
   'password-changed': '密码已更改，请使用新密码重新进入。',
   'seat-cleared': '裁判已清空该身份的名额，请重新进入。',
   'view-closed': '裁判已关闭该身份，请选择其他身份。',
+  kicked: '裁判已将你移出房间，可以重新进入。',
   'room-closed': '房间已结束，请向裁判确认房间号。',
   'room-not-found': '房间不存在或已结束，请向裁判确认房间号。',
   'view-full': '该身份人数已满，请联系裁判。',
@@ -592,6 +700,8 @@ function leaveRoom(message, { kept = false } = {}) {
   if ($('#dlg-tree').open) $('#dlg-tree').close();
   if (!kept) playerSessions.forget(entry.room, leavingSession);
   stopLiveMotion();
+  draftUI?.clear();
+  myPosition = null;
   latestState = null;
   shownRound = null;
   firstState = true;
@@ -616,6 +726,7 @@ function enterRoom(room, session) {
   retryAttempt = 0;
   const query = `session=${encodeURIComponent(session)}`;
   connection = { session, view: loadSession(room)?.view, url: `${API}/${room}/events?${query}`, checkUrl: `${API}/${room}/check?${query}` };
+  seatTabs.reset();
   connect(connection.url, connection.checkUrl);
 }
 
@@ -837,6 +948,17 @@ function connect(url, checkUrl) {
     applyState(JSON.parse(e.data));
   });
   source.addEventListener('ping', () => { if (isCurrent()) markAlive(); });
+  source.addEventListener('clock', (e) => { if (isCurrent()) draftUI.setClockOffset(JSON.parse(e.data).now - Date.now()); });
+  source.addEventListener('position', (e) => {
+    if (!isCurrent()) return;
+    const position = JSON.parse(e.data).position;
+    const changed = position !== myPosition;
+    myPosition = position;
+    if (latestState) syncViewLabel(latestState.view);
+    // 拿到新号位时切到自己，之前点过的标签不再算数；断线重连号位不变，就留在原来看的座位
+    if (changed) seatTabs.reset(); else seatTabs.syncDefault();
+    if (latestState?.draft) syncDraft(latestState, false, null);
+  });
   source.addEventListener('closed', (e) => {
     if (!isCurrent()) return;
     const { reason } = JSON.parse(e.data);

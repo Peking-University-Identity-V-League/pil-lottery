@@ -72,7 +72,7 @@ test('SQLite restores state, permissions, passwords, seats and sequence numbers;
     assert.deepEqual(restored.visibility, ALL_HIDDEN);
     assert.equal(restored.access.spectator.password, true);
     assert.equal(restored.access.spectator.limit, 1);
-    // 重启后名额还在保留期内，占位不丢，密码仍要校验，明文不落库
+    // 重启后名额仍保留，密码仍要校验，明文不落库
     assert.equal(restored.access.spectator.taken, 1);
     const denied = await fetch(instance.base + '/' + room.roomId + '/join', { method: 'POST', body: JSON.stringify({ view: 'spectator', password: 'watch' }) });
     assert.equal(denied.status, 409);
@@ -201,11 +201,11 @@ test('failed database writes do not publish or mutate authoritative room state',
     failing = true;
     for (const [method, path, body] of [
       ['PUT', '/state', { seq: 1, state }], ['PUT', '/visibility', { visibility: ALL_HIDDEN }],
-      ['PUT', '/access', { view: 'hunter', limit: 1 }], ['POST', '/reset', {}], ['DELETE', '', undefined],
+      ['PUT', '/access', { view: 'hunter', limit: 2 }], ['POST', '/reset', {}], ['DELETE', '', undefined],
     ]) assert.equal((await host(instance.base, room, method, path, body)).status, 500);
     const saved = await (await host(instance.base, room, 'GET', '/status')).json();
     assert.deepEqual(saved.visibility, room.visibility);
-    assert.equal(saved.access.hunter.limit, null);
+    assert.equal(saved.access.hunter.limit, 1);
     failing = false;
     assert.equal((await firstState(instance.base, room, await joinAs(instance.base, room, 'spectator'))).phase, 'idle');
     assert.equal((await host(instance.base, room, 'PUT', '/state', { seq: 1, state })).status, 200);
@@ -216,7 +216,7 @@ test('committed room data survives an abrupt process kill and WAL recovery', { t
   const dir = await mkdtemp(join(tmpdir(), 'pil-room-crash-'));
   const dbPath = join(dir, 'rooms.sqlite');
   const source = new URL('../server/live-server.mjs', import.meta.url).href;
-  const code = "import {createLiveServer} from " + JSON.stringify(source) + "; const s=createLiveServer({dbPath:process.env.TEST_DB,seatGraceMs:300,pingIntervalMs:50}); s.listen(0,'127.0.0.1',()=>console.log(s.address().port));";
+  const code = "import {createLiveServer} from " + JSON.stringify(source) + "; const s=createLiveServer({dbPath:process.env.TEST_DB,pingIntervalMs:50}); s.listen(0,'127.0.0.1',()=>console.log(s.address().port));";
   let child, instance;
   try {
     child = spawn(process.execPath, ['--input-type=module', '-e', code], { env: { ...process.env, TEST_DB: dbPath }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -227,7 +227,7 @@ test('committed room data survives an abrupt process kill and WAL recovery', { t
     assert.equal((await host(base, room, 'PUT', '/state', { seq: 8, state })).status, 200);
     await host(base, room, 'PUT', '/access', { view: 'hunter', limit: 1 });
     const staleSession = await joinAs(base, room, 'hunter');
-    await new Promise(resolve => setTimeout(resolve, 350));
+    await fetch(base + '/' + room.roomId + '/leave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: staleSession }) });
     const currentSession = await joinAs(base, room, 'hunter');
     const stream = await fetch(base + '/' + room.roomId + '/events?session=' + currentSession);
     assert.equal(stream.status, 200);
@@ -235,7 +235,7 @@ test('committed room data survives an abrupt process kill and WAL recovery', { t
     await stream.body.cancel().catch(() => {});
     instance = await start({ dbPath });
     assert.equal((await firstState(instance.base, room, await joinAs(instance.base, room, 'spectator'))).round, 7);
-    assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?session=' + staleSession)).status, 409);
+    assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?session=' + staleSession)).status, 403);
     assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?session=' + currentSession)).status, 200);
   } finally {
     if (child) { const exited = once(child, 'exit'); child.kill('SIGKILL'); await exited; }
@@ -311,67 +311,51 @@ test('storage update never inserts a removed room', () => {
   } finally { store.close(); }
 });
 
-test('restarting does not renew released seats or extend an unconnected seat lease', { timeout: 10000 }, async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'pil-seat-lease-'));
-  const dbPath = join(dir, 'rooms.sqlite');
+test('offline reservations survive hours and restarts until an explicit exit', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'pil-permanent-seat-')), dbPath = join(dir, 'rooms.sqlite');
   let time = 1_000_000, instance;
   const options = { dbPath, now: () => time };
   try {
-    instance = await start(options);
-    const room = await create(instance.base);
-    await host(instance.base, room, 'PUT', '/access', { view: 'hunter', limit: 1 });
+    instance = await start(options);const room = await create(instance.base);
     const a = await joinAs(instance.base, room, 'hunter');
-    time += 120001;
-    const b = await joinAs(instance.base, room, 'hunter');
+    await instance.stop();time += 2 * 60 * 60 * 1000;instance = await start(options);
     const check = session => fetch(instance.base + '/' + room.roomId + '/check?session=' + session);
-    assert.equal((await check(a)).status, 409);
-    await instance.stop();
-    instance = await start(options);
-    assert.equal((await check(a)).status, 409);
-    assert.equal((await check(b)).status, 200);
-    const denied = await fetch(instance.base + '/' + room.roomId + '/events?session=' + a);
-    assert.equal(denied.status, 409);
-    const stream = await fetch(instance.base + '/' + room.roomId + '/events?session=' + b);
-    assert.equal(stream.status, 200);
-    let status = await (await host(instance.base, room, 'GET', '/status')).json();
-    assert.equal(status.access.hunter.taken, 1);
-    assert.equal(status.access.hunter.online, 1);
-    await stream.body.cancel();
-    await new Promise(resolve => setTimeout(resolve, 20));
-    await instance.stop();
-    time += 60000;
-    instance = await start(options);
-    status = await (await host(instance.base, room, 'GET', '/status')).json();
-    assert.equal(status.access.hunter.taken, 1);
-    await instance.stop();
-    time += 60001;
-    instance = await start(options);
-    status = await (await host(instance.base, room, 'GET', '/status')).json();
-    assert.equal(status.access.hunter.taken, 0);
-    // Only one expired session can reclaim the free seat, even concurrently.
-    const responses = await Promise.all([a, b].map(session => fetch(instance.base + '/' + room.roomId + '/events?session=' + session)));
-    assert.deepEqual(responses.map(res => res.status).sort(), [200, 409]);
-    for (const res of responses) await res.body.cancel();
+    assert.equal((await check(a)).status, 200);
+    assert.equal((await fetch(instance.base + '/' + room.roomId + '/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ view: 'hunter' }) })).status, 409);
+    assert.equal((await (await host(instance.base, room, 'GET', '/status')).json()).access.hunter.taken, 1);
+    const stream = await fetch(instance.base + '/' + room.roomId + '/events?session=' + a);assert.equal(stream.status, 200);await stream.body.cancel();
+    await fetch(instance.base + '/' + room.roomId + '/leave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: a }) });
+    const b = await joinAs(instance.base, room, 'hunter');await instance.stop();time += 3600000;instance = await start(options);
+    assert.equal((await check(a)).status, 403);assert.equal((await check(b)).status, 200);
   } finally { if (instance) await instance.stop(); await rm(dir, { recursive: true, force: true }); }
 });
 
-
-test('online heartbeats persist leases without extending the host room lifetime', { timeout: 5000 }, async () => {
-  const real = openRoomStore();
-  let time = 1_000_000;
-  let saved;
-  const roomStore = { ...real, putSeats(id, seats) { real.putSeats(id, seats); saved = { seats: structuredClone(seats), touchedAt: 1_000_000 }; }, renewSeats(updates) { real.renewSeats(updates); saved = { seats: structuredClone(updates[0].seats), touchedAt: real.load(0)[0].touchedAt }; } };
-  const instance = await start({ roomStore, now: () => time, pingIntervalMs: 20 });
+test('online heartbeats do not rewrite reservations or extend room lifetime', async () => {
+  const real = openRoomStore();let time = 1_000_000, writes = 0;
+  const roomStore = { ...real, putSeats(id, seats) { writes++;real.putSeats(id, seats); }, renewSeats() { throw new Error('No lease renewal expected'); } };
+  const instance = await start({ roomStore, now: () => time, pingIntervalMs: 100000 });
   try {
-    const room = await create(instance.base);
-    const session = await joinAs(instance.base, room, 'hunter');
+    const room = await create(instance.base), session = await joinAs(instance.base, room, 'hunter');
     const stream = await fetch(instance.base + '/' + room.roomId + '/events?session=' + session);
-    const reader = stream.body.pipeThrough(new TextDecoderStream()).getReader();
-    await reader.read();
-    time += 120001;
-    while (Object.values(saved.seats)[0].expiresAt <= time) await reader.read();
-    assert.equal(Object.values(saved.seats)[0].expiresAt, time + 120000);
-    assert.equal(saved.touchedAt, 1_000_000);
-    await reader.cancel();
+    const before = writes;time += 3600000;await instance.server.heartbeat();
+    assert.equal(writes, before);assert.equal(real.load(0)[0].touchedAt, 1_000_000);
+    assert.equal(Object.values(real.load(0)[0].seats)[0].expiresAt, Number.MAX_SAFE_INTEGER);
+    await stream.body.cancel();
   } finally { await instance.stop(); }
+});
+
+test('legacy active reservations become permanent without reviving already expired seats', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'pil-seat-upgrade-')), dbPath = join(dir, 'rooms.sqlite');
+  let time = 1_000_000, instance;
+  try {
+    instance = await start({ dbPath, now: () => time });const room = await create(instance.base);
+    const active = await joinAs(instance.base, room, 'hunter'), expired = await joinAs(instance.base, room, 'spectator');await instance.stop();instance = null;
+    const db = new DatabaseSync(dbPath);const row = db.prepare('SELECT seats FROM rooms_v2 WHERE id=?').get(room.roomId);const seats = JSON.parse(row.seats);
+    for (const seat of Object.values(seats)) seat.expiresAt = seat.view === 'hunter' ? time + 120000 : time - 1;
+    db.prepare('UPDATE rooms_v2 SET seats=? WHERE id=?').run(JSON.stringify(seats), room.roomId);db.close();
+    instance = await start({ dbPath, now: () => time });assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?session=' + expired)).status, 403);
+    await instance.stop();time += 3600000;instance = await start({ dbPath, now: () => time });
+    assert.equal((await fetch(instance.base + '/' + room.roomId + '/check?session=' + active)).status, 200);
+    assert.equal((await (await host(instance.base, room, 'GET', '/status')).json()).access.hunter.taken, 1);
+  } finally { if (instance) await instance.stop();await rm(dir, { recursive: true, force: true }); }
 });

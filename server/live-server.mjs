@@ -3,10 +3,10 @@ import { createHash, randomBytes, randomInt, scrypt, timingSafeEqual } from 'nod
 import { readFileSync, realpathSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { pathToFileURL, fileURLToPath } from 'node:url';
-import { openWorkerRoomStore } from './room-store.mjs';
+import { openWorkerRoomStore, PERMANENT_SEAT_EXPIRY } from './room-store.mjs';
 import { createSseWriter } from './sse-writer.mjs';
 import {
-  DEFAULT_VISIBILITY, LIVE_VIEWS, emptyState, normalizeState, normalizeVisibility, project,
+  DEFAULT_VISIBILITY, LIVE_VIEWS, applyDraftPick, draftOpen, emptyState, normalizeDraft, normalizeState, normalizeVisibility, project,
 } from '../js/live-visibility.js';
 
 export const API_PREFIX = '/lottery/live-api';
@@ -17,6 +17,8 @@ const CREATE_WINDOW_MS = 60 * 60 * 1000;
 const ATTEMPT_WINDOW_MS = 10 * 60 * 1000;
 const MAX_PASSWORD_LENGTH = 64;
 const MAX_STORED_SEATS = 256;
+const MAX_DRAFT_SECONDS = 600;
+const SURVIVOR_POSITIONS = [0, 1, 2, 3];
 
 const newToken = (bytes = 24) => randomBytes(bytes).toString('base64url');
 
@@ -45,7 +47,9 @@ async function verifyPassword(password, stored) {
   return sameToken(await derivePassword(password, salt), expected);
 }
 
-const emptyAccess = () => Object.fromEntries(LIVE_VIEWS.map((view) => [view, { passwordHash: null, limit: null }]));
+// 一局正好 4 名求生者和 1 名监管者；裁判可以在房间设置里调整
+const DEFAULT_LIMITS = { survivor: 4, hunter: 1, spectator: null };
+const emptyAccess = () => Object.fromEntries(LIVE_VIEWS.map((view) => [view, { passwordHash: null, limit: DEFAULT_LIMITS[view] }]));
 
 function reply(res, status, body = {}) {
   const text = JSON.stringify(body);
@@ -110,7 +114,6 @@ export function createLiveServer({
   maxPendingWrites = 512,
   maxStoredSeats = Math.max(MAX_STORED_SEATS, maxClientsPerRoom * 2),
   maxCreatesPerHour = 30,
-  seatGraceMs = 2 * 60 * 1000,
   maxPasswordFailures = 10,
   maxPasswordChecks = 16,
   maxRoomMisses = 30,
@@ -118,7 +121,7 @@ export function createLiveServer({
   const store = roomStore || openWorkerRoomStore(dbPath);
   let rooms;
   try {
-    rooms = new Map(store.load(now() - ttlMs).map(room => {
+    rooms = new Map(store.load(now() - ttlMs, { permanentSeatsAt: now() }).map(room => {
       const visibility = normalizeVisibility(room.visibility);
       if (!visibility || !room.id || !room.hostToken || !LIVE_VIEWS.every(view => room.access?.[view]) || !room.seats) {
         throw new Error('Invalid persisted room');
@@ -135,7 +138,6 @@ export function createLiveServer({
   let spectatorCount = 0;
   let writeQueue = Promise.resolve();
   let pendingWrites = 0;
-  let heartbeatPending = false;
   let shutdownPromise;
   let storeClosing;
   const metrics = { projections: 0, leaseBatches: 0, maxPendingWrites: 0 };
@@ -158,16 +160,60 @@ export function createLiveServer({
   function pushTo(room, client) {
     let text = room.projectionCache.get(client.view);
     if (text === undefined) {
-      text = JSON.stringify(project(room.state, client.view, room.visibility));
+      const projected = project(room.state, client.view, room.visibility);
+      if (projected.draft) projected.draft.claimed = claimedPositions(room);
+      text = JSON.stringify(projected);
       room.projectionCache.set(client.view, text);
       metrics.projections++;
     }
     if (text === client.last) return;
     client.last = text;
+    // 倒计时用服务器时间，避免各设备时钟不一致
+    if (room.state.draft) client.send('clock', { now: now() });
     client.send('state', text, true);
   }
 
   const broadcast = (room) => room.clients.forEach((client) => pushTo(room, client));
+
+  /** 号位跟着名额走，断线不释放，直到主动退出或裁判明确移除。 */
+  function positionHolder(room, position, except, seats = room.seats) {
+    return Object.entries(seats).find(([hash, seat]) => seat.view === 'survivor' && seat.position === position && hash !== except)?.[0] || null;
+  }
+
+  /** 最小的空号位；4 个都有人时返回 undefined，多出来的求生者只能观看。 */
+  const freePosition = (room, except, seats = room.seats) => SURVIVOR_POSITIONS.find((position) => !positionHolder(room, position, except, seats));
+
+  const notifyPosition = (room, hash, position) => room.clients.forEach((client) => {
+    if (client.seat === hash) client.send('position', { position: position ?? null });
+  });
+
+  /** 有号位空出来时，补给在线但还没有号位的求生者。 */
+  async function promoteSurvivors(room) {
+    const seats = { ...room.seats };
+    const promoted = [];
+    for (const hash of Object.keys(seats)) {
+      if (seats[hash].view !== 'survivor' || seats[hash].position !== undefined || !room.presence.get(hash)?.connections) continue;
+      const position = freePosition(room, hash, seats);
+      if (position === undefined) break;
+      seats[hash] = { ...seats[hash], position };
+      promoted.push([hash, position]);
+    }
+    if (!promoted.length) return;
+    await saveSeats(room, seats);
+    promoted.forEach(([hash, position]) => notifyPosition(room, hash, position));
+  }
+
+  const claimedPositions = (room) => SURVIVOR_POSITIONS.map((position) => Boolean(positionHolder(room, position)));
+
+  /** 名额变化后更新选手看到的号位占用；只有变化时才推送。 */
+  function refreshClaims(room) {
+    if (!room.state.draft) return;
+    const key = JSON.stringify(claimedPositions(room));
+    if (key === room.claimKey) return;
+    room.claimKey = key;
+    room.projectionCache.clear();
+    broadcast(room);
+  }
 
   function closeClients(room, reason, match = () => true) {
     for (const client of [...room.clients]) {
@@ -201,10 +247,9 @@ export function createLiveServer({
     room.seats = seats;
   }
 
-  /** 名额按进入后的凭证计算：在线，或断线后还在保留期内。 */
+  /** 名额跟随有效凭证持久保留，不依赖连接状态或断线时长。 */
   function holdsSeat(room, hash) {
-    if (!room.seats[hash]) return false;
-    return room.presence.get(hash)?.connections > 0 || room.seats[hash].expiresAt > now();
+    return Boolean(room.seats[hash]);
   }
 
   function seatsTaken(room, view, except) {
@@ -217,7 +262,14 @@ export function createLiveServer({
     const online = viewers(room);
     return Object.fromEntries(LIVE_VIEWS.map((view) => {
       const { passwordHash, limit } = room.access[view];
-      return [view, { open: !room.access[view].closed, password: Boolean(passwordHash), limit, maxLimit: maxClientsPerRoom, effectiveLimit: seatLimit(room, view), taken: seatsTaken(room, view), online: online[view] }];
+      const summary = { open: !room.access[view].closed, password: Boolean(passwordHash), limit, maxLimit: maxClientsPerRoom, effectiveLimit: seatLimit(room, view), taken: seatsTaken(room, view), online: online[view] };
+      if (view === 'survivor') {
+        summary.positions = SURVIVOR_POSITIONS.map((position) => {
+          const hash = positionHolder(room, position);
+          return { taken: Boolean(hash), online: Boolean(hash && room.presence.get(hash)?.connections) };
+        });
+      }
+      return [view, summary];
     }));
   }
 
@@ -324,20 +376,21 @@ export function createLiveServer({
       if (seatsTaken(room, view, previousHash) >= seatLimit(room, view)) return reply(res, 409, { error: 'view-full' });
       const seats = { ...room.seats };
       if (previousHash) delete seats[previousHash];
-      // 只清理已过保留期的记录，避免反复进入让名额表无限增长
-      if (Object.keys(seats).length >= maxStoredSeats) {
-        for (const hash of Object.keys(seats)) if (!holdsSeat(room, hash)) delete seats[hash];
-      }
       if (Object.keys(seats).length >= maxStoredSeats) return reply(res, 409, { error: 'view-full' });
       const session = newToken();
       const hash = hashSession(session);
-      seats[hash] = { view, expiresAt: now() + seatGraceMs };
+      seats[hash] = { view, expiresAt: PERMANENT_SEAT_EXPIRY };
+      if (view === 'survivor') {
+        const position = freePosition(room, hash, seats);
+        if (position !== undefined) seats[hash].position = position;
+      }
       await saveSeats(room, seats);
       if (previousHash) {
         closeClients(room, 'session-replaced', client => client.seat === previousHash);
         room.presence.delete(previousHash);
       }
-      return reply(res, 200, { session, view });
+      refreshClaims(room);
+      return reply(res, 200, { session, view, position: seats[hash].position ?? null });
     });
   }
 
@@ -359,16 +412,17 @@ export function createLiveServer({
       await saveSeats(room, seats);
       closeClients(room, 'session-replaced', client => client.seat === hash);
       room.presence.delete(hash);
+      await promoteSurvivors(room);
+      refreshClaims(room);
       return reply(res, 200, {});
     });
   }
 
-  /** 凭证对应的身份；名额已过保留期并被别人占满时不能再进入。 */
+  /** 有效凭证恢复原身份；已退出或被裁判撤销的凭证不能重连。 */
   function sessionStatus(room, session) {
     const hash = hashSession(session);
     const view = room.seats[hash]?.view;
     if (!session || !view) return { status: 403, error: 'invalid-session' };
-    if (!holdsSeat(room, hash) && seatsTaken(room, view, hash) >= seatLimit(room, view)) return { status: 409, error: 'view-full' };
     return { hash, view };
   }
 
@@ -390,7 +444,13 @@ export function createLiveServer({
       const unavailable = connectionError(room, hash, view);
       if (unavailable) { res.setHeader('Retry-After', '3'); return reply(res, 503, { error: unavailable }); }
       if (res.destroyed) return;
-      await saveSeats(room, { ...room.seats, [hash]: { view, expiresAt: now() + seatGraceMs } });
+      // 兼容旧版尚未分配号位的凭证；正常重连保持原号位。
+      const seat = { ...room.seats[hash] };
+      if (view === 'survivor' && (seat.position === undefined || positionHolder(room, seat.position, hash))) {
+        const position = freePosition(room, hash);
+        if (position === undefined) delete seat.position; else seat.position = position;
+      }
+      if (seat.position !== room.seats[hash].position) await saveSeats(room, { ...room.seats, [hash]: seat });
       if (res.destroyed) return;
       res.writeHead(200, {
         'Content-Type': 'text/event-stream; charset=utf-8',
@@ -405,7 +465,9 @@ export function createLiveServer({
       presence.connections++;
       room.presence.set(hash, presence);
       res.write('retry: ' + randomInt(1500, 4001) + '\n\n');
+      client.send('position', { position: seat.position ?? null });
       pushTo(room, client);
+      refreshClaims(room);
       client.detach = () => {
         if (!room.clients.delete(client)) return;
         clientCount--;
@@ -413,14 +475,6 @@ export function createLiveServer({
         presence.connections--;
         if (!presence.connections && room.presence.get(hash) === presence) {
           room.presence.delete(hash);
-          if (!storeClosed && isCurrent(room) && room.seats[hash]) {
-            const expiresAt = now() + seatGraceMs;
-            commit(async () => {
-              if (isCurrent(room) && room.seats[hash] && !room.presence.get(hash)?.connections) {
-                await saveSeats(room, { ...room.seats, [hash]: { view, expiresAt } });
-              }
-            }, true).catch(() => console.error('Disconnected seat lease could not be persisted'));
-          }
         }
       };
       res.once('close', client.detach);
@@ -448,6 +502,9 @@ export function createLiveServer({
         } catch (error) {
           return reply(res, 400, { error: error.message });
         }
+        // 选手的选择只由选角接口修改；开始新一轮时选角自然结束
+        delete state.draft;
+        if (room.state.draft?.round === state.round) state.draft = room.state.draft;
         await updateRoom(room, { state, seq: body.seq });
         broadcast(room);
         return reply(res, 200, { viewers: viewers(room) });
@@ -497,6 +554,7 @@ export function createLiveServer({
       if (removeSeats) {
         room.admissionVersion++;
         closeClients(room, open === false ? 'view-closed' : 'password-changed', (client) => client.view === view);
+        refreshClaims(room);
       }
       return reply(res, 200, { access: accessSummary(room) });
     });
@@ -517,6 +575,33 @@ export function createLiveServer({
       await updateRoom(room, { seats: Object.fromEntries(Object.entries(room.seats).filter(([, seat]) => seat.view !== body.view)) });
       room.admissionVersion++;
       closeClients(room, 'seat-cleared', (client) => client.view === body.view);
+      refreshClaims(room);
+      return reply(res, 200, { access: accessSummary(room) });
+    });
+  }
+
+  /** 踢出某个号位上的求生者；不封禁，对方可以重新进入，并拿到最小的空号位。 */
+  async function kickPosition(req, res, room) {
+    const generation = room.generation;
+    let body;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      return reply(res, error.message === 'too-large' ? 413 : 400, { error: error.message });
+    }
+    return commit(async () => {
+      if (!isCurrent(room)) return reply(res, 404, { error: 'room-not-found' });
+      if (generation !== room.generation) return reply(res, 409, { error: 'room-changed' });
+      if (!SURVIVOR_POSITIONS.includes(body.position)) return reply(res, 400, { error: 'invalid-position' });
+      const hash = positionHolder(room, body.position);
+      if (hash) {
+        const { [hash]: removed, ...seats } = room.seats;
+        await updateRoom(room, { seats });
+        closeClients(room, 'kicked', (client) => client.seat === hash);
+        room.presence.delete(hash);
+        await promoteSurvivors(room);
+        refreshClaims(room);
+      }
       return reply(res, 200, { access: accessSummary(room) });
     });
   }
@@ -544,6 +629,118 @@ export function createLiveServer({
       room.presence.clear();
       closeClients(room, 'reset');
       return reply(res, 200, { access: accessSummary(room) });
+    });
+  }
+
+  /** 选手操作不算裁判操作，不延长房间有效期。 */
+  async function saveDraft(room, draft) {
+    assertCurrent(room);
+    const state = { ...room.state, draft };
+    await store.put(persistedRoom({ ...room, state }));
+    room.state = state;
+    room.projectionCache.clear();
+    broadcast(room);
+  }
+
+  const DRAFT_CONFLICTS = new Set(['already-locked', 'card-taken', 'nothing-selected']);
+  const draftError = (res, error) => {
+    if (DRAFT_CONFLICTS.has(error.message)) return reply(res, 409, { error: error.message });
+    if (['invalid-position', 'invalid-char'].includes(error.message)) return reply(res, 400, { error: error.message });
+    throw error;
+  };
+  const hostDraftView = (room) => ({ draft: room.state.draft || null, claimed: claimedPositions(room), now: now() });
+
+  /** 裁判发放候选：开始新一轮，旧结果同时撤下。 */
+  async function hostStartDraft(req, res, room) {
+    const generation = room.generation;
+    let body;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      return reply(res, error.message === 'too-large' ? 413 : 400, { error: error.message });
+    }
+    return commit(async () => {
+      if (!isCurrent(room)) return reply(res, 404, { error: 'room-not-found' });
+      if (generation !== room.generation) return reply(res, 409, { error: 'room-changed' });
+      if (!Number.isSafeInteger(body.seq) || body.seq < 0) return reply(res, 400, { error: 'invalid-seq' });
+      if (body.seq <= room.seq) return reply(res, 200, { stale: true });
+      const seconds = body.seconds ?? null;
+      if (seconds !== null && (!Number.isInteger(seconds) || seconds < 1 || seconds > MAX_DRAFT_SECONDS)) return reply(res, 400, { error: 'invalid-seconds' });
+      let draft;
+      try {
+        const { seats, closed, ...fresh } = body.draft || {};
+        draft = normalizeDraft({ ...fresh, deadline: seconds === null ? null : now() + seconds * 1000 });
+      } catch (error) {
+        return reply(res, 400, { error: error.message });
+      }
+      await updateRoom(room, { state: { ...emptyState(), round: draft.round, phase: 'drawing', draft }, seq: body.seq });
+      room.claimKey = JSON.stringify(claimedPositions(room));
+      broadcast(room);
+      return reply(res, 200, hostDraftView(room));
+    });
+  }
+
+  /** 裁判代选、延时、结束选角。 */
+  async function hostDraftAction(req, res, room, action) {
+    const generation = room.generation;
+    let body;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      return reply(res, error.message === 'too-large' ? 413 : 400, { error: error.message });
+    }
+    return commit(async () => {
+      if (!isCurrent(room)) return reply(res, 404, { error: 'room-not-found' });
+      if (generation !== room.generation) return reply(res, 409, { error: 'room-changed' });
+      const draft = room.state.draft;
+      if (!draft || draft.round !== body.round) return reply(res, 409, { error: 'no-draft' });
+      let next;
+      if (action === 'pick') {
+        try { next = applyDraftPick(draft, body.position, body.char, body.lock === true); } catch (error) { return draftError(res, error); }
+      } else if (action === 'extend') {
+        if (draft.deadline === null || !Number.isInteger(body.seconds) || body.seconds < 1 || body.seconds > MAX_DRAFT_SECONDS) return reply(res, 400, { error: 'invalid-seconds' });
+        next = { ...draft, deadline: Math.max(draft.deadline, now()) + body.seconds * 1000 };
+      } else {
+        next = { ...draft, closed: true };
+      }
+      await saveDraft(room, next);
+      return reply(res, 200, hostDraftView(room));
+    });
+  }
+
+  /** 选手预选和锁定。 */
+  async function playerDraftAction(req, res, room, action) {
+    let body;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      return reply(res, error.message === 'too-large' ? 413 : 400, { error: error.message });
+    }
+    return commit(async () => {
+      if (!isCurrent(room)) return reply(res, 404, { error: 'room-not-found' });
+      const { hash, view, status, error } = sessionStatus(room, body.session);
+      if (error) return reply(res, status, { error });
+      const draft = room.state.draft;
+      if (!draft || draft.round !== body.round) return reply(res, 409, { error: 'no-draft' });
+      if (!draftOpen(draft, now())) return reply(res, 409, { error: 'draft-closed' });
+      // 写入前检查凭证仍拥有名额，号位归属另行核对。
+      if (!holdsSeat(room, hash)) return reply(res, 403, { error: 'not-your-seat' });
+      const { position } = body;
+      if (view === 'hunter') {
+        if (position !== 4) return reply(res, 403, { error: 'not-your-seat' });
+      } else if (view === 'survivor') {
+        // 共享卡池里，无人认领的号位可以由在场队友代选
+        const own = room.seats[hash].position;
+        if (!SURVIVOR_POSITIONS.includes(own) || positionHolder(room, own) !== hash) return reply(res, 403, { error: 'not-your-seat' });
+        const canHelp = draft.survivor.mode === 'shared' && !positionHolder(room, position);
+        if (!SURVIVOR_POSITIONS.includes(position) || (own !== position && !canHelp)) return reply(res, 403, { error: 'not-your-seat' });
+      } else {
+        return reply(res, 403, { error: 'not-your-seat' });
+      }
+      let next;
+      try { next = applyDraftPick(draft, position, body.char, action === 'lock'); } catch (err) { return draftError(res, err); }
+      await saveDraft(room, next);
+      return reply(res, 200, {});
     });
   }
 
@@ -589,6 +786,7 @@ export function createLiveServer({
     if (req.method === 'POST' && action === 'join') return joinRoom(req, res, room);
     if (req.method === 'POST' && action === 'leave') return leaveRoomSeat(req, res, room);
     if (req.method === 'GET' && action === 'events') return subscribe(req, res, room, session);
+    if (req.method === 'POST' && ['draft/pick', 'draft/lock'].includes(action)) return playerDraftAction(req, res, room, action.slice(6));
     if (req.method === 'GET' && action === 'check') {
       const { hash, view, status, error } = sessionStatus(room, session);
       return error ? reply(res, status, { error }) : reply(res, 200, { ok: true, view, connectionError: connectionError(room, hash, view) });
@@ -600,7 +798,11 @@ export function createLiveServer({
     }
     if (req.method === 'PUT' && (action === 'state' || action === 'visibility')) return hostUpdate(req, res, room, action);
     if (req.method === 'PUT' && action === 'access') return updateAccess(req, res, room);
+    if (req.method === 'PUT' && action === 'draft') return hostStartDraft(req, res, room);
+    if (req.method === 'GET' && action === 'draft') return reply(res, 200, hostDraftView(room));
+    if (req.method === 'POST' && ['draft/host-pick', 'draft/extend', 'draft/close'].includes(action)) return hostDraftAction(req, res, room, action.slice(6).replace('host-', ''));
     if (req.method === 'POST' && action === 'seats/clear') return clearSeats(req, res, room);
+    if (req.method === 'POST' && action === 'seats/kick') return kickPosition(req, res, room);
     if (req.method === 'POST' && action === 'reset') return resetRoom(req, res, room);
     if (req.method === 'DELETE' && action === '') {
       return commit(async () => { await removeRoom(room.id); return reply(res, 200, {}); });
@@ -634,24 +836,6 @@ export function createLiveServer({
   server.requestTimeout = 0;
   function heartbeat() {
     for (const room of rooms.values()) room.clients.forEach(client => send(client, 'ping', {}));
-    if (heartbeatPending || storeClosed) return;
-    heartbeatPending = true;
-    return commit(async () => {
-      const updates = [];
-      for (const room of rooms.values()) {
-        if (!room.clients.size) continue;
-        const seats = { ...room.seats };
-        for (const [hash, presence] of room.presence) {
-          if (presence.connections > 0 && seats[hash]) seats[hash] = { ...seats[hash], expiresAt: now() + seatGraceMs };
-        }
-        updates.push({ id: room.id, seats });
-      }
-      if (!updates.length) return;
-      await store.renewSeats(updates);
-      for (const { id, seats } of updates) rooms.get(id).seats = seats;
-      metrics.leaseBatches++;
-    }, true).catch(() => console.error('Connected seat leases could not be persisted'))
-      .finally(() => { heartbeatPending = false; });
   }
   const pingTimer = setInterval(heartbeat, pingIntervalMs);
   const sweepTimer = setInterval(() => { sweep().catch(() => console.error('Room expiration could not be persisted')); }, SWEEP_MS);

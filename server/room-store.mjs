@@ -3,6 +3,9 @@ import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 
+// Keep the existing numeric field readable by older rollback runtimes.
+export const PERMANENT_SEAT_EXPIRY = Number.MAX_SAFE_INTEGER;
+
 // One writer per database. Commit before changing memory or publishing.
 // Keep the v1 schema and user_version readable by the deployed rollback runtime.
 // Room-number sessions live in their own table; old link tokens are never imported.
@@ -40,17 +43,30 @@ export function openRoomStore(path = ':memory:') {
     const values = room => [room.hostToken, JSON.stringify(room.access), JSON.stringify(room.seats), JSON.stringify(room.state),
       JSON.stringify(room.visibility), room.seq, room.touchedAt];
     return {
-      load(cutoff) {
-        db.prepare('DELETE FROM rooms_v2 WHERE touched_at < ?').run(cutoff);
-        return db.prepare('SELECT * FROM rooms_v2').all().map(row => ({
-          id: row.id, hostToken: row.host_token, access: JSON.parse(row.access),
-          // Preview seats had no durable lease. They may reclaim a free seat,
-          // but must not receive a new grace period merely because we restarted.
-          seats: Object.fromEntries(Object.entries(JSON.parse(row.seats)).map(([hash, seat]) =>
-            [hash, typeof seat === 'string' ? { view: seat, expiresAt: 0 } : seat])),
-          state: JSON.parse(row.state), visibility: JSON.parse(row.visibility),
-          seq: row.seq, touchedAt: row.touched_at,
-        }));
+      load(cutoff, { permanentSeatsAt } = {}) {
+        db.exec('BEGIN IMMEDIATE');
+        try {
+          db.prepare('DELETE FROM rooms_v2 WHERE touched_at < ?').run(cutoff);
+          const rooms = db.prepare('SELECT * FROM rooms_v2').all().map(row => {
+            let seats = Object.fromEntries(Object.entries(JSON.parse(row.seats)).map(([hash, seat]) =>
+              [hash, typeof seat === 'string' ? { view: seat, expiresAt: 0 } : seat]));
+            if (permanentSeatsAt !== undefined) {
+              // Convert still-reserved legacy seats once; expired records must not
+              // reclaim capacity merely because the retention policy changed.
+              seats = Object.fromEntries(Object.entries(seats)
+                .filter(([, seat]) => seat.expiresAt > permanentSeatsAt)
+                .map(([hash, seat]) => [hash, { ...seat, expiresAt: PERMANENT_SEAT_EXPIRY }]));
+              if (JSON.stringify(seats) !== row.seats) updateSeats.run(JSON.stringify(seats), row.id);
+            }
+            return {
+              id: row.id, hostToken: row.host_token, access: JSON.parse(row.access), seats,
+              state: JSON.parse(row.state), visibility: JSON.parse(row.visibility),
+              seq: row.seq, touchedAt: row.touched_at,
+            };
+          });
+          db.exec('COMMIT');
+          return rooms;
+        } catch (error) { db.exec('ROLLBACK'); throw error; }
       },
       create(room) { insert.run(room.id, ...values(room)); },
       put(room) {
@@ -100,10 +116,10 @@ export function openWorkerRoomStore(path = ':memory:') {
     });
   }
   return {
-    load(cutoff) {
+    load(cutoff, options) {
       const bootstrap = openRoomStore(path);
       let rooms;
-      try { rooms = bootstrap.load(cutoff); } finally { bootstrap.close(); }
+      try { rooms = bootstrap.load(cutoff, options); } finally { bootstrap.close(); }
       worker = new Worker(new URL(import.meta.url), { workerData: { roomStorePath: path }, execArgv: [] });
       worker.on('message', ({ id, error, result }) => {
         const waiter = pending.get(id);

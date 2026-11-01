@@ -184,6 +184,57 @@ export function rollBuild(tree, { ultimateSetting = 'random', ultimateWeights = 
   return { levels: Object.fromEntries(levels), used, ultimates };
 }
 
+/** 高级玩法的默认设置：全部直接抽取时，流程和没有这个功能时一样。 */
+export const DRAFT_DEFAULTS = {
+  survivor: 'direct', // direct | personal | shared
+  survivorCount: 3,
+  sharedSize: 6,
+  hunter: 'direct', // direct | pick
+  hunterCount: 3,
+  seconds: 60, // 0 表示不限时
+  onTimeout: 'random', // random | wait
+};
+export const DRAFT_LIMITS = { survivorCount: [2, 6], sharedSize: [4, 36], hunterCount: [2, 12] };
+export const DRAFT_SECONDS = [30, 60, 90, 0];
+
+/** 补齐并修正保存过的设置，无效的值恢复默认。 */
+export function normalizeDraftSettings(raw) {
+  const out = { ...DRAFT_DEFAULTS };
+  if (['direct', 'personal', 'shared'].includes(raw?.survivor)) out.survivor = raw.survivor;
+  if (['direct', 'pick'].includes(raw?.hunter)) out.hunter = raw.hunter;
+  for (const [key, [min, max]] of Object.entries(DRAFT_LIMITS)) {
+    if (Number.isInteger(raw?.[key]) && raw[key] >= min && raw[key] <= max) out[key] = raw[key];
+  }
+  if (DRAFT_SECONDS.includes(raw?.seconds)) out.seconds = raw.seconds;
+  if (['random', 'wait'].includes(raw?.onTimeout)) out.onTimeout = raw.onTimeout;
+  return out;
+}
+
+export const draftEnabled = (draft) => draft.survivor !== 'direct' || draft.hunter !== 'direct';
+
+/** 这种设置下，双方卡池至少要有多少个角色。 */
+export function draftNeeds(draft) {
+  return {
+    survivor: draft.survivor === 'personal' ? draft.survivorCount * 4 : draft.survivor === 'shared' ? draft.sharedSize : 4,
+    hunter: draft.hunter === 'pick' ? draft.hunterCount : 1,
+  };
+}
+
+/** 发候选：各自候选互不重复；直接抽取的一方不发，等全部选定后再抽。 */
+export function dealDraft(draft, survivorPool, hunterPool, rng = createRng()) {
+  const needs = draftNeeds(draft);
+  const survivors = draft.survivor === 'direct' ? [] : sample(survivorPool, needs.survivor, rng).map((c) => c.id);
+  const survivor = { mode: draft.survivor };
+  if (draft.survivor === 'personal') {
+    survivor.cands = [0, 1, 2, 3].map((i) => survivors.slice(i * draft.survivorCount, (i + 1) * draft.survivorCount));
+  } else if (draft.survivor === 'shared') {
+    survivor.pool = survivors;
+  }
+  const hunter = { mode: draft.hunter };
+  if (draft.hunter === 'pick') hunter.cands = sample(hunterPool, needs.hunter, rng).map((c) => c.id);
+  return { survivor, hunter };
+}
+
 /** 校验一套人格是否合规，返回问题列表（空数组表示合规）。用于自检。 */
 export function validateBuild(tree, build) {
   const problems = [];

@@ -348,7 +348,7 @@ test('改密码后该身份立即退出，其他身份不受影响，旧凭证�
   survivor.close();
 });
 
-test('人数上限：同一凭证重连不多占，满员拒绝，断线保留 2 分钟后释放', async () => {
+test('人数上限：同一凭证重连不多占，断线不释放，主动退出才释放', async () => {
   const room = await createRoom();
   await hostCall(room, 'PUT', '/access', { view: 'hunter', limit: 1 });
   const first = await openStream(room, 'hunter');
@@ -370,13 +370,13 @@ test('人数上限：同一凭证重连不多占，满员拒绝，断线保留 2
   assert.equal((await join(room, 'hunter')).status, 409);
   assert.equal((await fetch(`${base}/${room.roomId}/check?session=${first.session}`)).status, 200);
 
-  // 超过保留期后释放；此时别人占了名额，原凭证就回不来了
-  clock += 61 * 1000;
-  const takeover = await join(room, 'hunter');
-  assert.equal(takeover.status, 200);
-  const stale = await fetch(`${base}/${room.roomId}/check?session=${first.session}`);
-  assert.equal(stale.status, 409);
-  assert.equal((await stale.json()).error, 'view-full');
+  // 时间过去也不能顶替；明确退出后才能由别人进入。
+  clock += 2 * 60 * 60 * 1000;
+  assert.equal((await join(room, 'hunter')).status, 409);
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${first.session}`)).status, 200);
+  assert.equal((await fetch(`${base}/${room.roomId}/leave`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: first.session }) })).status, 200);
+  assert.equal((await join(room, 'hunter')).status, 200);
+  assert.equal((await fetch(`${base}/${room.roomId}/check?session=${first.session}`)).status, 403);
 });
 
 test('调低上限不踢人，清空名额才会退出', async () => {
@@ -517,7 +517,7 @@ test('switching identity revokes every old tab and delivers no later state to th
 
 test('concurrent wrong passwords share the ten-attempt budget and recover after the window', { timeout: 10000 }, async () => {
   const room = await createRoom();
-  await hostCall(room, 'PUT', '/access', { view: 'hunter', password: 'correct' });
+  await hostCall(room, 'PUT', '/access', { view: 'hunter', password: 'correct', limit: 64 });
   const results = await Promise.all(Array.from({ length: 24 }, () => join(room, 'hunter', 'wrong')));
   assert.equal(results.filter(res => res.status === 403).length, 10);
   assert.equal(results.filter(res => res.status === 429).length, 14);

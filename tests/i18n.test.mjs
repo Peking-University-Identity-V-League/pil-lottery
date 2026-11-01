@@ -40,7 +40,7 @@ test('every description is translated and keeps the numbers of the Chinese text'
 
 test('every interface string is translated and keeps its placeholders', async () => {
   const sources = await Promise.all([
-    'js/app.js', 'js/live.js', 'js/shared-ui.js', 'js/fit-rules.js',
+    'js/app.js', 'js/live.js', 'js/shared-ui.js', 'js/fit-rules.js', 'js/draft-ui.js', 'js/seat-tabs.js',
   ].map(read));
   const pages = await Promise.all(['index.html', 'live/index.html'].map(read));
   const keys = new Set();

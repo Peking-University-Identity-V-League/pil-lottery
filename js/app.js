@@ -1,17 +1,19 @@
 import { sfx } from './sound.js';
 import {
-  RANDOM_ULTIMATE_WEIGHTS, createRng, normalizeUltimateWeights, pickOne, sample, prepareTree, rollBuild, validateBuild,
+  DRAFT_DEFAULTS, DRAFT_LIMITS, RANDOM_ULTIMATE_WEIGHTS, createRng, dealDraft, draftEnabled, draftNeeds, normalizeDraftSettings, normalizeUltimateWeights, pickOne, sample, prepareTree, rollBuild, validateBuild,
 } from './rules.js';
 import {
   FIT_RULES, buildViolatesFit, describeRule, fitFor, isListedBlocked, isRuleEnabled, isRuleModified, setRuleEnabled, toggleCharacter,
 } from './fit-rules.js';
 import { createLiveHost, liveLink } from './live-host.js';
 import {
-  DEFAULT_VISIBILITY, LIVE_VIEWS, VISIBILITY_OPTIONS, VISIBILITY_TOGGLES, activeToggles, toggleVisibility,
+  DEFAULT_VISIBILITY, LIVE_VIEWS, VISIBILITY_OPTIONS, VISIBILITY_TOGGLES, activeToggles, applyDraftPick, draftCandidates, draftComplete, normalizeDraft, toggleVisibility,
 } from './live-visibility.js';
 import {
   applyPortraitView, asset, cleanDescription, el, renderWeb, showTreeDialog, splitBuild, talentItems,
 } from './shared-ui.js';
+import { createSeatTabs } from './seat-tabs.js';
+import { createDraftUI, draftModel, setLeftoverLine, setRejectedLine } from './draft-ui.js';
 import { applyI18n, bindLanguageSelect, charName, joinList, roleName, t, talentName, traitName } from './i18n.js';
 
 /* ------------------------------------------------------------------ 基础 */
@@ -39,6 +41,7 @@ const DEFAULTS = {
   excluded: { survivor: [], hunter: [], trait: [] },
   fit: {},
   ultWeights: { survivor: RANDOM_ULTIMATE_WEIGHTS, hunter: RANDOM_ULTIMATE_WEIGHTS },
+  draft: DRAFT_DEFAULTS,
 };
 
 function loadSettings() {
@@ -53,6 +56,7 @@ function loadSettings() {
       survivor: normalizeUltimateWeights(saved.ultWeights?.survivor) || RANDOM_ULTIMATE_WEIGHTS,
       hunter: normalizeUltimateWeights(saved.ultWeights?.hunter) || RANDOM_ULTIMATE_WEIGHTS,
     },
+    draft: normalizeDraftSettings(saved.draft),
   };
 }
 
@@ -111,6 +115,9 @@ function poolProblem() {
   if (pool('survivor').length < POOL_MIN.survivor) return t('卡池里至少要留 4 名求生者，才能凑齐一局。');
   if (pool('hunter').length < POOL_MIN.hunter) return t('卡池里至少要留 1 名监管者。');
   if (settings.drawTrait && pool('trait').length < POOL_MIN.trait) return t('卡池里至少要留 1 个辅助特质，或关闭“抽取辅助特质”。');
+  const needs = draftNeeds(settings.draft);
+  if (pool('survivor').length < needs.survivor) return t('高级玩法需要 {count} 名求生者，卡池不够。', { count: needs.survivor });
+  if (pool('hunter').length < needs.hunter) return t('高级玩法需要 {count} 名监管者，卡池不够。', { count: needs.hunter });
   return null;
 }
 
@@ -198,8 +205,11 @@ async function warmAllImages() {
 }
 
 function newMatch() {
-  const survivors = sample(pool('survivor'), 4, rng);
-  const hunter = pickOne(pool('hunter'), rng);
+  return composeMatch(sample(pool('survivor'), 4, rng), pickOne(pool('hunter'), rng));
+}
+
+/** 角色定下来之后才抽人格和特质，适配设置才能生效。 */
+function composeMatch(survivors, hunter) {
   const trait = pickTrait(hunter);
   if (settings.drawTrait && !trait) toast(t('{name}没有可抽的辅助特质，改为自选。', { name: charName(hunter) }));
   const slots = [
@@ -310,6 +320,7 @@ async function sequence(task) {
       instantFrame = requestAnimationFrame(() => document.body.classList.remove('instant'));
     });
     syncButtons();
+    seatTabs.settle();
   }
 }
 
@@ -333,6 +344,14 @@ function buildTable() {
   }
   table.replaceChildren(survivorSide, divider, hunterSide);
   slots.forEach((slot) => { setPanelPending(slot); resetTrait(slot); });
+  draftUI = createDraftUI({
+    slots, table, lookup: lookupChar, toast,
+    onPick: (position, char) => hostDraftPick(position, char),
+    onLock: (position) => hostDraftPick(position, undefined, true),
+    onExpire: onDraftExpire,
+    motion: () => !reduceMotion.matches && !skipping,
+  });
+  seatTabs = createSeatTabs({ slots, table });
 }
 
 function createSlot(index) {
@@ -550,10 +569,12 @@ async function shuffleAndDeal() {
   resetCardMotion();
   const cards = slots.map((s) => s.card);
   const rects = cards.map((c) => c.getBoundingClientRect());
-  const left = Math.min(...rects.map((r) => r.left));
-  const right = Math.max(...rects.map((r) => r.right));
-  const top = Math.max(0, Math.min(...rects.map((r) => r.top)));
-  const bottom = Math.min(window.innerHeight, Math.max(...rects.map((r) => r.bottom)));
+  // 窄屏只显示一个座位，隐藏的信封不参与定位
+  const shown = rects.filter((r) => r.width);
+  const left = Math.min(...shown.map((r) => r.left));
+  const right = Math.max(...shown.map((r) => r.right));
+  const top = Math.max(0, Math.min(...shown.map((r) => r.top)));
+  const bottom = Math.min(window.innerHeight, Math.max(...shown.map((r) => r.bottom)));
   const cx = (left + right) / 2;
   const cy = (top + bottom) / 2;
   const to = rects.map((r, i) => ({
@@ -624,11 +645,15 @@ async function rollTrait(slot, final) {
 /* ------------------------------------------------------------------ 操作 */
 
 function draw() {
+  if (hostDraft || draftResuming) return;
   if (busy) { skip(); return; }
   if (!data.trees.survivor) return;
   const problem = poolProblem();
   if (problem) { toast(problem); return; }
   sfx.unlock();
+  seatTabs.reset();
+  clearDraftResult();
+  if (draftEnabled(settings.draft)) { startHostDraft(); return; }
   const next = newMatch();
   track('lottery_draw', {
     survivor_ult: settings.survivorUlt, hunter_ult: settings.hunterUlt,
@@ -645,27 +670,363 @@ function draw() {
     startLiveRound();
     slots.forEach((s, i) => fillLetter(s, match.slots[i]));
     await shuffleAndDeal();
+    await revealMatch();
+  });
+}
 
-    const lights = [];
-    for (let i = 0; i < 4; i++) {
-      await openCard(slots[i]);
-      lights.push(lightPanel(slots[i], match.slots[i]));
-      await wait(240);
-    }
-    await wait(300);
-    const hunter = slots[4];
+/** 依次揭晓求生者、监管者、人格和特质。kept 标记选角时已经翻开的座位，它们不再翻牌。 */
+async function revealMatch(kept = []) {
+  const lights = [];
+  for (let i = 0; i < 4; i++) {
+    if (kept[i]) liveReveal(i, 'char');
+    else await openCard(slots[i]);
+    lights.push(lightPanel(slots[i], match.slots[i]));
+    await wait(kept[i] ? 120 : 240);
+  }
+  await wait(300);
+  const hunter = slots[4];
+  if (kept[4]) {
+    liveReveal(4, 'char');
+  } else {
     syncLive('hunter');
     await revealHunter(hunter);
-    lights.push(lightPanel(hunter, match.slots[4], 60));
-    if (match.slots[4].trait) {
-      await wait(520);
-      syncLive('trait');
-      await rollTrait(hunter, match.slots[4].trait);
-    } else {
-      showTraitFree(hunter);
-      liveReveal(4, 'trait');
+  }
+  lights.push(lightPanel(hunter, match.slots[4], 60));
+  if (match.slots[4].trait) {
+    await wait(520);
+    syncLive('trait');
+    await rollTrait(hunter, match.slots[4].trait);
+  } else {
+    showTraitFree(hunter);
+    liveReveal(4, 'trait');
+  }
+  await Promise.all(lights);
+  showDraftResult();
+}
+
+/* ------------------------------------------------------------------ 高级玩法：选角 */
+
+const DRAFT_POLL_MS = 1000;
+const DRAFT_DEAL_GRACE_SECONDS = 4; // 发牌动画不占选择时间
+const DRAFT_EXTEND_SECONDS = 30;
+const DRAFT_ERRORS = {
+  'already-locked': '这个座位已经锁定了。',
+  'card-taken': '这张牌已被其他号位占用。',
+  'nothing-selected': '先选一张牌，再锁定。',
+};
+let hostDraft = null; // { draft, claimed, online, stage: 'dealing' | 'picking' | 'finishing', poll }
+let draftResuming = false;
+let draftUI = null;
+let seatTabs = null;
+
+const lookupChar = (side, id) => (side === 'survivor' ? data.survivors : data.hunters).find((c) => c.id === id);
+const draftOnline = () => Boolean(hostDraft?.online && live.room);
+
+function renderHostDraft({ animate = !reduceMotion.matches, before = null } = {}) {
+  return draftUI.show(draftModel(hostDraft.draft, { host: true, claimed: hostDraft.claimed }), { animate, before });
+}
+
+function draftNames(side, ids) {
+  return ids.map((id) => charName(lookupChar(side, id)));
+}
+
+function clearDraftResult() {
+  slots.forEach((slot) => setRejectedLine(slot, []));
+  setLeftoverLine($('.lineup-survivor'), []);
+}
+
+function showDraftResult() {
+  if (!match) return;
+  match.slots.forEach((entry, i) => setRejectedLine(slots[i], entry.rejected ? draftNames(entry.side, entry.rejected) : []));
+  setLeftoverLine($('.lineup-survivor'), match.leftover ? draftNames('survivor', match.leftover) : []);
+}
+
+async function startHostDraft() {
+  const { survivor, hunter } = dealDraft(settings.draft, pool('survivor'), pool('hunter'), rng);
+  const seconds = settings.draft.seconds ? settings.draft.seconds + DRAFT_DEAL_GRACE_SECONDS : null;
+  const round = Date.now();
+  const onTimeout = settings.draft.onTimeout;
+  let draft = normalizeDraft({ round, survivor, hunter, onTimeout, deadline: seconds ? Date.now() + seconds * 1000 : null });
+  const online = Boolean(live.room);
+  if (online && live.syncBlocked) { toast(t('同步暂停时不能发放候选，请先打开房间设置处理。')); return; }
+  [...(survivor.cands || []).flat(), ...(survivor.pool || [])].forEach((id) => preload(lookupChar('survivor', id).portrait));
+  (hunter.cands || []).forEach((id) => preload(lookupChar('hunter', id).portrait));
+  hostDraft = { draft, claimed: [false, false, false, false], online, stage: 'dealing', poll: 0 };
+  syncButtons();
+  track('lottery_draft', { survivor_mode: settings.draft.survivor, hunter_mode: settings.draft.hunter, seconds: settings.draft.seconds });
+  if (online) {
+    try {
+      const res = await live.startDraft(draft, seconds);
+      if (res.stale || !res.draft) throw new Error('stale');
+      draft = res.draft;
+      hostDraft.draft = draft;
+      hostDraft.claimed = res.claimed;
+      draftUI.setClockOffset(res.now - Date.now());
+    } catch {
+      hostDraft = null;
+      toast(t('候选没有发出去，请重试。'));
+      syncButtons();
+      return;
     }
-    await Promise.all(lights);
+  } else {
+    draftUI.setClockOffset(0);
+  }
+  const wasOpen = slots.some((s) => s.card.classList.contains('is-open'));
+  match = null;
+  liveShown = null;
+  slots.forEach((s) => { closeCard(s); setPanelPending(s); resetTrait(s); });
+  syncButtons();
+  skipping = reduceMotion.matches;
+  const prelude = (async () => {
+    if (wasOpen) { say('flip'); await wait(680); }
+    await shuffleAndDeal();
+  })();
+  await renderHostDraft({ before: prelude });
+  skipping = false;
+  if (!hostDraft || hostDraft.draft.round !== draft.round) return;
+  enterDraftPicking();
+}
+
+function enterDraftPicking() {
+  hostDraft.stage = 'picking';
+  syncButtons();
+  if (draftOnline()) scheduleDraftPoll();
+  // 恢复或发牌结束时重新检查；渲染期间的超时回调可能已被 dealing 阶段忽略。
+  if (draftComplete(hostDraft.draft) || hostDraft.draft.closed
+    || (hostDraft.draft.onTimeout === 'random' && draftUI.expired)) finishHostDraft();
+}
+
+function scheduleDraftPoll() {
+  clearTimeout(hostDraft.poll);
+  hostDraft.poll = setTimeout(async () => {
+    const current = hostDraft;
+    if (!current || current.stage !== 'picking') return;
+    if (!draftOnline()) { abortHostDraft(t('选角已被其他操作取消。')); return; }
+    try {
+      const res = await live.draftStatus();
+      if (hostDraft === current && current.stage === 'picking') applyDraftStatus(res);
+    } catch { /* 下一轮再试 */ }
+    if (hostDraft === current && current.stage === 'picking') scheduleDraftPoll();
+  }, DRAFT_POLL_MS);
+}
+
+function applyDraftStatus(res) {
+  if (!hostDraft || hostDraft.stage === 'finishing') return;
+  if (res.draft?.round !== hostDraft.draft.round) {
+    // 房间被重置，或其他设备开始了新一轮
+    abortHostDraft(t('选角已被其他操作取消。'));
+    return;
+  }
+  hostDraft.draft = res.draft;
+  hostDraft.claimed = res.claimed;
+  draftUI.setClockOffset(res.now - Date.now());
+  renderHostDraft();
+  if (!hostDraft.finishFailed && draftComplete(res.draft)) finishHostDraft();
+}
+
+function abortHostDraft(message) {
+  clearTimeout(hostDraft.poll);
+  hostDraft = null;
+  draftUI.clear();
+  slots.forEach((s) => { closeCard(s); });
+  if (message) toast(message);
+  syncButtons();
+}
+
+async function hostDraftPick(position, char, lock = false) {
+  if (!hostDraft || hostDraft.stage !== 'picking') return;
+  sfx.unlock();
+  try {
+    if (draftOnline()) {
+      applyDraftStatus(await live.draftAction('host-pick', { round: hostDraft.draft.round, position, char, lock }));
+    } else {
+      hostDraft.draft = applyDraftPick(hostDraft.draft, position, char, lock);
+      renderHostDraft();
+      if (draftComplete(hostDraft.draft)) finishHostDraft();
+    }
+  } catch (error) {
+    toast(t(DRAFT_ERRORS[error.code || error.message] || '操作没有成功，请重试。'));
+  }
+}
+
+async function extendHostDraft() {
+  if (!hostDraft || hostDraft.draft.deadline === null || hostDraft.stage !== 'picking') return;
+  try {
+    if (draftOnline()) {
+      applyDraftStatus(await live.draftAction('extend', { round: hostDraft.draft.round, seconds: DRAFT_EXTEND_SECONDS }));
+    } else {
+      hostDraft.draft = { ...hostDraft.draft, deadline: Math.max(hostDraft.draft.deadline, Date.now()) + DRAFT_EXTEND_SECONDS * 1000 };
+      renderHostDraft();
+    }
+    toast(t('已延时 {seconds} 秒', { seconds: DRAFT_EXTEND_SECONDS }));
+  } catch {
+    toast(t('操作没有成功，请重试。'));
+  }
+}
+
+function onDraftExpire() {
+  if (hostDraft?.stage === 'picking' && !hostDraft.finishFailed && hostDraft.draft.onTimeout === 'random') finishHostDraft();
+}
+
+/** 结束选角：未锁定的座位保留预选，没有预选的随机补齐，然后才抽人格。 */
+async function finishHostDraft() {
+  if (!hostDraft || hostDraft.stage === 'finishing') return;
+  const current = hostDraft;
+  current.stage = 'finishing';
+  clearTimeout(current.poll);
+  syncButtons();
+  if (current.online) {
+    // 曾经在线的选角不能因为房间丢失而退回本地快照生成结果。
+    if (!live.room) { abortHostDraft(t('选角已被其他操作取消。')); return; }
+    try {
+      const res = await live.draftAction('close', { round: current.draft.round });
+      if (hostDraft !== current) return;
+      if (res.draft?.round !== current.draft.round) { abortHostDraft(t('选角已被其他操作取消。')); return; }
+      if (!res.draft.closed) throw new Error('close-not-confirmed');
+      current.draft = res.draft;
+      current.claimed = res.claimed;
+      renderHostDraft();
+    } catch {
+      if (hostDraft !== current) return;
+      if (!live.room) { abortHostDraft(t('选角已被其他操作取消。')); return; }
+      current.stage = 'picking';
+      current.finishFailed = true;
+      toast(t('结束选角未确认，已保留当前选择，请重试。'));
+      syncButtons();
+      scheduleDraftPoll();
+      return;
+    }
+  }
+  const { draft } = current;
+  const chosen = draft.seats.map((seat) => seat.sel);
+  const missing = [0, 1, 2, 3, 4].filter((i) => !chosen[i] && draftCandidates(draft, i).length);
+  if (missing.length) await draftUI.hop(missing);
+  if (hostDraft !== current) return;
+  for (const i of missing) {
+    const free = draftCandidates(draft, i).filter((id) => !draft.survivor.pool || i === 4 || !chosen.slice(0, 4).includes(id));
+    chosen[i] = pickOne(free, rng);
+  }
+  const pickedSurvivors = draft.survivor.mode === 'direct'
+    ? sample(pool('survivor'), 4, rng)
+    : chosen.slice(0, 4).map((id) => lookupChar('survivor', id));
+  const pickedHunter = draft.hunter.mode === 'direct' ? pickOne(pool('hunter'), rng) : lookupChar('hunter', chosen[4]);
+  const next = composeMatch(pickedSurvivors, pickedHunter);
+  next.slots.forEach((entry, i) => {
+    const pickedId = entry.char.id;
+    if (i === 4 ? draft.hunter.cands : draft.survivor.cands) {
+      const rejected = draftCandidates(draft, i).filter((id) => id !== pickedId);
+      if (rejected.length) entry.rejected = rejected;
+    }
+  });
+  if (draft.survivor.pool) {
+    const leftover = draft.survivor.pool.filter((id) => !chosen.slice(0, 4).includes(id));
+    if (leftover.length) next.leftover = leftover;
+  }
+  hostDraft = null;
+  sequence(async () => {
+    const kept = slots.map((s) => s.card.classList.contains('is-open'));
+    match = next;
+    startLiveRound();
+    slots.forEach((s, i) => fillLetter(s, match.slots[i]));
+    await draftUI.leave();
+    await revealMatch(kept);
+  });
+}
+
+/** 刷新页面后从服务器恢复选角：此时人格还没生成，没有东西会丢。 */
+async function resumeHostDraft() {
+  if (!live.room) return;
+  draftResuming = true;
+  syncButtons();
+  try {
+    const res = await live.draftStatus();
+    if (res.draft) {
+      hostDraft = { draft: res.draft, claimed: res.claimed, online: true, stage: 'dealing', poll: 0 };
+      draftUI.setClockOffset(res.now - Date.now());
+      await renderHostDraft({ animate: false });
+      enterDraftPicking();
+    }
+  } catch { /* 房间失效时由其他流程提示 */ }
+  draftResuming = false;
+  syncButtons();
+}
+
+/* ------------------------------------------------------------------ 高级玩法：设置 */
+
+function syncAdvanced() {
+  const draft = settings.draft;
+  document.querySelectorAll('#dlg-advanced [data-draft]').forEach((group) => {
+    group.querySelectorAll('[role="radio"]').forEach((b) => {
+      const value = group.hasAttribute('data-number') ? Number(b.dataset.value) : b.dataset.value;
+      const on = value === draft[group.dataset.draft];
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+  });
+  document.querySelectorAll('#dlg-advanced [data-draft-for]').forEach((node) => {
+    node.hidden = ![draft.survivor, draft.hunter].includes(node.dataset.draftFor);
+  });
+  const needs = draftNeeds(draft);
+  const hint = (id, need, have) => {
+    const node = $(id);
+    node.hidden = have >= need;
+    node.textContent = have < need ? t('需要 {need} 名，卡池只有 {have} 名。', { need, have }) : '';
+  };
+  if (data.survivors.length) {
+    hint('#adv-hint-survivor', needs.survivor, pool('survivor').length);
+    hint('#adv-hint-hunter', needs.hunter, pool('hunter').length);
+  }
+  document.querySelectorAll('#dlg-advanced [data-draft-input]').forEach((input) => {
+    if (document.activeElement !== input) input.value = draft[input.dataset.draftInput];
+  });
+  $('#btn-advanced').dataset.on = String(draftEnabled(draft));
+  syncButtons();
+}
+
+function bindAdvanced() {
+  const dlg = $('#dlg-advanced');
+  $('#btn-advanced').addEventListener('click', () => { syncAdvanced(); dlg.showModal(); track('lottery_advanced_open'); });
+  dlg.querySelectorAll('[data-draft]').forEach((group) => {
+    const choose = (b) => {
+      const key = group.dataset.draft;
+      settings.draft = normalizeDraftSettings({ ...settings.draft, [key]: group.hasAttribute('data-number') ? Number(b.dataset.value) : b.dataset.value });
+      track('lottery_settings_change', { setting: `draft_${key}`, value: settings.draft[key] });
+      saveSettings();
+      syncAdvanced();
+    };
+    group.addEventListener('click', (e) => {
+      const b = e.target.closest('[role="radio"]');
+      if (b) choose(b);
+    });
+    group.addEventListener('keydown', (e) => {
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+      e.preventDefault();
+      const radios = [...group.querySelectorAll('[role="radio"]')];
+      const dir = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
+      const next = radios[(radios.indexOf(document.activeElement) + dir + radios.length) % radios.length];
+      choose(next);
+      next.focus();
+    });
+  });
+  dlg.querySelectorAll('[data-draft-input]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const key = input.dataset.draftInput;
+      const [min, max] = DRAFT_LIMITS[key];
+      // 超出范围时取最近的有效值，没填或不是整数时保持原值
+      const value = Number(input.value);
+      if (input.value !== '' && Number.isFinite(value)) {
+        settings.draft = { ...settings.draft, [key]: Math.min(max, Math.max(min, Math.round(value))) };
+        track('lottery_settings_change', { setting: `draft_${key}` });
+        saveSettings();
+      }
+      input.value = settings.draft[key];
+      syncAdvanced();
+    });
+  });
+  $('#adv-reset').addEventListener('click', () => {
+    settings.draft = { ...DRAFT_DEFAULTS };
+    saveSettings();
+    syncAdvanced();
   });
 }
 
@@ -810,11 +1171,14 @@ function resultText({ brief = false } = {}) {
     if (entry.side !== 'survivor') return;
     lines.push(`${i + 1}. ${charName(entry.char)}${SEP}${ultimateText(entry)}`);
     if (!brief) lines.push(othersLine(entry));
+    if (!brief && entry.rejected) lines.push(`   ${t('未选：{names}', { names: joinList(draftNames('survivor', entry.rejected)) })}`);
   });
+  if (!brief && match.leftover) lines.push(t('未选：{names}', { names: joinList(draftNames('survivor', match.leftover)) }));
   const hunter = match.slots[4];
   const trait = brief ? '' : `${t('辅助特质：{name}', { name: hunter.trait ? traitName(hunter.trait.name) : t('自选') })}${SEP}`;
   lines.push('', `${t('【监管者】')}${charName(hunter.char)}${SEP}${trait}${ultimateText(hunter)}`);
   if (!brief) lines.push(othersLine(hunter));
+  if (!brief && hunter.rejected) lines.push(`   ${t('未选：{names}', { names: joinList(draftNames('hunter', hunter.rejected)) })}`);
   return lines.join('\n');
 }
 
@@ -1370,6 +1734,7 @@ function liveSnapshot(phase) {
   return {
     round: liveRound,
     phase,
+    ...(match.leftover ? { leftover: match.leftover } : {}),
     slots: match.slots.map((entry, i) => {
       const shown = liveShown?.[i];
       const showChar = !shown || shown.char;
@@ -1378,6 +1743,7 @@ function liveSnapshot(phase) {
         char: showChar ? entry.char.id : null,
         build: showBuild ? { levels: entry.build.levels, ultimates: entry.build.ultimates, used: entry.build.used } : null,
       };
+      if (showChar && entry.rejected) out.rejected = entry.rejected;
       if (entry.side === 'survivor') {
         out.despair = showBuild && Boolean(entry.build.levels[despairId]);
       } else if (!shown || shown.trait) {
@@ -1392,6 +1758,7 @@ function liveSnapshot(phase) {
 
 function syncLive(phase) {
   livePhase = phase;
+  if (hostDraft) return; // 选角期间的同步走选角接口，这里发布会结束这一轮
   if (live.room && !liveSuppressed) live.push(liveSnapshot(phase));
 }
 
@@ -1469,10 +1836,30 @@ function syncLiveAccess(room, visibility) {
     password.disabled = limit.disabled = $('.access-clear', row).disabled = !open.checked;
     $('.live-access-taken', row).textContent = open.checked ? t('已占 {taken}/{limit}', { taken: access.taken ?? 0, limit: access.effectiveLimit ?? access.limit ?? 64 }) : t('未开放');
   }
+  syncLivePositions(room);
   const exposed = exposedViews(visibility, passwords);
   const warning = $('#live-access-warning');
   warning.hidden = !exposed.length;
   warning.textContent = exposed.length ? t('已隐藏部分内容，但{names}没有密码：知道房间号的人都能选择这些身份。', { names: joinList(exposed) }) : '';
+}
+
+/** 求生者的 4 个号位：谁在、是否在线，可以单独踢出。 */
+function syncLivePositions(room) {
+  const box = $('#live-positions');
+  const positions = room.access?.survivor?.positions;
+  box.hidden = !positions || room.access.survivor.open === false;
+  if (box.hidden) return;
+  box.replaceChildren(...positions.map(({ taken, online }, position) => {
+    const item = el('div', `live-position${online ? ' is-online' : ''}`);
+    item.append(el('span', '', t('{position} 号位', { position: position + 1 })), el('small', '', t(online ? '在线' : taken ? '已断线' : '空位')));
+    const kick = el('button', 'btn btn-mini', t('踢出'));
+    kick.type = 'button';
+    kick.dataset.kick = String(position);
+    kick.disabled = !taken;
+    kick.setAttribute('aria-label', t('踢出 {position} 号位', { position: position + 1 }));
+    item.append(kick);
+    return item;
+  }));
 }
 
 function disarmLiveReset() {
@@ -1607,6 +1994,18 @@ function bindLive() {
       saveAccess(view, { limit });
     }
   });
+  $('#live-positions').addEventListener('click', async (e) => {
+    const button = e.target.closest('[data-kick]');
+    if (!button) return;
+    const position = Number(button.dataset.kick);
+    try {
+      await live.kickPosition(position);
+      toast(t('已踢出 {position} 号位', { position: position + 1 }));
+    } catch {
+      toast(t('操作没有成功，请重试。'));
+    }
+    syncLiveUI();
+  });
   $('#live-access').addEventListener('click', async (e) => {
     if (!e.target.matches('.access-clear')) return;
     try {
@@ -1618,7 +2017,7 @@ function bindLive() {
     syncLiveUI();
   });
   $('#live-reset').addEventListener('click', async (e) => {
-    if (busy) { toast(t('抽取进行中，结束后才能重置房间。')); return; }
+    if (busy || hostDraft) { toast(t('抽取进行中，结束后才能重置房间。')); return; }
     if (!liveResetTimer) {
       e.currentTarget.textContent = t('再点一次确认');
       e.currentTarget.classList.add('is-armed');
@@ -1663,15 +2062,22 @@ function toast(message) {
 
 function syncButtons() {
   const draw = $('#btn-draw');
-  draw.disabled = !data.trees.survivor;
-  draw.textContent = t(busy ? '跳过动画' : (match ? '再抽一局' : '抽取结果'));
+  const picking = hostDraft?.stage === 'picking';
+  const inDraft = Boolean(hostDraft) || draftResuming;
+  draw.disabled = !data.trees.survivor || (inDraft && !picking);
+  const idleLabel = draftEnabled(settings.draft) ? '发放候选' : (match ? '再抽一局' : '抽取结果');
+  draw.textContent = t(picking ? (hostDraft.finishFailed ? '重试结束选角' : '结束选角') : busy ? '跳过动画' : idleLabel);
   draw.classList.toggle('is-skip', busy);
+  $('#btn-draft-extend').hidden = !picking || hostDraft.draft.deadline === null;
+  $('#btn-draft-redeal').hidden = !picking;
+  $('#btn-advanced').disabled = busy || inDraft;
+  $('#live-create').disabled = inDraft;
   $('#btn-copy').disabled = !match || busy;
   $('#btn-copy-brief').disabled = !match || busy;
-  $('#btn-pool').disabled = busy;
-  $('#btn-fit').disabled = busy || !data.trees.survivor;
-  $('#opt-trait').disabled = busy;
-  $('#lang-select').disabled = busy;
+  $('#btn-pool').disabled = busy || inDraft;
+  $('#btn-fit').disabled = busy || inDraft || !data.trees.survivor;
+  $('#opt-trait').disabled = busy || inDraft;
+  $('#lang-select').disabled = busy || inDraft;
   document.querySelectorAll('.slot-actions .btn, .web-btn, .panel-copy').forEach((b) => { b.disabled = !match || busy; });
   document.querySelectorAll('[data-act="trait"]').forEach((b) => { b.hidden = !settings.drawTrait; });
   document.body.classList.toggle('is-busy', busy);
@@ -1742,7 +2148,14 @@ function bindControls() {
     saveSettings();
     syncSettingsUI();
   });
-  $('#btn-draw').addEventListener('click', draw);
+  $('#btn-draw').addEventListener('click', () => { if (hostDraft) finishHostDraft(); else draw(); });
+  $('#btn-draft-extend').addEventListener('click', extendHostDraft);
+  $('#btn-draft-redeal').addEventListener('click', () => {
+    if (hostDraft?.stage !== 'picking') return;
+    abortHostDraft();
+    const problem = poolProblem();
+    if (problem) toast(problem); else startHostDraft();
+  });
   $('#btn-copy').addEventListener('click', () => copyResult());
   $('#btn-copy-brief').addEventListener('click', () => copyResult({ brief: true }));
   $('#table').addEventListener('click', (e) => { if (busy && !e.target.closest('button')) skip(); });
@@ -1787,6 +2200,7 @@ async function main() {
   bindFit();
   bindUltWeights();
   bindLive();
+  bindAdvanced();
   applyI18n();
   syncLiveUI();
   try {
@@ -1799,6 +2213,8 @@ async function main() {
   buildTable();
   syncButtons();
   refreshLiveViewers(); // 刷新页面后确认之前的同步房间还有效
+  syncAdvanced();
+  await resumeHostDraft();
   requestAnimationFrame(() => { void warmAllImages(); });
 }
 
