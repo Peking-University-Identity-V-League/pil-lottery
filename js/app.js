@@ -1225,7 +1225,6 @@ function syncAdvanced() {
   document.querySelectorAll('#dlg-advanced [data-draft-input]').forEach((input) => {
     if (document.activeElement !== input) input.value = draft[input.dataset.draftInput];
   });
-  $('#btn-advanced').dataset.on = String(draftEnabled(draft) || bansEnabled(draft));
   syncButtons();
 }
 
